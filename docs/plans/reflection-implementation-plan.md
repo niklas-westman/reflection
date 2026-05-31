@@ -491,6 +491,13 @@ pnpm add -D @types/pngjs
 - Diff over threshold becomes `warn` by default.
 - Strict mode can convert selected diffs into blocking failure.
 
+**Phase 2.2 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/image-diff.test.ts` failed because `src/contracts/visual/image-diff.ts` did not exist yet.
+- GREEN: Added `pngjs`, `pixelmatch`, `@types/pngjs`, a pure PNG comparison service, and threshold evaluation for `maxDiffPixels` / `maxDiffPixelRatio`.
+- Behavior: equal PNGs pass and can write a diff artifact, dimension mismatches classify as `visual-dimension-mismatch`, over-threshold diffs warn by default, and strict mode converts over-threshold diffs to fail.
+- Verification: `corepack pnpm exec vitest run tests/unit/image-diff.test.ts`, `corepack pnpm typecheck`, `corepack pnpm test` (10 files / 38 tests), `corepack pnpm build`, and `git diff --check` passed.
+
 ### Phase 2.3 — Route visual smoke
 
 **Objective:** Compare one route screenshot against a baseline.
