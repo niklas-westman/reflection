@@ -435,6 +435,18 @@ pnpm reflection doctor --config examples/basic-react/reflection.config.ts
 
 Add the smallest visual baseline comparison loop without making baselines dangerous.
 
+### DevEx installation/setup direction
+
+Reflection should have friendly setup, but it should not start with a magical broad `init` that silently mutates a repo. The better shape is a staged setup flow:
+
+1. `reflection doctor` is read-only and always safe. It explains what is missing and can print suggested config/scripts.
+2. `reflection init --dry-run` detects package manager/framework/dev server/Storybook and prints the exact files and package scripts it would create.
+3. `reflection init --write` creates only the minimal files: `reflection.config.ts`, `.reflection/.gitkeep`, and suggested package scripts.
+4. `reflection init --preset vite-react` / `--preset storybook` can be added before broad auto-detection, so the first experience is deterministic rather than clever.
+5. `reflection init --from-greenhouse` can later adapt Greenhouse Spec route/component metadata into Reflection config without coupling the product identity to Greenhouse.
+
+Recommendation: build the first install path as **doctor-first + dry-run init**, then add explicit presets. This keeps the nice Greenhouse-init feeling while preserving Reflection's safety rule: no silent baselines, no silent thresholds, no broad repo mutation.
+
 ### Phase 2.1 — Baseline store
 
 **Objective:** Load baseline metadata and enforce safe baseline path rules.
@@ -448,6 +460,13 @@ Add the smallest visual baseline comparison loop without making baselines danger
 - Baselines resolve only inside `.reflection/baselines/` or configured baseline root.
 - Missing baseline produces a controlled review/fail result according to case policy.
 - Normal runs never create or update baselines.
+
+**Phase 2.1 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/baseline-store.test.ts` failed because `src/core/baseline-store.ts` did not exist yet.
+- GREEN: Added a read-only baseline store that resolves paths only inside the configured baseline root, reads metadata, and creates controlled missing-baseline visual checks as review warnings or blocking failures based on policy.
+- Safety note: the baseline store intentionally exposes no write/update API; baseline mutation remains reserved for the later explicit `reflection update` flow.
+- Verification: `corepack pnpm exec vitest run tests/unit/baseline-store.test.ts`, `corepack pnpm typecheck`, `corepack pnpm test` (9 files / 33 tests), `corepack pnpm build`, and `git diff --check` passed.
 
 ### Phase 2.2 — Image diff service
 
