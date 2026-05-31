@@ -247,6 +247,14 @@ type CheckResult = {
 - Blocking failure exits `1`.
 - Tool/config/internal error exits `2`.
 
+**Phase 1.2 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/report-schema.test.ts tests/unit/artifact-store.test.ts` failed because `src/core/report-schema.ts`, `src/core/artifact-store.ts`, `src/core/manifest.ts`, and `src/core/report-writer.ts` did not exist yet.
+- GREEN: Added canonical report schemas/types, status/exit-code derivation, artifact store with path traversal guard, manifest creator, Markdown/JSON report writer, and basic failure classifier.
+- CLI smoke: `node dist/cli.js run --mode smoke --report-dir /tmp/reflection-phase-1-2-smoke` wrote `report.json`, `report.md`, `manifest.json`, and a `runs/latest` pointer.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, CLI smoke, and `git diff --check` passed.
+- Current scope note: `reflection run` now emits a placeholder environment check so the evidence pipeline exists before real browser contract checks. Phase 1.3 should replace the placeholder context with a real fixture app target; Phase 1.5 should replace the placeholder check with Playwright-produced browser checks.
+
 ### Phase 1.3 — Example app fixture
 
 **Objective:** Provide a tiny real app that can prove the browser runner.

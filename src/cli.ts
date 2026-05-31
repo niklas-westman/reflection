@@ -22,7 +22,8 @@ export function createCli(): Command {
     .option('--config <path>', 'Path to reflection.config.ts')
     .option('--mode <mode>', 'Run mode: smoke, design, visual, full', 'smoke')
     .option('--ci', 'Run with CI defaults')
-    .action(async (options: { config?: string; mode: string; ci?: boolean }) => {
+    .option('--report-dir <path>', 'Artifact/report root directory')
+    .action(async (options: { config?: string; mode: string; ci?: boolean; reportDir?: string }) => {
       await runCommand(options);
     });
 
