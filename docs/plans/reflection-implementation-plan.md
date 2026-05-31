@@ -292,6 +292,14 @@ type CheckResult = {
 - It has deterministic content, no dynamic timestamps, no network dependency.
 - It provides one passing route and two failing route cases for tests.
 
+**Phase 1.3 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/basic-react-fixture.test.ts` failed because `examples/basic-react/package.json`, `src/main.tsx`, and `reflection.config.ts` did not exist yet.
+- GREEN: Added a minimal Vite/React fixture with deterministic `/login`, intentionally overflowing `/overflow`, and intentional console-error `/console-error` routes plus a Reflection browser contract config for those scenarios.
+- Fixture smoke: `corepack pnpm install` and `corepack pnpm build` passed in `examples/basic-react`; a Vite dev server returned HTTP 200 for `/login`, `/overflow`, and `/console-error`.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, and `git diff --check` passed at the Reflection repo root.
+- Current scope note: the fixture includes `reflection.config.ts` for the intended typed public surface, but runtime TS config loading is still a deliberate future task. Phase 1.4 can use the fixture server command/readiness values without needing TS config execution.
+
 ### Phase 1.4 — Server manager
 
 **Objective:** Start or reuse a configured app server and wait for readiness.
