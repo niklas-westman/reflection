@@ -191,6 +191,13 @@ export default defineReflection({
 - Valid minimal config loads and normalizes defaults.
 - No user-facing package/config helper names contain `greenhouse`.
 
+**Phase 1.1 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/config.test.ts tests/unit/cli.test.ts` failed because `src/core/config.ts`, `src/core/define-reflection.ts`, `src/core/exit-codes.ts`, and `createCli` did not exist yet; after first implementation pass it also exposed CLI error-handling issues for invalid mode and missing config.
+- GREEN: Added config schema/default normalization, `defineReflection`, exit-code constants, command modules, and import-safe `createCli`.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, `node dist/cli.js run --mode smoke`, `node dist/cli.js doctor`, and `git diff --check` all passed.
+- Current scope note: TypeScript config files are planned, but Phase 1.1 only proves runtime loading for JavaScript ESM config modules. True `reflection.config.ts` loading should be implemented deliberately when choosing the runtime loader strategy.
+
 ### Phase 1.2 — Artifact and report core
 
 **Objective:** Every run writes a manifest and canonical reports before browser complexity expands.
