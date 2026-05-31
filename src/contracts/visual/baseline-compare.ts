@@ -28,6 +28,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
   const target = `${String(input.routeCheck.metadata.route ?? input.visualCase.route)} ${input.visualCase.viewport}`;
   const baselinePath = resolveCaseBaselinePath(input.visualCase);
   const blocking = input.visualCase.blocking === true || input.visualCase.strict === true;
+  const strict = input.visualCase.strict === true || input.visualCase.blocking === true;
 
   if (!actualArtifact) {
     return {
@@ -70,9 +71,9 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
     actualPath: input.store.resolveRunPath(actualVisualArtifact.path),
     diffPath,
     ...(input.visualCase.threshold ? { threshold: input.visualCase.threshold } : {}),
-    ...(input.visualCase.strict === undefined ? {} : { strict: input.visualCase.strict })
+    strict
   });
-  const diffArtifact = await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff');
+  const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
 
   const severity = result.status === 'fail' && blocking ? 'blocking' : 'review';
 
@@ -83,7 +84,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
     status: result.status,
     severity,
     summary: createVisualSummary(input.visualCase.id, result),
-    artifacts: [expectedArtifact, actualVisualArtifact, diffArtifact],
+    artifacts: [expectedArtifact, actualVisualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
     metadata: {
       ...result,
       routeId: input.visualCase.route,

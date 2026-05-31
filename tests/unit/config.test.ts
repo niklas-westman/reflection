@@ -64,6 +64,30 @@ describe('validateReflectionConfig', () => {
       })
     ).toThrow(/Invalid Reflection config/);
   });
+
+  it('rejects impossible visual diff ratios', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          browser: {
+            enabled: true,
+            baseUrl: 'http://127.0.0.1:5173',
+            routes: [],
+            visualSmoke: [
+              {
+                id: 'login-mobile',
+                route: 'login',
+                viewport: 'mobile',
+                baseline: 'browser/login/mobile.png',
+                threshold: { maxDiffPixelRatio: 1.5 }
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/Invalid Reflection config/);
+  });
 });
 
 describe('loadReflectionConfig', () => {

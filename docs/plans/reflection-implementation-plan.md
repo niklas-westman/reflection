@@ -545,6 +545,17 @@ prints:
 - artifact paths
 - suggested next steps
 
+**Phase 2.4 evidence — 2026-05-31:**
+
+- Validation phase before new work: independent review of Phase 2.3 found no secret/shell/eval/deserialization/SQL concerns, but did find two logic issues: dimension-mismatch visual comparisons could crash when no diff image was written, and `blocking: true` visual smoke cases were still reported as review warnings unless `strict` was also set.
+- Fixes from validation: added unit coverage for `compareRouteVisualBaseline`; dimension mismatches now return a visual check with expected/actual artifacts and no missing diff stat; blocking visual diffs now become `status: fail` + `severity: blocking`; visual `maxDiffPixelRatio` config is constrained to `0..1`.
+- RED: `corepack pnpm exec vitest run tests/unit/review-command.test.ts` initially failed because `src/commands/review.ts` did not exist. Config and baseline-compare validation tests also failed before their fixes.
+- GREEN: Added `reflection review` CLI wiring plus `src/commands/review.ts`. The command reads `runs/latest` or `--run`, validates run IDs/path boundaries, parses `report.json`, prints human review output, and emits a stable JSON agent summary with blocking failures, review items, artifact paths, and next steps.
+- Review hardening: rejects ambiguous `--latest` + `--run`, rejects unsafe latest-pointer run IDs, and has CLI-level coverage for `reflection review --json --report-dir <dir> --run <id>`.
+- CLI smoke: `node dist/cli.js run --config /tmp/reflection-review-smoke.config.mjs --report-dir /tmp/reflection-review-cli-Z4VMot`, then `node dist/cli.js review --report-dir /tmp/reflection-review-cli-Z4VMot`, then `node dist/cli.js review --report-dir /tmp/reflection-review-cli-Z4VMot --json` passed. The review output listed `browser/login/mobile/actual.png`, metadata, and `visual/login-mobile/{expected,actual,diff}.png`.
+- Verification: `corepack pnpm exec vitest run tests/unit/review-command.test.ts`, `corepack pnpm test` (13 files / 49 tests), `corepack pnpm typecheck`, `corepack pnpm build`, and `git diff --check` passed.
+- Final independent validation review passed with no blocking security concerns or logic errors. Follow-up suggestions kept for later: include summary counts/passed checks in human review output if needed.
+
 ### Phase 2.5 — Update command dry-run and targeted update
 
 **Objective:** Add explicit baseline update flow without CI mutation risk.

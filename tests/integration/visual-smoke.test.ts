@@ -9,10 +9,10 @@ import { runBrowserContract } from '../../src/contracts/browser/browser-contract
 const activeServers: ManagedServer[] = [];
 
 async function startBasicReactFixture(): Promise<string> {
-  const readyUrl = 'http://127.0.0.1:5173';
+  const readyUrl = 'http://127.0.0.1:5174';
   const server = await startManagedServer(
     {
-      command: 'corepack pnpm dev --host 127.0.0.1',
+      command: 'corepack pnpm dev --host 127.0.0.1 --port 5174',
       readyUrl,
       reuseExisting: true,
       timeoutMs: 10_000

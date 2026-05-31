@@ -24,7 +24,7 @@ const BrowserExpectationSchema = z.union([
 
 const VisualThresholdSchema = z.object({
   maxDiffPixels: z.number().int().nonnegative().optional(),
-  maxDiffPixelRatio: z.number().nonnegative().optional()
+  maxDiffPixelRatio: z.number().min(0).max(1).optional()
 });
 
 const RouteVisualSmokeCaseSchema = z.object({
