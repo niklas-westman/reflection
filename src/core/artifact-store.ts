@@ -10,6 +10,7 @@ export type ArtifactStore = {
   ensureRunDir(): Promise<void>;
   resolveRunPath(relativePath: string): string;
   writeText(relativePath: string, content: string): Promise<ArtifactRef>;
+  writeBuffer(relativePath: string, content: Buffer): Promise<ArtifactRef>;
   writeJson(relativePath: string, value: unknown): Promise<ArtifactRef>;
   describeArtifact(relativePath: string, type: ArtifactRef['type'], role?: ArtifactRef['role']): Promise<ArtifactRef>;
   updateLatestPointer(): Promise<void>;
@@ -68,6 +69,13 @@ export async function createArtifactStore(options: CreateArtifactStoreOptions): 
     return describeArtifact(relativePath, inferArtifactType(relativePath), inferArtifactRole(relativePath));
   };
 
+  const writeBuffer = async (relativePath: string, content: Buffer): Promise<ArtifactRef> => {
+    const path = resolveRunPath(relativePath);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, content);
+    return describeArtifact(relativePath, inferArtifactType(relativePath), inferArtifactRole(relativePath));
+  };
+
   return {
     rootDir,
     runId: options.runId,
@@ -77,6 +85,7 @@ export async function createArtifactStore(options: CreateArtifactStoreOptions): 
     },
     resolveRunPath,
     writeText,
+    writeBuffer,
     async writeJson(relativePath: string, value: unknown) {
       return writeText(relativePath, `${JSON.stringify(value, null, 2)}\n`);
     },
@@ -102,6 +111,10 @@ function inferArtifactType(relativePath: string): ArtifactRef['type'] {
     return 'log';
   }
 
+  if (relativePath.endsWith('.png')) {
+    return 'screenshot';
+  }
+
   return 'metadata';
 }
 
@@ -112,6 +125,10 @@ function inferArtifactRole(relativePath: string): ArtifactRef['role'] | undefine
 
   if (relativePath.endsWith('.log')) {
     return 'debug';
+  }
+
+  if (relativePath.endsWith('/actual.png')) {
+    return 'actual';
   }
 
   return undefined;

@@ -21,6 +21,7 @@ const pageStyle: React.CSSProperties = {
 
 const panelStyle: React.CSSProperties = {
   width: 'min(100%, 420px)',
+  boxSizing: 'border-box',
   padding: '32px',
   border: '1px solid rgba(255, 255, 255, 0.14)',
   borderRadius: '24px',

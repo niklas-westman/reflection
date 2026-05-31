@@ -382,6 +382,17 @@ screenshot
 - Browser failures become blocking failures by default.
 - Screenshots are saved and referenced in `report.json` and `report.md`.
 
+**Phase 1.5 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/integration/browser-contract.test.ts` failed because `src/contracts/browser/browser-contract.js` did not exist yet.
+- GREEN: Added Playwright Chromium launch/context helpers, route runner, browser assertions, console-error observer, horizontal-overflow check, screenshot/metadata artifacts, and browser contract aggregation. Added `playwright` as a dev dependency.
+- Fixture correction: `/login` mobile initially failed `noHorizontalOverflow`; fixed the fixture panel to use `boxSizing: 'border-box'` so the passing route is genuinely stable on mobile.
+- CLI wiring: `reflection run` now starts the configured server, runs browser checks for `smoke`/`full`, writes screenshot artifacts into `browser/<route>/<viewport>/actual.png`, writes per-route metadata, summarizes check statuses, and exits `1` on blocking browser failures.
+- Focused verification: `corepack pnpm exec vitest run tests/integration/browser-contract.test.ts` passed; `/login` passed desktop/mobile, `/overflow` failed as `layout-overflow`, and `/console-error` failed as `console-error`.
+- CLI smoke: a login-only fixture config exited `0` with status `pass` and 2 screenshots; an all-routes fixture config exited `1` with status `fail`, 2 blocking failures, and 3 screenshots.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, and `git diff --check` passed.
+- Current scope note: runtime loading of `reflection.config.ts` is still deferred. CLI smoke used temporary `.mjs` configs; Phase 1.6 should decide whether to add TS config loading now or document/use JS configs until the loader strategy is explicit.
+
 ### Phase 1.6 — Day 1 verification gate
 
 **Objective:** Prove Day 1 works end-to-end.
