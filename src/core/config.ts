@@ -1,5 +1,7 @@
 import { access } from 'node:fs/promises';
+import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createJiti } from 'jiti';
 import { z } from 'zod';
 
 export const runModes = ['smoke', 'design', 'visual', 'full'] as const;
@@ -76,19 +78,33 @@ export function validateReflectionConfig(input: unknown): ReflectionConfig {
 }
 
 export async function loadReflectionConfig(configPath: string): Promise<ReflectionConfig> {
+  const resolvedConfigPath = resolve(configPath);
+
   try {
-    await access(configPath);
+    await access(resolvedConfigPath);
   } catch {
     throw new Error(`Reflection config not found: ${configPath}`);
   }
 
-  const configUrl = pathToFileURL(configPath);
-  configUrl.searchParams.set('reflectionLoad', Date.now().toString());
-
-  const module = (await import(configUrl.href)) as { default?: unknown };
+  const module = await importConfigModule(resolvedConfigPath);
   if (!('default' in module)) {
     throw new Error(`Reflection config must use a default export: ${configPath}`);
   }
 
   return validateReflectionConfig(module.default);
+}
+
+async function importConfigModule(configPath: string): Promise<{ default?: unknown }> {
+  const extension = extname(configPath);
+
+  if (extension === '.ts' || extension === '.mts' || extension === '.cts') {
+    const jiti = createJiti(import.meta.url, { moduleCache: false });
+    const config = await jiti.import(configPath, { default: true });
+    return { default: config };
+  }
+
+  const configUrl = pathToFileURL(configPath);
+  configUrl.searchParams.set('reflectionLoad', Date.now().toString());
+
+  return (await import(configUrl.href)) as { default?: unknown };
 }

@@ -417,6 +417,16 @@ pnpm reflection doctor --config examples/basic-react/reflection.config.ts
 - Report paths are real and readable.
 - Final `git status --short` is reviewed before any commit.
 
+**Phase 1.6 evidence — 2026-05-31:**
+
+- Decision: baked in runtime `reflection.config.ts` loading now instead of continuing with temporary JavaScript configs, using `jiti` as the smallest practical loader for TypeScript config files.
+- RED: `node dist/cli.js run --config examples/basic-react/reflection.config.ts --report-dir <tmp>` exited `2` because the built CLI could not import the TypeScript config/helper path.
+- GREEN: `loadReflectionConfig` now resolves config paths to absolute paths and uses `jiti` for `.ts`, `.mts`, and `.cts` modules while preserving native dynamic import for JavaScript modules. Added regression coverage for TypeScript config files and relative TypeScript config paths.
+- Fixture adjustment: the example config server command now uses `corepack pnpm --dir examples/basic-react dev --host 127.0.0.1` so the built CLI can start the fixture from the repo root in environments where bare `pnpm` is not on `PATH`.
+- CLI smoke pass case: a temporary TypeScript login-only config exited `0`, reported status `pass`, project `basic-react-login-only`, and wrote desktop/mobile screenshot evidence.
+- CLI smoke fail case: `node dist/cli.js run --config examples/basic-react/reflection.config.ts --report-dir <tmp>` exited `1`, reported status `fail`, project `basic-react`, 2 blocking failures, and classified them as `layout-overflow` and `console-error`.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm test` (8 files / 30 tests), `corepack pnpm build`, and `git diff --check` passed.
+
 ---
 
 ## Day 2: Visual smoke seam and review flow

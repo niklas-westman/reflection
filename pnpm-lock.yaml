@@ -11,6 +11,9 @@ importers:
       commander:
         specifier: ^14.0.3
         version: 14.0.3
+      jiti:
+        specifier: ^2.7.0
+        version: 2.7.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -391,6 +394,10 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  jiti@2.7.0:
+    resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
+    hasBin: true
 
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
@@ -800,6 +807,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  jiti@2.7.0: {}
 
   loupe@3.2.1: {}
 

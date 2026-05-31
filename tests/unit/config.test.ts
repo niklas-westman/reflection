@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadReflectionConfig, validateReflectionConfig } from '../../src/core/config.js';
 import { defineReflection } from '../../src/core/define-reflection.js';
@@ -80,6 +80,43 @@ describe('loadReflectionConfig', () => {
 
     expect(config.project).toBe('from-disk');
     expect(config.run.defaultMode).toBe('smoke');
+  });
+
+  it('loads a TypeScript config module from disk', async () => {
+    const dir = await makeTempDir();
+    const configPath = join(dir, 'reflection.config.ts');
+    await writeFile(
+      configPath,
+      `
+        import { defineReflection } from '${process.cwd()}/src/core/define-reflection.ts';
+
+        const project: string = 'from-typescript';
+
+        export default defineReflection({
+          project,
+          contracts: {
+            browser: {
+              enabled: true,
+              baseUrl: 'http://127.0.0.1:5173',
+              routes: []
+            }
+          }
+        });
+      `,
+      'utf8'
+    );
+
+    const config = await loadReflectionConfig(configPath);
+
+    expect(config.project).toBe('from-typescript');
+    expect(config.run.defaultMode).toBe('smoke');
+  });
+
+  it('loads a TypeScript config from a relative path', async () => {
+    const config = await loadReflectionConfig('examples/basic-react/reflection.config.ts');
+
+    expect(config.project).toBe('basic-react');
+    expect(config.contracts.browser?.routes.map((route) => route.id)).toEqual(['login', 'overflow', 'console-error']);
   });
 
   it('fails clearly when the config file is missing', async () => {
