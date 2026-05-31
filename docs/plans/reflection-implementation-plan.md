@@ -327,6 +327,15 @@ server: {
 - Captures server logs into run artifacts on failure.
 - Kills only processes it started.
 
+**Phase 1.4 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/integration/server-manager.test.ts` failed because `src/core/server-manager.ts` did not exist yet.
+- GREEN: Added `startManagedServer`, `waitForUrl`, and a small managed process utility that starts shell commands, captures stdout/stderr to a configured log path, reuses reachable servers, and terminates only owned process groups.
+- Focused verification: `corepack pnpm exec vitest run tests/integration/server-manager.test.ts` passed with reuse, start/wait/logging, and timeout cleanup coverage.
+- Fixture smoke: built `dist`, then started `examples/basic-react` through the built server manager; it reported `{ started: true, reused: false, pidType: "number" }`, `/overflow` became reachable, and `stop()` made `/login` unreachable again.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, and `git diff --check` passed.
+- Current scope note: the server manager is not wired into `reflection run` yet. Phase 1.5 should use it as the substrate for Playwright browser route execution and route artifact logs.
+
 ### Phase 1.5 — Playwright browser route runner
 
 **Objective:** Render configured routes in Chromium across viewports and fixture states.
