@@ -1,0 +1,694 @@
+# Reflection Implementation Plan
+
+> **For Hermes:** Use this as the working implementation guide. Keep Day 1 focused on the smallest useful rendered-evidence loop before expanding into visual baselines, design contracts, Storybook, or Figma parity.
+
+**Goal:** Build Reflection as a separate sibling repo: a small CLI that produces evidence-backed validation of rendered UI behavior, screenshots, reports, and CI decisions.
+
+**Product stance:** Reflection should not use Greenhouse in the public package, binary, repo, config helper, or user-facing language. It may later integrate with external spec systems through adapters, but the product identity is standalone: `reflection`.
+
+**Architecture:** Start with a TypeScript CLI around a narrow core: config loading, run planning, browser route execution, artifact writing, report generation, and exit-code classification. Add visual baselines, design command wrapping, and Storybook/Figma parity only after the browser evidence loop is working and verified.
+
+**Tech stack:** TypeScript, Node >=22, pnpm, Commander, Zod, Vitest, Playwright, later `pngjs` + `pixelmatch` for image diffs.
+
+---
+
+## Product principles to preserve
+
+1. **Small surface, deep evidence.** The user sees `reflection run`, `reflection review`, `reflection update`, and `reflection doctor`; implementation depth stays underneath.
+2. **Rendered evidence beats claims.** A successful run must produce real browser evidence, machine-readable results, and human-readable summaries.
+3. **No magic healing.** Reflection must never silently update baselines, raise thresholds, ignore environment mismatches, or mask dynamic content without explicit config.
+4. **Sensitive by default.** Screenshots, traces, logs, cookies, and network data can leak private information. Traces and verbose network logs stay off unless explicitly configured or needed on failure.
+5. **Review-only visual first.** Visual diffs start as review items unless a specific stable case is explicitly configured as blocking or strict mode is requested.
+6. **Adapters, not coupling.** Future spec-system integration should compile external route/component/design metadata into Reflection targets. Reflection should not require a specific upstream spec product.
+7. **Agents are first-class consumers.** `report.json` and `--json` output must make the next action clear: fix code, inspect artifact, update baseline, or ask a human.
+
+---
+
+## Current repository setup
+
+Target path:
+
+```text
+/opt/data/workspace/repos/reflection
+```
+
+Initial package identity:
+
+```json
+{
+  "name": "reflection",
+  "private": true,
+  "bin": {
+    "reflection": "./dist/cli.js"
+  }
+}
+```
+
+Do not use scoped or product names containing `greenhouse` during this iteration.
+
+---
+
+## Planned repository shape
+
+```text
+reflection/
+  README.md
+  package.json
+  tsconfig.json
+  vitest.config.ts
+  docs/
+    plans/
+      reflection-implementation-plan.md
+  src/
+    cli.ts
+    commands/
+      run.ts
+      review.ts
+      update.ts
+      doctor.ts
+      gc.ts
+    core/
+      config.ts
+      define-reflection.ts
+      run-planner.ts
+      environment.ts
+      artifact-store.ts
+      manifest.ts
+      report-schema.ts
+      report-writer.ts
+      baseline-store.ts
+      failure-classifier.ts
+      exit-codes.ts
+    contracts/
+      browser/
+        browser-contract.ts
+        route-runner.ts
+        assertions.ts
+        console-observer.ts
+        overflow-check.ts
+        fixtures.ts
+      visual/
+        visual-contract.ts
+        image-diff.ts
+        baseline-compare.ts
+        masks.ts
+      design/
+        design-contract.ts
+        command-adapter.ts
+    integrations/
+      playwright/
+        browser-manager.ts
+        context-factory.ts
+        trace-policy.ts
+      storybook/
+        story-url.ts
+        index-json.ts
+    utils/
+      fs-safe.ts
+      hashing.ts
+      logger.ts
+      time.ts
+  examples/
+    basic-react/
+      package.json
+      src/
+      reflection.config.ts
+  tests/
+    unit/
+    integration/
+    e2e/
+```
+
+Only create files as needed. The shape above is the intended destination, not permission to scaffold empty abstractions.
+
+---
+
+## Day 1: Browser evidence loop
+
+### Day 1 goal
+
+`reflection run` validates at least one route in a real browser, captures screenshot evidence, writes report artifacts, and exits with the correct status.
+
+### Day 1 non-goals
+
+- No Figma API.
+- No Storybook integration.
+- No design-token validator wrapping.
+- No baseline updates.
+- No full HTML report viewer.
+- No broad framework auto-detection.
+- No public publishing setup.
+
+### Phase 1.1 — CLI and config foundation
+
+**Objective:** Make the CLI parse flags, load config, validate schema, and fail clearly.
+
+**Files:**
+- Modify: `src/cli.ts`
+- Create: `src/commands/run.ts`
+- Create: `src/commands/doctor.ts`
+- Create: `src/core/config.ts`
+- Create: `src/core/define-reflection.ts`
+- Create: `src/core/exit-codes.ts`
+- Test: `tests/unit/config.test.ts`
+- Test: `tests/unit/cli.test.ts`
+
+**Required behavior:**
+
+```bash
+reflection run --config examples/basic-react/reflection.config.ts
+reflection run --mode smoke
+reflection run --ci
+reflection doctor
+```
+
+Config helper:
+
+```ts
+import { defineReflection } from 'reflection';
+
+export default defineReflection({
+  project: 'basic-react',
+  run: {
+    defaultMode: 'smoke',
+    ciMode: 'smoke'
+  },
+  contracts: {
+    browser: {
+      enabled: true,
+      blocking: true,
+      baseUrl: 'http://127.0.0.1:5173',
+      routes: []
+    }
+  }
+});
+```
+
+**Acceptance:**
+
+- Missing config exits `2` with a useful message.
+- Invalid CLI usage exits `64`.
+- Valid minimal config loads and normalizes defaults.
+- No user-facing package/config helper names contain `greenhouse`.
+
+### Phase 1.2 — Artifact and report core
+
+**Objective:** Every run writes a manifest and canonical reports before browser complexity expands.
+
+**Files:**
+- Create: `src/core/artifact-store.ts`
+- Create: `src/core/manifest.ts`
+- Create: `src/core/report-schema.ts`
+- Create: `src/core/report-writer.ts`
+- Create: `src/core/failure-classifier.ts`
+- Test: `tests/unit/report-schema.test.ts`
+- Test: `tests/unit/artifact-store.test.ts`
+
+**Artifact layout:**
+
+```text
+.reflection/
+  runs/
+    <run-id>/
+      manifest.json
+      report.json
+      report.md
+```
+
+**Canonical result model:**
+
+```ts
+type CheckResult = {
+  id: string;
+  suite: 'design' | 'browser' | 'visual' | 'component' | 'environment';
+  target: string;
+  status: 'pass' | 'fail' | 'warn' | 'skipped' | 'error';
+  severity: 'blocking' | 'review' | 'info';
+  summary: string;
+  details?: string;
+  artifacts: ArtifactRef[];
+  metadata: Record<string, unknown>;
+  suggestedNextStep?: string;
+};
+```
+
+**Acceptance:**
+
+- Dummy pass/fail checks produce valid `report.json` and readable `report.md`.
+- Global run status is derived from check status/severity.
+- `pass + review warning` exits `0` but reports `pass-with-review`.
+- Blocking failure exits `1`.
+- Tool/config/internal error exits `2`.
+
+### Phase 1.3 — Example app fixture
+
+**Objective:** Provide a tiny real app that can prove the browser runner.
+
+**Files:**
+- Create: `examples/basic-react/package.json`
+- Create: `examples/basic-react/index.html`
+- Create: `examples/basic-react/src/main.tsx`
+- Create: `examples/basic-react/reflection.config.ts`
+
+**Routes/states:**
+
+```text
+/login
+  desktop + mobile
+  heading exists
+  email/password labels exist
+  sign-in button exists
+  no signup/register text
+  no horizontal overflow
+  screenshot evidence
+
+/overflow
+  mobile intentionally overflows
+  should fail noHorizontalOverflow
+
+/console-error
+  intentionally logs console.error
+  should fail noConsoleErrors
+```
+
+**Acceptance:**
+
+- The fixture can run locally with Vite.
+- It has deterministic content, no dynamic timestamps, no network dependency.
+- It provides one passing route and two failing route cases for tests.
+
+### Phase 1.4 — Server manager
+
+**Objective:** Start or reuse a configured app server and wait for readiness.
+
+**Files:**
+- Create: `src/core/server-manager.ts`
+- Create: `src/utils/process.ts`
+- Test: `tests/integration/server-manager.test.ts`
+
+**Required behavior:**
+
+```ts
+server: {
+  command: 'pnpm dev --host 127.0.0.1',
+  readyUrl: 'http://127.0.0.1:5173',
+  reuseExisting: true,
+  timeoutMs: 60_000
+}
+```
+
+**Acceptance:**
+
+- Reuses an already reachable `readyUrl` when configured.
+- Starts the server when needed.
+- Captures server logs into run artifacts on failure.
+- Kills only processes it started.
+
+### Phase 1.5 — Playwright browser route runner
+
+**Objective:** Render configured routes in Chromium across viewports and fixture states.
+
+**Files:**
+- Create: `src/integrations/playwright/browser-manager.ts`
+- Create: `src/integrations/playwright/context-factory.ts`
+- Create: `src/contracts/browser/browser-contract.ts`
+- Create: `src/contracts/browser/route-runner.ts`
+- Create: `src/contracts/browser/console-observer.ts`
+- Create: `src/contracts/browser/overflow-check.ts`
+- Create: `src/contracts/browser/assertions.ts`
+- Test: `tests/integration/browser-contract.test.ts`
+
+**MVP assertions:**
+
+```text
+urlIncludes
+urlEquals
+role
+label
+text
+noText
+selector
+elementVisible
+elementNotVisible
+noHorizontalOverflow
+noConsoleErrors
+screenshot
+```
+
+**Screenshot output:**
+
+```text
+.reflection/runs/<run-id>/browser/<route-id>/<viewport>/actual.png
+.reflection/runs/<run-id>/browser/<route-id>/<viewport>/metadata.json
+```
+
+**Acceptance:**
+
+- `/login` passes on desktop and mobile.
+- `/overflow` fails on mobile with a clear `layout-overflow` classification.
+- `/console-error` fails with a clear `console-error` classification.
+- Browser failures become blocking failures by default.
+- Screenshots are saved and referenced in `report.json` and `report.md`.
+
+### Phase 1.6 — Day 1 verification gate
+
+**Objective:** Prove Day 1 works end-to-end.
+
+**Commands:**
+
+```bash
+pnpm install
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm reflection run --config examples/basic-react/reflection.config.ts
+pnpm reflection doctor --config examples/basic-react/reflection.config.ts
+```
+
+**Acceptance:**
+
+- All tests pass.
+- Build passes.
+- Passing fixture route produces artifacts and exit code `0` when only passing routes are selected.
+- Failing fixture cases produce exit code `1` and clear report entries.
+- Report paths are real and readable.
+- Final `git status --short` is reviewed before any commit.
+
+---
+
+## Day 2: Visual smoke seam and review flow
+
+### Day 2 goal
+
+Add the smallest visual baseline comparison loop without making baselines dangerous.
+
+### Phase 2.1 — Baseline store
+
+**Objective:** Load baseline metadata and enforce safe baseline path rules.
+
+**Files:**
+- Create: `src/core/baseline-store.ts`
+- Test: `tests/unit/baseline-store.test.ts`
+
+**Acceptance:**
+
+- Baselines resolve only inside `.reflection/baselines/` or configured baseline root.
+- Missing baseline produces a controlled review/fail result according to case policy.
+- Normal runs never create or update baselines.
+
+### Phase 2.2 — Image diff service
+
+**Objective:** Compare actual and expected PNGs and produce metadata/diff image.
+
+**Files:**
+- Create: `src/contracts/visual/image-diff.ts`
+- Create: `src/contracts/visual/thresholds.ts`
+- Test: `tests/unit/image-diff.test.ts`
+
+**Dependencies:**
+
+```bash
+pnpm add pngjs pixelmatch
+pnpm add -D @types/pngjs
+```
+
+**Acceptance:**
+
+- Equal PNGs pass.
+- Dimension mismatch is classified separately.
+- Diff over threshold becomes `warn` by default.
+- Strict mode can convert selected diffs into blocking failure.
+
+### Phase 2.3 — Route visual smoke
+
+**Objective:** Compare one route screenshot against a baseline.
+
+**Files:**
+- Create: `src/contracts/visual/visual-contract.ts`
+- Create: `src/contracts/visual/baseline-compare.ts`
+- Modify: `src/contracts/browser/route-runner.ts`
+- Test: `tests/integration/visual-smoke.test.ts`
+
+**Acceptance:**
+
+- `/login` mobile actual screenshot compares to a checked-in fixture baseline.
+- Actual/baseline/diff files are linked in the report.
+- Visual diff is review-only unless strict mode is set.
+
+### Phase 2.4 — Review command
+
+**Objective:** Make latest evidence easy to inspect from the CLI.
+
+**Files:**
+- Create: `src/commands/review.ts`
+- Test: `tests/unit/review-command.test.ts`
+
+**Acceptance:**
+
+```bash
+reflection review
+reflection review --latest
+reflection review --json
+```
+
+prints:
+
+- status
+- blocking failures
+- review items
+- artifact paths
+- suggested next steps
+
+### Phase 2.5 — Update command dry-run and targeted update
+
+**Objective:** Add explicit baseline update flow without CI mutation risk.
+
+**Files:**
+- Create: `src/commands/update.ts`
+- Test: `tests/integration/update-command.test.ts`
+
+**Acceptance:**
+
+- `reflection update --route login --from-run latest --dry-run` reports intended changes without writing.
+- Non-dry targeted update copies only the selected actual screenshot into the selected baseline path.
+- CI mode refuses baseline updates.
+- Untargeted “update everything” is avoided or requires an explicit `--all` guard.
+
+---
+
+## Day 3: Artifact lifecycle, safety, and CI shape
+
+### Day 3 goal
+
+Make generated evidence safe, maintainable, and CI-compatible.
+
+### Phase 3.1 — Manifest-based GC
+
+**Objective:** Delete only eligible run artifacts and never baselines.
+
+**Files:**
+- Create: `src/commands/gc.ts`
+- Create: `src/core/gc.ts`
+- Test: `tests/unit/gc.test.ts`
+
+**Acceptance:**
+
+- `reflection gc --dry-run` lists eligible run dirs.
+- Deletion only occurs under configured artifact root.
+- A directory must contain a valid manifest before deletion.
+- Pinned runs are preserved.
+- `.reflection/baselines/` is never deleted by normal GC.
+
+### Phase 3.2 — Redaction and artifact policy
+
+**Objective:** Keep sensitive data out of reports/artifacts where possible.
+
+**Files:**
+- Create: `src/core/redaction.ts`
+- Create: `src/integrations/playwright/trace-policy.ts`
+- Test: `tests/unit/redaction.test.ts`
+
+**Acceptance:**
+
+- Authorization/cookie headers are redacted from captured logs.
+- Configured `maskSelectors` are applied before screenshots.
+- Report warns when traces/screenshots may contain private data.
+- Videos are off by default.
+
+### Phase 3.3 — CI report directory and workflow example
+
+**Objective:** Make `reflection run --ci` reliable in CI.
+
+**Files:**
+- Create: `docs/ci.md`
+- Create: `.github/workflows/reflection.yml` only when this repo has useful self-check examples
+- Test: `tests/e2e/ci-mode.test.ts`
+
+**Acceptance:**
+
+- `--ci` writes to `artifacts/reflection` by default.
+- workers default to `1` for visual stability.
+- CI never updates baselines.
+- Exit codes match the public spec.
+
+---
+
+## Day 4: Design command adapter
+
+### Day 4 goal
+
+Wrap existing deterministic design/source validators without claiming pixel parity.
+
+### Phase 4.1 — Command adapter
+
+**Objective:** Run configured commands and normalize stdout/stderr/exit code into `CheckResult` values.
+
+**Files:**
+- Create: `src/contracts/design/design-contract.ts`
+- Create: `src/contracts/design/command-adapter.ts`
+- Test: `tests/integration/design-command-adapter.test.ts`
+
+**Acceptance:**
+
+- `reflection run --mode design` can run configured commands.
+- Exit code `0` becomes pass.
+- Non-zero exit becomes blocking failure unless configured otherwise.
+- Output is summarized, with full logs as artifacts.
+- The report wording says token/source contract, not full visual parity.
+
+### Phase 4.2 — Family-level normalization
+
+**Objective:** Allow validators to emit structured JSON for richer family-level checks.
+
+**Acceptance:**
+
+- If command emits Reflection-compatible JSON, preserve family/target metadata.
+- If not, produce a global design check result.
+
+---
+
+## Day 5: Storybook component visual parity
+
+### Day 5 goal
+
+Compare one cached expected component image against one Storybook-rendered state.
+
+### Phase 5.1 — Storybook server and index lookup
+
+**Objective:** Start/reuse Storybook and resolve story URLs.
+
+**Files:**
+- Create: `src/integrations/storybook/server.ts`
+- Create: `src/integrations/storybook/index-json.ts`
+- Create: `src/integrations/storybook/story-url.ts`
+- Test: `tests/integration/storybook-index.test.ts`
+
+**Acceptance:**
+
+- `storyId` resolves through `/index.json`.
+- Storybook server is started/reused like app server.
+- Missing story produces a clear setup/config failure.
+
+### Phase 5.2 — Component visual case
+
+**Objective:** Capture one deterministic component state and compare it to a cached expected image.
+
+**Acceptance:**
+
+- One button case produces expected/actual/diff artifacts.
+- Result is review-only by default.
+- Strict mode can make it blocking for selected stable cases.
+
+### Phase 5.3 — Pseudo-state policy
+
+**Objective:** Prefer explicit story states before browser-forced pseudo states.
+
+**Acceptance:**
+
+- Config supports a state note, but implementation first uses story args/decorators.
+- Browser hover/focus can be added only with animation stabilization.
+
+---
+
+## Day 6: External spec adapter seam
+
+### Day 6 goal
+
+Define a clean adapter boundary for future external spec systems without making Reflection depend on them.
+
+### Phase 6.1 — Target IR
+
+**Objective:** Introduce a small internal representation for route/component/design targets.
+
+**Acceptance:**
+
+- Reflection config compiles into target IR.
+- External adapters can later compile into the same IR.
+- No external product name appears in core user-facing commands.
+
+### Phase 6.2 — Adapter proof
+
+**Objective:** Add a fixture adapter that converts a JSON route manifest into Reflection route targets.
+
+**Acceptance:**
+
+- Adapter is optional.
+- Core browser runner does not know where targets came from.
+- This validates future integration without coupling.
+
+---
+
+## Day 7: Product hardening and docs
+
+### Day 7 goal
+
+Make the project understandable and ready for continued dogfooding.
+
+### Phase 7.1 — Documentation pass
+
+**Files:**
+- Create: `docs/getting-started.md`
+- Create: `docs/configuration.md`
+- Create: `docs/browser-contract.md`
+- Create: `docs/visual-contract.md`
+- Create: `docs/artifacts-and-gc.md`
+- Create: `docs/agent-workflows.md`
+
+**Acceptance:**
+
+- A new repo can manually add Reflection with a minimal config.
+- Docs clearly distinguish evidence screenshots from baselines.
+- Docs explain that visual diffs are review-only by default.
+
+### Phase 7.2 — Dogfood decision gate
+
+**Objective:** Decide whether Reflection is ready for real project dogfooding.
+
+**Acceptance checklist:**
+
+- `reflection run` works locally against `examples/basic-react`.
+- Browser contract catches route/layout/console failures.
+- Reports are understandable without raw logs.
+- Agents can parse `report.json` and identify next steps.
+- GC cannot delete baselines or unrelated files.
+- Visual strictness remains opt-in.
+- No public names contain `greenhouse`.
+
+---
+
+## First implementation recommendation
+
+Start Day 1 with these exact first tasks:
+
+1. Install dependencies and verify TypeScript skeleton builds.
+2. Move CLI command bodies out of `src/cli.ts` into command modules.
+3. Add config schema and `defineReflection` helper.
+4. Add report schema and artifact writer with dummy checks.
+5. Add basic React fixture app.
+6. Add server manager.
+7. Add Playwright browser route runner.
+8. Add DOM/layout/console assertions.
+9. Run end-to-end against fixture routes.
+10. Commit only after `pnpm typecheck`, `pnpm test`, and `pnpm build` are clean.
+
+If tool budget or runtime setup gets tight, stop after a clean committed boundary. Do not leave half-written browser runner files without tests.

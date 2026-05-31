@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.reflection/runs/
+.reflection/tmp/
+.reflection/cache/
+artifacts/reflection/
+coverage/
+*.log
+.DS_Store
+
+# Keep reviewed baselines if repo-owned baseline mode is enabled later.
+!.reflection/baselines/
+!.reflection/baselines/**/*
