@@ -22,6 +22,22 @@ const BrowserExpectationSchema = z.union([
   z.object({ screenshot: z.string() })
 ]);
 
+const VisualThresholdSchema = z.object({
+  maxDiffPixels: z.number().int().nonnegative().optional(),
+  maxDiffPixelRatio: z.number().nonnegative().optional()
+});
+
+const RouteVisualSmokeCaseSchema = z.object({
+  id: z.string().min(1),
+  route: z.string().min(1),
+  viewport: z.string().min(1),
+  baseline: z.string().min(1),
+  baselineRoot: z.string().optional(),
+  threshold: VisualThresholdSchema.optional(),
+  blocking: z.boolean().optional(),
+  strict: z.boolean().optional()
+});
+
 const BrowserRouteSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
@@ -42,7 +58,8 @@ const BrowserContractSchema = z.object({
       timeoutMs: z.number().int().positive().default(60_000)
     })
     .optional(),
-  routes: z.array(BrowserRouteSchema).default([])
+  routes: z.array(BrowserRouteSchema).default([]),
+  visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([])
 });
 
 const ReflectionConfigSchema = z.object({

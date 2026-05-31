@@ -1,6 +1,6 @@
 export type VisualThreshold = {
-  maxDiffPixels?: number;
-  maxDiffPixelRatio?: number;
+  maxDiffPixels?: number | undefined;
+  maxDiffPixelRatio?: number | undefined;
 };
 
 export type ThresholdEvaluationInput = {

@@ -57,6 +57,16 @@ export default defineReflection({
             { screenshot: 'final' }
           ]
         }
+      ],
+      visualSmoke: [
+        {
+          id: 'login-mobile',
+          route: 'login',
+          viewport: 'mobile',
+          baselineRoot: 'tests/fixtures/baselines',
+          baseline: 'browser/login/mobile.chromium-linux.light.png',
+          threshold: { maxDiffPixelRatio: 0.01 }
+        }
       ]
     }
   }

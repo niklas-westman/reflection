@@ -111,8 +111,12 @@ function inferArtifactType(relativePath: string): ArtifactRef['type'] {
     return 'log';
   }
 
+  if (relativePath.endsWith('/diff.png')) {
+    return 'visual-diff';
+  }
+
   if (relativePath.endsWith('.png')) {
-    return 'screenshot';
+    return relativePath.startsWith('visual/') ? 'image' : 'screenshot';
   }
 
   return 'metadata';
@@ -127,8 +131,16 @@ function inferArtifactRole(relativePath: string): ArtifactRef['role'] | undefine
     return 'debug';
   }
 
+  if (relativePath.endsWith('/expected.png')) {
+    return 'expected';
+  }
+
   if (relativePath.endsWith('/actual.png')) {
     return 'actual';
+  }
+
+  if (relativePath.endsWith('/diff.png')) {
+    return 'diff';
   }
 
   return undefined;

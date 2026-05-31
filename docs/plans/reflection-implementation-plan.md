@@ -514,6 +514,13 @@ pnpm add -D @types/pngjs
 - Actual/baseline/diff files are linked in the report.
 - Visual diff is review-only unless strict mode is set.
 
+**Phase 2.3 evidence — 2026-05-31:**
+
+- RED: `corepack pnpm exec vitest run tests/integration/visual-smoke.test.ts` failed because `runBrowserContract` only returned browser checks; `visual.login-mobile` and missing-baseline visual checks were absent.
+- GREEN: Added route visual smoke cases, read-only baseline resolution, visual expected/actual/diff artifact linking, and review-only missing-baseline reporting. The basic React fixture now has a checked-in `/login` mobile baseline.
+- CLI smoke: `node dist/cli.js run --config /tmp/reflection-visual-smoke.config.mjs --report-dir /tmp/reflection-visual-cli-ioM2BC` passed with `environment.smoke.server`, `browser.login.mobile`, and `visual.login-mobile`; `report.json` linked `visual/login-mobile/{expected,actual,diff}.png` plus the browser actual screenshot.
+- Verification: `corepack pnpm exec vitest run tests/integration/visual-smoke.test.ts`, `corepack pnpm typecheck`, `corepack pnpm test` (11 files / 40 tests), `corepack pnpm build`, and `git diff --check` passed.
+
 ### Phase 2.4 — Review command
 
 **Objective:** Make latest evidence easy to inspect from the CLI.
