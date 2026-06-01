@@ -709,6 +709,14 @@ Wrap existing deterministic design/source validators without claiming pixel pari
 - If command emits Reflection-compatible JSON, preserve family/target metadata.
 - If not, produce a global design check result.
 
+**Phase 4.2 evidence — 2026-06-01:**
+
+- RED: added a structured JSON regression proving `reflection: "design-checks-v1"` output must produce per-family checks instead of collapsing to one global `design.<command>` check.
+- GREEN: added structured design output parsing with Zod, preserving check id, family, target, summary, details, metadata, severity, shared log artifact, command metadata, and token/source contract classification; invalid or non-JSON stdout still falls back to the global command check.
+- Review hardening: independent review found two edge cases; fixed omitted severity so `blocking: false` commands default structured findings to review severity, and added a separate command failure check when valid structured JSON is emitted but the validator process exits non-zero.
+- Built CLI smoke: built `dist`, ran `node /opt/data/workspace/repos/reflection/dist/cli.js run --config <temp>/reflection.config.mjs --report-dir <temp>/artifacts --mode design` in fresh temp dir `/tmp/reflection-phase-4-2-smoke-1780327323-68819`, then read back `report.json`; the report was `pass-with-review`, preserved `design.button.primary.tokens` target `primary-button` family `button`, preserved `design.card.spacing` target `marketing-card` family `card`, and `design/tokens.log` contained the structured JSON.
+- Verification: `corepack pnpm exec vitest run tests/integration/design-command-adapter.test.ts` (9 tests), `corepack pnpm typecheck`, `corepack pnpm test` (18 files / 94 tests), `corepack pnpm build`, built CLI smoke, and `git diff --check` passed.
+
 ---
 
 ## Day 5: Storybook component visual parity

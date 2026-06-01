@@ -86,6 +86,156 @@ describe('design command adapter', () => {
     await expect(readFile(store.resolveRunPath(log?.path ?? ''), 'utf8')).resolves.toContain('source check warning detail');
   });
 
+  it('preserves Reflection-compatible structured JSON checks with family and target metadata', async () => {
+    const root = await makeTempDir('reflection-design-structured');
+    const scriptPath = await writeNodeScript(
+      root,
+      'validator.mjs',
+      `console.log(JSON.stringify({
+        reflection: 'design-checks-v1',
+        checks: [
+          {
+            id: 'button.primary.tokens',
+            family: 'button',
+            target: 'primary-button',
+            status: 'pass',
+            severity: 'blocking',
+            summary: 'Primary button tokens match source contract.',
+            details: 'Compared token family button.primary.',
+            metadata: { tokenPath: 'button.primary' }
+          },
+          {
+            id: 'card.spacing',
+            family: 'card',
+            target: 'marketing-card',
+            status: 'warn',
+            severity: 'review',
+            summary: 'Card spacing needs review.'
+          }
+        ]
+      }));\n`
+    );
+    const store = await createArtifactStore({ rootDir: join(root, 'artifacts'), runId: 'design-structured' });
+
+    const checks = await runDesignContract(
+      {
+        commands: [{ id: 'tokens', command: nodeCommand(scriptPath) }]
+      },
+      store
+    );
+
+    expect(checks.map((check) => check.id)).toEqual(['design.button.primary.tokens', 'design.card.spacing']);
+    expect(checks[0]).toMatchObject({
+      suite: 'design',
+      target: 'primary-button',
+      status: 'pass',
+      severity: 'blocking',
+      summary: 'Primary button tokens match source contract.',
+      details: 'Compared token family button.primary.',
+      metadata: {
+        family: 'button',
+        commandId: 'tokens',
+        tokenPath: 'button.primary',
+        classification: 'token-source-contract'
+      }
+    });
+    expect(checks[1]).toMatchObject({
+      suite: 'design',
+      target: 'marketing-card',
+      status: 'warn',
+      severity: 'review',
+      metadata: {
+        family: 'card',
+        commandId: 'tokens',
+        classification: 'token-source-contract'
+      }
+    });
+    expect(checks[0]?.artifacts[0]?.path).toBe('design/tokens.log');
+    expect(checks[1]?.artifacts[0]?.path).toBe('design/tokens.log');
+  });
+
+  it('uses non-blocking command severity defaults for structured findings without explicit severity', async () => {
+    const root = await makeTempDir('reflection-design-structured-review');
+    const scriptPath = await writeNodeScript(
+      root,
+      'validator.mjs',
+      `console.log(JSON.stringify({
+        reflection: 'design-checks-v1',
+        checks: [
+          {
+            id: 'button.primary.tokens',
+            family: 'button',
+            target: 'primary-button',
+            status: 'fail',
+            summary: 'Primary button tokens drifted.'
+          }
+        ]
+      }));\n`
+    );
+    const store = await createArtifactStore({ rootDir: join(root, 'artifacts'), runId: 'design-structured-review' });
+
+    const checks = await runDesignContract(
+      {
+        commands: [{ id: 'tokens', command: nodeCommand(scriptPath), blocking: false }]
+      },
+      store
+    );
+
+    expect(checks).toHaveLength(1);
+    expect(checks[0]).toMatchObject({
+      id: 'design.button.primary.tokens',
+      status: 'fail',
+      severity: 'review',
+      target: 'primary-button',
+      metadata: {
+        family: 'button',
+        commandId: 'tokens'
+      }
+    });
+  });
+
+  it('adds a command failure check when structured JSON is emitted but the command exits non-zero', async () => {
+    const root = await makeTempDir('reflection-design-structured-command-fail');
+    const scriptPath = await writeNodeScript(
+      root,
+      'validator.mjs',
+      `console.log(JSON.stringify({
+        reflection: 'design-checks-v1',
+        checks: [
+          {
+            id: 'button.primary.tokens',
+            family: 'button',
+            target: 'primary-button',
+            status: 'pass',
+            summary: 'Primary button tokens match source contract.'
+          }
+        ]
+      }));\nprocess.exit(9);\n`
+    );
+    const store = await createArtifactStore({ rootDir: join(root, 'artifacts'), runId: 'design-structured-command-fail' });
+
+    const checks = await runDesignContract(
+      {
+        commands: [{ id: 'tokens', command: nodeCommand(scriptPath) }]
+      },
+      store
+    );
+
+    expect(checks.map((check) => check.id)).toEqual(['design.button.primary.tokens', 'design.tokens.command']);
+    expect(checks[0]).toMatchObject({ status: 'pass', target: 'primary-button' });
+    expect(checks[1]).toMatchObject({
+      suite: 'design',
+      target: 'tokens',
+      status: 'fail',
+      severity: 'blocking',
+      metadata: {
+        exitCode: 9,
+        structuredOutput: true,
+        classification: 'token-source-contract'
+      }
+    });
+  });
+
   it('turns a non-zero command exit into a blocking failure by default', async () => {
     const root = await makeTempDir('reflection-design-fail');
     const scriptPath = await writeNodeScript(root, 'validator.mjs', `console.error('missing token: color.brand');\nprocess.exit(7);\n`);
