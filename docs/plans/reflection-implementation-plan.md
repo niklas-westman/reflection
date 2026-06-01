@@ -741,6 +741,15 @@ Compare one cached expected component image against one Storybook-rendered state
 - Storybook server is started/reused like app server.
 - Missing story produces a clear setup/config failure.
 
+**Phase 5.1 evidence — 2026-06-01:**
+
+- Pre-flight: verified Day 4 was committed at `dbb21a5 Add structured design command checks` and the working tree was clean before starting Day 5.
+- RED: added `tests/integration/storybook-index.test.ts`; the focused test initially failed because `src/integrations/storybook/index-json.ts`, `server.ts`, and `story-url.ts` did not exist.
+- GREEN: added Storybook `/index.json` loading with schema validation, story-id to `iframe.html?id=<storyId>` URL resolution, clear setup/config errors for missing/non-story entries, and `startStorybookServer` on top of the existing managed app-server lifecycle.
+- Review hardening: independent review found path-prefixed Storybook URLs would be collapsed to the origin root. Added a RED regression for `baseUrl` ending in `/storybook/`, then changed index, iframe, and readiness URL construction to preserve base paths. Focused re-review found no remaining issues.
+- Built module smoke: built `dist`, started a temporary HTTP Storybook fixture under `/storybook/`, called `startStorybookServer` and `resolveStoryUrl` from built JS, read back result JSON from `/tmp/reflection-phase-5-1-smoke-1780328993-83773`; the server was reused, `storyUrl` resolved to `/storybook/iframe.html?id=button--primary`, and missing story produced a setup/config error pointing at `/storybook/index.json`.
+- Verification: focused Storybook/server-manager tests, `corepack pnpm typecheck`, `corepack pnpm test` (19 files / 99 tests), `corepack pnpm build`, built module smoke, and `git diff --check` passed.
+
 ### Phase 5.2 — Component visual case
 
 **Objective:** Capture one deterministic component state and compare it to a cached expected image.
