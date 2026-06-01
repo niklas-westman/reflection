@@ -606,6 +606,15 @@ Make generated evidence safe, maintainable, and CI-compatible.
 - Pinned runs are preserved.
 - `.reflection/baselines/` is never deleted by normal GC.
 
+**Phase 3.1 evidence — 2026-06-01:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/gc.test.ts` failed because `src/core/gc.ts` did not exist yet.
+- GREEN: Added manifest-based `collectGarbage` plus `reflection gc` CLI wiring. GC dry-runs by default, supports explicit `--delete`, considers only run directories with valid manifests eligible, skips pinned runs, and reports skipped invalid/no-manifest entries.
+- Safety hardening: GC rejects a symlinked `runs` directory, resolves candidates under the real configured runs directory, refuses/safely skips symlinked run directories that resolve outside the runs directory, revalidates candidate safety immediately before deletion, requires `manifest.runId` to match the directory name, ignores the `runs/latest` pointer, and never traverses into `.reflection/baselines/`.
+- Review loop: independent pre-commit review found that validating candidates only against the artifact root could allow a symlinked `runs` directory to redirect deletion into in-root baselines. Added a RED regression for that case, then fixed GC to reject symlinked `runs` directories and revalidated.
+- CLI smoke: built `dist`, created a temporary artifact root with one eligible run, one pinned run, and a baseline file; `node dist/cli.js gc --report-dir <tmp> --dry-run` listed only the eligible run, and `node dist/cli.js gc --report-dir <tmp> --delete` removed that run while preserving the pinned run and baseline.
+- Verification: `corepack pnpm exec vitest run tests/unit/gc.test.ts`, `corepack pnpm typecheck`, `corepack pnpm test` (15 files / 71 tests), `corepack pnpm build`, CLI smoke, and `git diff --check` passed.
+
 ### Phase 3.2 — Redaction and artifact policy
 
 **Objective:** Keep sensitive data out of reports/artifacts where possible.

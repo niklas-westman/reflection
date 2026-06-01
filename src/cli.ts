@@ -2,6 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import { Command, CommanderError } from 'commander';
 import { doctorCommand } from './commands/doctor.js';
+import { gcCommand } from './commands/gc.js';
 import { reviewCommand } from './commands/review.js';
 import { runCommand } from './commands/run.js';
 import { updateCommand } from './commands/update.js';
@@ -53,6 +54,16 @@ export function createCli(): Command {
     .option('--ci', 'Refuse updates under CI mode')
     .action(async (options: { config?: string; reportDir?: string; fromRun?: string; route?: string; case?: string; all?: boolean; dryRun?: boolean; ci?: boolean }) => {
       await updateCommand(options);
+    });
+
+  program
+    .command('gc')
+    .description('Clean up old Reflection run artifacts without touching baselines.')
+    .option('--report-dir <path>', 'Artifact/report root directory')
+    .option('--dry-run', 'List eligible run directories without deleting them')
+    .option('--delete', 'Delete eligible run directories')
+    .action(async (options: { reportDir?: string; dryRun?: boolean; delete?: boolean }) => {
+      await gcCommand(options);
     });
 
   program
