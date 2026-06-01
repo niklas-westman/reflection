@@ -10,9 +10,11 @@ Does it still match the design system contract?
 Did anything visible change unexpectedly?
 ```
 
-Current status: project skeleton and implementation plan. Day 1 should focus on the smallest useful loop: config → browser route check → screenshot evidence → report → exit code.
+Current status: Reflection now has the core local validation loop: config → browser route check → screenshot/visual evidence → report → review → explicit baseline update.
 
-## Planned command surface
+For agent and CI usage, see [`docs/validation-process.md`](docs/validation-process.md). That file is the canonical operating guide for running Reflection as a validation process and for safely proposing intentional visual baseline updates.
+
+## Command surface
 
 ```bash
 reflection run
