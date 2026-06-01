@@ -63,6 +63,18 @@ const BrowserContractSchema = z.object({
   visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([])
 });
 
+const DesignCommandSchema = z.object({
+  id: z.string().min(1),
+  command: z.string().min(1),
+  cwd: z.string().min(1).optional(),
+  blocking: z.boolean().optional()
+});
+
+const DesignContractSchema = z.object({
+  enabled: z.boolean().default(true),
+  commands: z.array(DesignCommandSchema).default([])
+});
+
 const ReflectionConfigSchema = z.object({
   project: z.string().min(1),
   run: z
@@ -73,7 +85,7 @@ const ReflectionConfigSchema = z.object({
     .default({ defaultMode: 'smoke', ciMode: 'smoke' }),
   contracts: z.object({
     browser: BrowserContractSchema.optional(),
-    design: z.unknown().optional(),
+    design: DesignContractSchema.optional(),
     visual: z.unknown().optional()
   })
 });

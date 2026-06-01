@@ -691,6 +691,15 @@ Wrap existing deterministic design/source validators without claiming pixel pari
 - Output is summarized, with full logs as artifacts.
 - The report wording says token/source contract, not full visual parity.
 
+**Phase 4.1 evidence — 2026-06-01:**
+
+- Resumption boundary: working tree already contained the Phase 4.1 RED/GREEN slice; inspected the plan, diff, tests, config schema, run-command wiring, and new design contract files before editing further.
+- Focused GREEN boundary: `corepack pnpm exec vitest run tests/integration/design-command-adapter.test.ts && corepack pnpm typecheck` passed with 5 design adapter tests.
+- Implementation: added typed design command config parsing, `runDesignContract`, `runDesignCommand`, design-mode run wiring, blocking/review-only normalization, token/source contract wording, and full stdout/stderr log artifacts.
+- Review hardening: independent review passed with no blocking concerns and suggested direct CLI coverage for non-blocking failures; added a regression proving `blocking: false` yields `pass-with-review`, prints a warning check, and exits successfully.
+- CLI smoke: built `dist`, wrote a temporary design validator/config under `/tmp/reflection-phase-4-1-smoke`, ran `node /opt/data/workspace/repos/reflection/dist/cli.js run --config /tmp/reflection-phase-4-1-smoke/reflection.config.mjs --report-dir /tmp/reflection-phase-4-1-smoke/artifacts --mode design`, then read back `report.json` and `design/tokens.log`; the report was `pass`, check `design.tokens` was blocking/pass, summary said token/source contract, and the log contained stdout and stderr details.
+- Verification: focused design/config/report tests, `corepack pnpm typecheck`, `corepack pnpm test` (18 files / 91 tests), `corepack pnpm build`, CLI smoke, and `git diff --check` passed.
+
 ### Phase 4.2 — Family-level normalization
 
 **Objective:** Allow validators to emit structured JSON for richer family-level checks.
