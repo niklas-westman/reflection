@@ -803,6 +803,13 @@ Define a clean adapter boundary for future external spec systems without making 
 - External adapters can later compile into the same IR.
 - No external product name appears in core user-facing commands.
 
+**Phase 6.1 evidence — 2026-06-01:**
+
+- RED: added `tests/unit/target-ir.test.ts`; the focused test initially failed because `src/core/target-ir.ts` did not exist.
+- GREEN: added `compileReflectionTargets` with a generic target IR for browser routes, route visuals, component visuals, and design commands, using neutral `reflection-config` / `adapter` source semantics.
+- Adapter seam: target families now preserve enough normalized route/story/visual/command metadata for future optional adapters to emit the same shape without coupling core commands to an external product name. Reviewer noted falsy-but-valid threshold preservation as a hardening concern; zero-valued thresholds were added to regression coverage and preserved explicitly.
+- Verification: `corepack pnpm exec vitest run tests/unit/target-ir.test.ts`, `corepack pnpm typecheck`, `corepack pnpm test` (21 files / 109 tests), `corepack pnpm build`, and `git diff --check` passed.
+
 ### Phase 6.2 — Adapter proof
 
 **Objective:** Add a fixture adapter that converts a JSON route manifest into Reflection route targets.
