@@ -75,6 +75,28 @@ const DesignContractSchema = z.object({
   commands: z.array(DesignCommandSchema).default([])
 });
 
+const ComponentVisualCaseSchema = z.object({
+  id: z.string().min(1),
+  storyId: z.string().min(1),
+  viewport: z.string().min(1).default('component'),
+  baseline: z.string().min(1),
+  baselineRoot: z.string().optional(),
+  threshold: VisualThresholdSchema.optional(),
+  blocking: z.boolean().optional(),
+  strict: z.boolean().optional()
+});
+
+const ComponentContractSchema = z.object({
+  enabled: z.boolean().default(true),
+  storybook: z.object({
+    command: z.string(),
+    readyUrl: z.string().url(),
+    reuseExisting: z.boolean().default(true),
+    timeoutMs: z.number().int().positive().default(60_000)
+  }),
+  cases: z.array(ComponentVisualCaseSchema).default([])
+});
+
 const ReflectionConfigSchema = z.object({
   project: z.string().min(1),
   run: z
@@ -86,6 +108,7 @@ const ReflectionConfigSchema = z.object({
   contracts: z.object({
     browser: BrowserContractSchema.optional(),
     design: DesignContractSchema.optional(),
+    component: ComponentContractSchema.optional(),
     visual: z.unknown().optional()
   })
 });

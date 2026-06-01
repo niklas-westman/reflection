@@ -2,6 +2,7 @@ import { CommanderError } from 'commander';
 import { availableParallelism } from 'node:os';
 import { basename, join } from 'node:path';
 import { runBrowserContract } from '../contracts/browser/browser-contract.js';
+import { runComponentVisualContract } from '../contracts/component/component-visual-contract.js';
 import { runDesignContract } from '../contracts/design/design-contract.js';
 import { createArtifactStore } from '../core/artifact-store.js';
 import { isRunMode, loadReflectionConfig, type ReflectionConfig, type RunMode } from '../core/config.js';
@@ -71,8 +72,10 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   try {
     const browserConfig = config?.contracts.browser;
     const designConfig = config?.contracts.design;
+    const componentConfig = config?.contracts.component;
     const shouldRunBrowser = (mode === 'smoke' || mode === 'full') && browserConfig?.enabled !== false && browserConfig !== undefined;
     const shouldRunDesign = (mode === 'design' || mode === 'full') && designConfig?.enabled !== false && designConfig !== undefined;
+    const shouldRunComponent = (mode === 'visual' || mode === 'full') && componentConfig?.enabled !== false && componentConfig !== undefined;
 
     if (shouldRunBrowser) {
       if (browserConfig.server) {
@@ -90,7 +93,11 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       checks.push(...(await runDesignContract(designConfig, store)));
     }
 
-    if (!shouldRunBrowser && !shouldRunDesign) {
+    if (shouldRunComponent) {
+      checks.push(...(await runComponentVisualContract(componentConfig, store)));
+    }
+
+    if (!shouldRunBrowser && !shouldRunDesign && !shouldRunComponent) {
       checks.push(...createPhasePlaceholderChecks(mode));
     }
   } finally {

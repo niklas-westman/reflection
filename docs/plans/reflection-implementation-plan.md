@@ -760,6 +760,14 @@ Compare one cached expected component image against one Storybook-rendered state
 - Result is review-only by default.
 - Strict mode can make it blocking for selected stable cases.
 
+**Phase 5.2 evidence — 2026-06-01:**
+
+- RED: added `tests/integration/component-visual.test.ts`; the focused test initially failed because `src/contracts/component/component-visual-contract.ts` did not exist.
+- GREEN: added `contracts.component` config parsing, `reflection run --mode visual` component wiring, Storybook story screenshot capture, baseline comparison, and expected/actual/diff artifact reporting.
+- Strict behavior: review-only is the default; `strict: true`/`blocking: true` makes mismatching stable component cases blocking.
+- Built CLI smoke: ran built `dist/cli.js` against a temporary Storybook fixture and baseline under `/tmp/reflection-phase-5-2-smoke-2btwNV`; CLI exited 0, report status was `pass`, `visual.button-primary` was `review`, and expected/actual/diff artifacts were recorded.
+- Verification: focused component/Storybook/visual-smoke tests, `corepack pnpm typecheck`, `corepack pnpm test` (20 files / 101 tests), `corepack pnpm build`, built CLI smoke, and `git diff --check` passed. Independent review passed with no security concerns or logic errors.
+
 ### Phase 5.3 — Pseudo-state policy
 
 **Objective:** Prefer explicit story states before browser-forced pseudo states.
