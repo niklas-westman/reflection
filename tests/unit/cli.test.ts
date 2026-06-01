@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -96,6 +96,28 @@ describe('reflection CLI', () => {
     expect(parsed.status).toBe('pass-with-review');
     expect(parsed.reviewItems.map((item) => item.id)).toEqual(['visual.login-mobile']);
   });
+
+  it('wires update --route --from-run --dry-run through the CLI without mutating baselines', async () => {
+    const fixture = await makeUpdateFixture();
+
+    const result = await runCli([
+      'update',
+      '--config',
+      fixture.configPath,
+      '--report-dir',
+      fixture.reportRoot,
+      '--from-run',
+      'latest',
+      '--route',
+      'login',
+      '--dry-run'
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stdout).toContain('Reflection update');
+    expect(result.stdout).toContain('Dry run: yes');
+    await expect(readFile(fixture.baselinePath, 'utf8')).resolves.toBe('OLD-BASELINE');
+  });
 });
 
 async function makeReviewReportRoot(): Promise<string> {
@@ -133,4 +155,61 @@ function check(overrides: Partial<CheckResult>): CheckResult {
     metadata: {},
     ...overrides
   };
+}
+
+async function makeUpdateFixture(): Promise<{ configPath: string; reportRoot: string; baselinePath: string }> {
+  const root = join(tmpdir(), `reflection-cli-update-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const reportRoot = join(root, 'artifacts');
+  const baselineRoot = join(root, 'baselines');
+  const baselinePath = join(baselineRoot, 'browser/login/mobile.png');
+  const runDir = join(reportRoot, 'runs', 'cli-update-run');
+  await mkdir(join(baselineRoot, 'browser/login'), { recursive: true });
+  await mkdir(join(runDir, 'visual/login-mobile'), { recursive: true });
+  await writeFile(baselinePath, 'OLD-BASELINE', 'utf8');
+  await writeFile(join(runDir, 'visual/login-mobile/actual.png'), 'NEW-ACTUAL', 'utf8');
+  await writeFile(
+    join(runDir, 'report.json'),
+    `${JSON.stringify(
+      createReport({
+        runId: 'cli-update-run',
+        project: 'cli-update-fixture',
+        startedAt: new Date('2026-05-31T12:00:00.000Z'),
+        finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+        mode: 'smoke',
+        ci: false,
+        checks: [
+          check({
+            id: 'visual.login-mobile',
+            suite: 'visual',
+            status: 'warn',
+            severity: 'review',
+            artifacts: [{ type: 'image', role: 'actual', path: 'visual/login-mobile/actual.png' }],
+            metadata: { routeId: 'login', viewport: 'mobile', baselinePath: 'browser/login/mobile.png' }
+          })
+        ]
+      }),
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+  await writeFile(join(reportRoot, 'runs', 'latest'), 'cli-update-run\n', 'utf8');
+
+  const configPath = join(root, 'reflection.config.mjs');
+  await writeFile(
+    configPath,
+    `export default {
+      project: 'cli-update-fixture',
+      contracts: {
+        browser: {
+          baseUrl: 'http://127.0.0.1:4173',
+          routes: [],
+          visualSmoke: [{ id: 'login-mobile', route: 'login', viewport: 'mobile', baselineRoot: ${JSON.stringify(baselineRoot)}, baseline: 'browser/login/mobile.png' }]
+        }
+      }
+    };\n`,
+    'utf8'
+  );
+
+  return { configPath, reportRoot, baselinePath };
 }

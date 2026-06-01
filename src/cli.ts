@@ -4,6 +4,7 @@ import { Command, CommanderError } from 'commander';
 import { doctorCommand } from './commands/doctor.js';
 import { reviewCommand } from './commands/review.js';
 import { runCommand } from './commands/run.js';
+import { updateCommand } from './commands/update.js';
 import { ExitCode } from './core/exit-codes.js';
 
 export function createCli(): Command {
@@ -37,6 +38,21 @@ export function createCli(): Command {
     .option('--report-dir <path>', 'Artifact/report root directory')
     .action(async (options: { latest?: boolean; run?: string; json?: boolean; reportDir?: string }) => {
       await reviewCommand(options);
+    });
+
+  program
+    .command('update')
+    .description('Accept intentional visual changes by updating targeted baselines.')
+    .option('--config <path>', 'Path to reflection.config.ts')
+    .option('--report-dir <path>', 'Artifact/report root directory')
+    .option('--from-run <runId>', 'Run id to promote from, or latest', 'latest')
+    .option('--route <routeId>', 'Update visual baselines for a specific route id')
+    .option('--case <caseId>', 'Update a specific visual baseline case id')
+    .option('--all', 'Update all visual baselines from the selected run')
+    .option('--dry-run', 'Show planned baseline updates without writing')
+    .option('--ci', 'Refuse updates under CI mode')
+    .action(async (options: { config?: string; reportDir?: string; fromRun?: string; route?: string; case?: string; all?: boolean; dryRun?: boolean; ci?: boolean }) => {
+      await updateCommand(options);
     });
 
   program

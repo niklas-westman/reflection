@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CommanderError } from 'commander';
@@ -131,6 +131,65 @@ describe('reviewCommand', () => {
     await writeFile(join(root, 'runs', 'latest'), '../outside\n', 'utf8');
 
     await expect(reviewCommand({ reportDir: root })).rejects.toMatchObject({
+      exitCode: ExitCode.ToolOrConfigError,
+      code: 'reflection.review'
+    } satisfies Partial<CommanderError>);
+  });
+
+  it('rejects latest pointers that resolve outside the runs directory', async () => {
+    const root = await makeReportRoot();
+    await writeRun(root, 'linked-latest');
+    await writeFile(join(root, 'outside-latest'), 'linked-latest\n', 'utf8');
+    await rm(join(root, 'runs', 'latest'));
+    await symlink(join(root, 'outside-latest'), join(root, 'runs', 'latest'));
+
+    await expect(reviewCommand({ reportDir: root })).rejects.toMatchObject({
+      exitCode: ExitCode.ToolOrConfigError,
+      code: 'reflection.review'
+    } satisfies Partial<CommanderError>);
+  });
+
+  it('rejects unsafe explicit run ids before resolving report paths', async () => {
+    const root = await makeReportRoot();
+
+    await expect(reviewCommand({ reportDir: root, run: '../outside' })).rejects.toMatchObject({
+      exitCode: ExitCode.ToolOrConfigError,
+      code: 'reflection.review'
+    } satisfies Partial<CommanderError>);
+  });
+
+  it('rejects report files that resolve outside the runs directory through symlinks', async () => {
+    const root = await makeReportRoot();
+    const outside = await makeReportRoot();
+    await writeRun(outside, 'linked-run');
+    await mkdir(join(root, 'runs'), { recursive: true });
+    await symlink(join(outside, 'runs', 'linked-run'), join(root, 'runs', 'linked-run'), 'dir');
+    await writeFile(join(root, 'runs', 'latest'), 'linked-run\n', 'utf8');
+
+    await expect(reviewCommand({ reportDir: root })).rejects.toMatchObject({
+      exitCode: ExitCode.ToolOrConfigError,
+      code: 'reflection.review'
+    } satisfies Partial<CommanderError>);
+  });
+
+  it('rejects reports whose artifact paths are absolute or escape the run directory', async () => {
+    const root = await makeReportRoot();
+    const runId = 'unsafe-artifacts';
+    const runDir = join(root, 'runs', runId);
+    await mkdir(runDir, { recursive: true });
+    const report = createReport({
+      runId,
+      project: 'review-fixture',
+      startedAt: new Date('2026-05-31T12:00:00.000Z'),
+      finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+      mode: 'smoke',
+      ci: false,
+      checks: [check({ artifacts: [{ type: 'screenshot', role: 'actual', path: '../outside.png' }] })],
+      artifacts: [{ type: 'report', path: '/tmp/outside-report.json' }]
+    });
+    await writeFile(join(runDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+
+    await expect(reviewCommand({ reportDir: root, run: runId })).rejects.toMatchObject({
       exitCode: ExitCode.ToolOrConfigError,
       code: 'reflection.review'
     } satisfies Partial<CommanderError>);

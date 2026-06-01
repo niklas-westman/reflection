@@ -571,6 +571,16 @@ prints:
 - CI mode refuses baseline updates.
 - Untargeted “update everything” is avoided or requires an explicit `--all` guard.
 
+**Phase 2.5 evidence — 2026-06-01:**
+
+- Validation phase before new work: independent review of Phase 2.4 found no secret/shell/eval/deserialization/SQL concerns, but requested hardening for report symlink reads and unsafe artifact paths. `reflection review` now realpath-checks `runs/latest`, the selected run directory, and `report.json`; rejects report/run mismatches; and rejects absolute or escaping artifact paths before emitting agent summaries.
+- RED: `corepack pnpm exec vitest run tests/integration/update-command.test.ts` initially failed because `src/commands/update.ts` did not exist. CLI wiring coverage then failed before `src/cli.ts` registered `update`.
+- GREEN: Added `reflection update` CLI wiring plus `src/commands/update.ts`. The command supports `--route`, `--case`, explicit `--all`, `--from-run latest|<runId>`, and `--dry-run`; non-dry updates copy only selected actual PNG artifacts into configured baseline paths.
+- Safety hardening: update refuses CI mutation, untargeted updates, mixed `--all` + targeted selectors, unsafe run IDs, symlinked/escaping `latest`, run directories, report files, and source artifacts. Baseline writes validate the configured root and walk/create destination directories without following intermediate symlinks; existing destination symlinks are refused before overwrite.
+- RED/GREEN validation loop: regression tests first failed for `report.json` symlink escape, mixed `--all` selectors, symlinked `runs/latest`, review latest symlink escape, and intermediate baseline directory symlink creation outside the baseline root; each passed after the targeted fix.
+- Verification: `corepack pnpm exec vitest run tests/unit/review-command.test.ts tests/integration/update-command.test.ts` (21 tests), `corepack pnpm typecheck`, `corepack pnpm test` (14 files / 66 tests), `corepack pnpm build`, and `git diff --check` passed.
+- Final independent validation review passed with no blocking security concerns or logic errors after the symlink/path hardening fixes.
+
 ---
 
 ## Day 3: Artifact lifecycle, safety, and CI shape

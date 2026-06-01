@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { CommanderError } from 'commander';
 import { ExitCode } from '../core/exit-codes.js';
 import { validateReport, type ArtifactRef, type CheckResult, type ReflectionReport } from '../core/report-schema.js';
@@ -29,13 +29,21 @@ export async function reviewCommand(options: ReviewCommandOptions = {}): Promise
     }
 
     const rootDir = resolve(options.reportDir ?? '.reflection');
+    const runsDir = resolve(rootDir, 'runs');
     const runId = options.run ?? (await readLatestRunId(rootDir));
     assertSafeRunId(runId);
-    const reportPath = resolve(rootDir, 'runs', runId, 'report.json');
-    ensureInside(resolve(rootDir, 'runs'), reportPath);
+    const runDir = resolve(runsDir, runId);
+    ensureInside(runsDir, runDir);
+    await ensureRealPathInside(runsDir, runDir);
+    const reportPath = resolve(runDir, 'report.json');
+    ensureInside(runDir, reportPath);
+    await ensureRealPathInside(runDir, reportPath);
 
     const report = validateReport(JSON.parse(await readFile(reportPath, 'utf8')) as unknown);
-    const summary = createReviewSummary(report, reportPath);
+    if (report.runId !== runId) {
+      throw new Error(`Report run id mismatch: expected ${runId}, found ${report.runId}`);
+    }
+    const summary = createReviewSummary(report, reportPath, dirname(reportPath));
 
     if (options.json === true) {
       console.log(JSON.stringify(summary, null, 2));
@@ -54,8 +62,10 @@ export async function reviewCommand(options: ReviewCommandOptions = {}): Promise
 }
 
 async function readLatestRunId(rootDir: string): Promise<string> {
-  const latestPath = resolve(rootDir, 'runs', 'latest');
-  ensureInside(resolve(rootDir, 'runs'), latestPath);
+  const runsDir = resolve(rootDir, 'runs');
+  const latestPath = resolve(runsDir, 'latest');
+  ensureInside(runsDir, latestPath);
+  await ensureRealPathInside(runsDir, latestPath);
   const value = (await readFile(latestPath, 'utf8')).trim();
   if (value.length === 0) {
     throw new Error(`Latest Reflection run pointer is empty: ${latestPath}`);
@@ -63,7 +73,7 @@ async function readLatestRunId(rootDir: string): Promise<string> {
   return value;
 }
 
-function createReviewSummary(report: ReflectionReport, reportPath: string): ReviewSummary {
+function createReviewSummary(report: ReflectionReport, reportPath: string, runDir: string): ReviewSummary {
   const blockingFailures = report.checks.filter(isBlockingFailure).map(toReviewCheck);
   const reviewItems = report.checks.filter(isReviewItem).map(toReviewCheck);
 
@@ -74,7 +84,7 @@ function createReviewSummary(report: ReflectionReport, reportPath: string): Revi
     reportPath,
     blockingFailures,
     reviewItems,
-    artifactPaths: collectArtifactPaths(report),
+    artifactPaths: collectArtifactPaths(report, runDir),
     suggestedNextSteps: report.suggestedNextSteps.map((step) => step.summary)
   };
 }
@@ -140,12 +150,24 @@ function toReviewCheck(check: CheckResult): Pick<CheckResult, 'id' | 'summary' |
   };
 }
 
-function collectArtifactPaths(report: ReflectionReport): string[] {
+function collectArtifactPaths(report: ReflectionReport, runDir: string): string[] {
   const paths = new Set<string>();
-  const addArtifact = (artifact: ArtifactRef) => paths.add(artifact.path);
+  const addArtifact = (artifact: ArtifactRef) => {
+    assertSafeArtifactPath(artifact.path, runDir);
+    paths.add(artifact.path);
+  };
   report.artifacts.forEach(addArtifact);
   report.checks.flatMap((check) => check.artifacts).forEach(addArtifact);
   return [...paths];
+}
+
+function assertSafeArtifactPath(artifactPath: string, runDir: string): void {
+  if (isAbsolute(artifactPath)) {
+    throw new Error(`Invalid absolute artifact path in report: ${artifactPath}`);
+  }
+
+  const resolvedArtifactPath = resolve(runDir, artifactPath);
+  ensureInside(runDir, resolvedArtifactPath, `Refusing to emit artifact path outside Reflection run directory: ${artifactPath}`);
 }
 
 function assertSafeRunId(runId: string): void {
@@ -154,9 +176,14 @@ function assertSafeRunId(runId: string): void {
   }
 }
 
-function ensureInside(parent: string, child: string): void {
+async function ensureRealPathInside(parent: string, child: string): Promise<void> {
+  const [realParent, realChild] = await Promise.all([realpath(parent), realpath(child)]);
+  ensureInside(realParent, realChild, `Refusing to read report outside Reflection runs directory: ${child}`);
+}
+
+function ensureInside(parent: string, child: string, message?: string): void {
   const relation = relative(parent, child);
   if (relation.startsWith('..') || isAbsolute(relation)) {
-    throw new Error(`Refusing to read report outside Reflection runs directory: ${child}`);
+    throw new Error(message ?? `Refusing to read report outside Reflection runs directory: ${child}`);
   }
 }
