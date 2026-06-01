@@ -820,6 +820,14 @@ Define a clean adapter boundary for future external spec systems without making 
 - Core browser runner does not know where targets came from.
 - This validates future integration without coupling.
 
+**Phase 6.2 evidence — 2026-06-01:**
+
+- RED: added `tests/unit/route-manifest-adapter.test.ts`; the focused test initially failed because `src/adapters/route-manifest.ts` did not exist.
+- GREEN: added `parseRouteManifestTargets` and `loadRouteManifestTargets`, validating a small JSON route manifest and compiling it into adapter-sourced `browser-route` Target IR. Independent review suggested stricter expectation and id validation; ambiguous expectation objects and duplicate route ids are now rejected before runner execution.
+- Documentation: added `docs/target-ir-and-adapters.md` and linked it from the README so Target IR, adapter constraints, and the route manifest proof are documented in the docs folder.
+- Coupling check: the adapter emits generic Target IR and no browser runner changes were needed; runner code remains unaware of route manifest source.
+- Verification: focused route-manifest adapter tests, `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, and `git diff --check` passed.
+
 ---
 
 ## Day 7: Product hardening and docs

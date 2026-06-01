@@ -14,6 +14,8 @@ Current status: Reflection now has the core local validation loop: config → br
 
 For agent and CI usage, see [`docs/validation-process.md`](docs/validation-process.md). That file is the canonical operating guide for running Reflection as a validation process and for safely proposing intentional visual baseline updates.
 
+For the internal target inventory and adapter seam, see [`docs/target-ir-and-adapters.md`](docs/target-ir-and-adapters.md).
+
 ## Command surface
 
 ```bash
