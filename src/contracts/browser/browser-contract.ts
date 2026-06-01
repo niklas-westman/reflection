@@ -11,6 +11,7 @@ export type BrowserContractConfig = {
   baseUrl: string;
   routes: BrowserRoute[];
   visualSmoke?: RouteVisualBaselineCase[];
+  maskSelectors?: string[];
 };
 
 export async function runBrowserContract(config: BrowserContractConfig, store: ArtifactStore): Promise<CheckResult[]> {
@@ -31,7 +32,8 @@ export async function runBrowserContract(config: BrowserContractConfig, store: A
             baseUrl: config.baseUrl,
             route,
             viewport,
-            blocking: config.blocking ?? true
+            blocking: config.blocking ?? true,
+            maskSelectors: config.maskSelectors ?? []
           })
         );
       }

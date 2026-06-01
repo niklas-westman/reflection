@@ -59,6 +59,7 @@ const BrowserContractSchema = z.object({
     })
     .optional(),
   routes: z.array(BrowserRouteSchema).default([]),
+  maskSelectors: z.array(z.string().min(1)).default([]),
   visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([])
 });
 

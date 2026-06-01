@@ -2,6 +2,7 @@ import { spawn, type ChildProcess, type SpawnOptionsWithoutStdio } from 'node:ch
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { createRedactionTransform } from '../core/redaction.js';
 
 export type ManagedProcessOptions = {
   cwd?: string;
@@ -33,8 +34,8 @@ export async function spawnManagedProcess(command: string, options: ManagedProce
   child.stdin?.end();
 
   if (logStream) {
-    child.stdout?.pipe(logStream, { end: false });
-    child.stderr?.pipe(logStream, { end: false });
+    child.stdout?.pipe(createRedactionTransform()).pipe(logStream, { end: false });
+    child.stderr?.pipe(createRedactionTransform()).pipe(logStream, { end: false });
   }
 
   return {

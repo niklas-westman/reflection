@@ -65,6 +65,22 @@ describe('validateReflectionConfig', () => {
     ).toThrow(/Invalid Reflection config/);
   });
 
+  it('accepts screenshot privacy mask selectors for browser routes', () => {
+    const config = validateReflectionConfig({
+      project: 'basic-react',
+      contracts: {
+        browser: {
+          enabled: true,
+          baseUrl: 'http://127.0.0.1:5173',
+          maskSelectors: ['[data-private]', '.secret'],
+          routes: []
+        }
+      }
+    });
+
+    expect(config.contracts.browser.maskSelectors).toEqual(['[data-private]', '.secret']);
+  });
+
   it('rejects impossible visual diff ratios', () => {
     expect(() =>
       validateReflectionConfig({

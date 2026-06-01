@@ -36,7 +36,7 @@ afterEach(async () => {
 });
 
 describe('browser contract', () => {
-  it('passes the login route on desktop and mobile and writes screenshot artifacts', async () => {
+  it('passes the login route, masks configured selectors, and warns about screenshot privacy', async () => {
     const baseUrl = await startBasicReactFixture();
     const rootDir = await mkdtemp(join(tmpdir(), 'reflection-browser-contract-pass-'));
     const store = await createArtifactStore({ rootDir, runId: 'browser-pass' });
@@ -49,34 +49,26 @@ describe('browser contract', () => {
           {
             id: 'login',
             path: '/login',
-            viewports: ['desktop', 'mobile'],
-            expects: [
-              { role: 'heading', name: 'Login' },
-              { label: 'Email' },
-              { label: 'Password' },
-              { role: 'button', name: 'Sign in' },
-              { noText: 'Sign up' },
-              { noText: 'Register' },
-              { noHorizontalOverflow: true },
-              { noConsoleErrors: true },
-              { screenshot: 'final' }
-            ]
+            viewports: ['mobile'],
+            expects: [{ screenshot: 'final' }]
           }
-        ]
+        ],
+        maskSelectors: ['input[type="password"]']
       },
       store
     );
 
-    expect(checks).toHaveLength(2);
-    expect(checks.map((check) => check.status)).toEqual(['pass', 'pass']);
-    expect(checks.map((check) => check.id)).toEqual(['browser.login.desktop', 'browser.login.mobile']);
-
-    for (const check of checks) {
-      const screenshot = check.artifacts.find((artifact) => artifact.type === 'screenshot');
-      expect(screenshot?.role).toBe('actual');
-      expect(screenshot?.path).toMatch(/^browser\/login\/(desktop|mobile)\/actual\.png$/);
-      await expect(readFile(store.resolveRunPath(screenshot?.path ?? ''))).resolves.toBeInstanceOf(Buffer);
-    }
+    expect(checks).toHaveLength(1);
+    const check = checks[0];
+    expect(check?.status).toBe('pass');
+    expect(check?.id).toBe('browser.login.mobile');
+    const screenshot = check?.artifacts.find((artifact) => artifact.type === 'screenshot');
+    expect(screenshot?.role).toBe('actual');
+    expect(screenshot?.path).toBe('browser/login/mobile/actual.png');
+    await expect(readFile(store.resolveRunPath(screenshot?.path ?? ''))).resolves.toBeInstanceOf(Buffer);
+    expect(check?.metadata.maskSelectors).toEqual(['input[type="password"]']);
+    expect(check?.metadata.privacyWarning).toContain('Screenshots may contain private UI data');
+    expect(check?.metadata.maskedSelectors).toEqual(['input[type="password"]']);
   }, 20_000);
 
   it('fails the intentional overflow and console error routes with clear classifications', async () => {

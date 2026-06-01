@@ -125,4 +125,29 @@ describe('server manager', () => {
     await expect(readFile(logPath, 'utf8')).resolves.toContain('fixture startup failure');
     await expect(waitForUrl(readyUrl, { timeoutMs: 100, intervalMs: 25 })).rejects.toThrow(/not reachable/i);
   });
+
+  it('captures redacted server logs so auth and cookie values are not persisted', async () => {
+    const port = await getFreePort();
+    const readyUrl = `http://127.0.0.1:${port}`;
+    const workdir = await mkdtemp(join(tmpdir(), 'reflection-server-manager-redact-'));
+    const logPath = join(workdir, 'server.log');
+
+    await expect(
+      startManagedServer(
+        {
+          command: `node -e ${JSON.stringify("console.error('Authorization: Bearer super-secret-token'); console.error('Cookie: session=abc123'); setInterval(() => {}, 1000);")}`,
+          readyUrl,
+          reuseExisting: false,
+          timeoutMs: 250
+        },
+        { cwd: workdir, logPath }
+      )
+    ).rejects.toThrow(/server did not become ready/i);
+
+    const log = await readFile(logPath, 'utf8');
+    expect(log).toContain('Authorization: [REDACTED]');
+    expect(log).toContain('Cookie: [REDACTED]');
+    expect(log).not.toContain('super-secret-token');
+    expect(log).not.toContain('session=abc123');
+  });
 });

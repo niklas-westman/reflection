@@ -631,6 +631,16 @@ Make generated evidence safe, maintainable, and CI-compatible.
 - Report warns when traces/screenshots may contain private data.
 - Videos are off by default.
 
+**Phase 3.2 evidence — 2026-06-01:**
+
+- RED: `corepack pnpm exec vitest run tests/unit/redaction.test.ts tests/unit/config.test.ts tests/integration/server-manager.test.ts tests/integration/browser-contract.test.ts` failed because `src/core/redaction.ts` / `src/integrations/playwright/trace-policy.ts` did not exist yet, `maskSelectors` were not accepted/preserved by config, server logs persisted auth/cookie values, and browser check metadata did not expose screenshot masking/privacy warnings.
+- GREEN: Added `redactSensitiveText` and a streaming-safe redaction transform for managed server stdout/stderr logs; added browser `maskSelectors` config, applied matching selectors before screenshots, and recorded privacy warning/mask metadata in browser metadata/report checks; added a trace policy helper with trace/video capture off by default.
+- Review hardening: independent review found that per-chunk redaction could leak sensitive values split across stream chunks and that JSON-serialized header fields were not covered. Added RED regressions for JSON auth/cookie/API key fields and chunk-boundary splits, then fixed the transform to buffer pending line/tail content before flushing and expanded quoted-field redaction.
+- Re-review hardening: independent re-review found that bounded flushing could still leak long unterminated sensitive lines after the retained tail. Added a RED regression for long sensitive lines, then fixed the transform to suppress the remainder of an overlong sensitive line until a line terminator is observed.
+- Final review hardening: independent final review found that escaped quotes inside JSON string values could end quoted-field redaction too early. Added a RED regression for escaped quotes in serialized sensitive values, then made quoted-value redaction escape-aware.
+- CLI smoke: built `dist`, ran `node dist/cli.js run --config /tmp/reflection-phase-3-2.config.mjs --mode smoke --report-dir <tmp>` against the basic React login route with `maskSelectors: ['input[type="password"]']`; run passed, wrote screenshot artifacts, and `report.json` / `metadata.json` recorded the privacy warning plus applied mask selectors.
+- Verification: focused Phase 3.2 tests, `corepack pnpm typecheck`, `corepack pnpm test` (16 files / 79 tests), `corepack pnpm build`, CLI smoke, and `git diff --check` passed.
+
 ### Phase 3.3 — CI report directory and workflow example
 
 **Objective:** Make `reflection run --ci` reliable in CI.

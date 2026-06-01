@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright';
+import type { Browser, Page } from 'playwright';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
 import { createBrowserContext } from '../../integrations/playwright/context-factory.js';
@@ -20,6 +20,7 @@ export type RouteRunInput = {
   route: BrowserRoute;
   viewport: string;
   blocking: boolean;
+  maskSelectors?: string[];
 };
 
 export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult> {
@@ -28,6 +29,8 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
   const consoleObserver = observeConsoleErrors(page);
   const failures: AssertionFailure[] = [];
   const artifacts = [];
+  const maskSelectors = input.maskSelectors ?? [];
+  let maskedSelectors: string[] = [];
 
   try {
     await page.goto(new URL(input.route.path, input.baseUrl).toString(), { waitUntil: 'domcontentloaded' });
@@ -41,6 +44,7 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
     }
 
     if (shouldCaptureScreenshot(input.route.expects)) {
+      maskedSelectors = await applyMaskSelectors(page, maskSelectors);
       const screenshotPath = `browser/${input.route.id}/${input.viewport}/actual.png`;
       const screenshot = await page.screenshot({ fullPage: true });
       artifacts.push(await input.store.writeBuffer(screenshotPath, screenshot));
@@ -53,7 +57,10 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
         viewport: input.viewport,
         url: page.url(),
         consoleErrors: consoleObserver.errors,
-        failures
+        failures,
+        privacyWarning: shouldCaptureScreenshot(input.route.expects) ? 'Screenshots may contain private UI data. Use maskSelectors for sensitive regions.' : undefined,
+        maskSelectors,
+        maskedSelectors
       })
     );
   } catch (error) {
@@ -87,8 +94,37 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
       routeId: input.route.id,
       viewport: input.viewport,
       classification: firstFailure?.classification,
-      failures
+      failures,
+      ...(shouldCaptureScreenshot(input.route.expects)
+        ? {
+            privacyWarning: 'Screenshots may contain private UI data. Use maskSelectors for sensitive regions.',
+            maskSelectors,
+            maskedSelectors
+          }
+        : {})
     },
     ...(failures.length > 0 ? { suggestedNextStep: 'Inspect screenshot and browser metadata, then fix the rendered UI contract failure.' } : {})
   };
+}
+
+async function applyMaskSelectors(page: Page, selectors: string[]): Promise<string[]> {
+  const applied: string[] = [];
+
+  for (const selector of selectors) {
+    const count = await page.locator(selector).count().catch(() => 0);
+    if (count === 0) {
+      continue;
+    }
+
+    await page.locator(selector).evaluateAll((elements) => {
+      for (const element of elements) {
+        const target = element as unknown as { getAttribute(name: string): string | null; setAttribute(name: string, value: string): void };
+        const previousStyle = target.getAttribute('style') ?? '';
+        target.setAttribute('style', `${previousStyle}; visibility: hidden !important;`);
+      }
+    });
+    applied.push(selector);
+  }
+
+  return applied;
 }
