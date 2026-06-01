@@ -657,6 +657,15 @@ Make generated evidence safe, maintainable, and CI-compatible.
 - CI never updates baselines.
 - Exit codes match the public spec.
 
+**Phase 3.3 evidence — 2026-06-01:**
+
+- RED: `corepack pnpm exec vitest run tests/e2e/ci-mode.test.ts` failed because CI reports did not record a stable `workers: 1` default and `docs/ci.md` / `.github/workflows/reflection.yml` did not exist yet.
+- GREEN: Added CI worker default metadata for `reflection run --ci`, strict positive-integer `--workers` validation, documented CI artifact paths, baseline immutability, and public exit codes in `docs/ci.md`, and added a GitHub Actions workflow example that runs `node dist/cli.js run --ci --mode design` and uploads `artifacts/reflection`.
+- Review hardening: independent review found malformed worker values such as `--workers 2abc` were coerced by `Number.parseInt`. Added a RED regression, then switched worker parsing to strict integer-string validation before artifact store creation.
+- Re-review hardening: independent re-review found missing worker values (`--workers` without a count) still exited through Commander's default code `1`. Added a RED regression and changed `--workers` to an optional-value option whose missing value is validated by Reflection, returning exit code `64`.
+- CLI smoke: built `dist`, ran `node /opt/data/workspace/repos/reflection/dist/cli.js run --ci --mode design` from a fresh temp directory, then read back `artifacts/reflection/runs/latest` and `report.json`; the report was `pass`, `ci: true`, profile `ci`, workers `1`, and `report.md` existed. Also smoke-checked `--workers 2abc` and missing `--workers` both exit `64` with invalid-workers messages.
+- Verification: focused CI/update/CLI tests, `corepack pnpm typecheck`, `corepack pnpm test` (17 files / 85 tests), `corepack pnpm build`, CLI smoke, and `git diff --check` passed.
+
 ---
 
 ## Day 4: Design command adapter

@@ -26,7 +26,8 @@ export function createCli(): Command {
     .option('--mode <mode>', 'Run mode: smoke, design, visual, full', 'smoke')
     .option('--ci', 'Run with CI defaults')
     .option('--report-dir <path>', 'Artifact/report root directory')
-    .action(async (options: { config?: string; mode: string; ci?: boolean; reportDir?: string }) => {
+    .option('--workers [count]', 'Worker count for browser/visual checks')
+    .action(async (options: { config?: string; mode: string; ci?: boolean; reportDir?: string; workers?: string | boolean }) => {
       await runCommand(options);
     });
 

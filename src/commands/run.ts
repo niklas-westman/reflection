@@ -1,4 +1,5 @@
 import { CommanderError } from 'commander';
+import { availableParallelism } from 'node:os';
 import { basename, join } from 'node:path';
 import { runBrowserContract } from '../contracts/browser/browser-contract.js';
 import { createArtifactStore } from '../core/artifact-store.js';
@@ -14,6 +15,7 @@ export type RunCommandOptions = {
   mode: string;
   ci?: boolean;
   reportDir?: string;
+  workers?: string | number | boolean;
 };
 
 export function parseRunMode(value: string): RunMode {
@@ -51,7 +53,16 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 
   const startedAt = new Date();
   const runId = createRunId(startedAt);
-  const rootDir = options.reportDir ?? (options.ci === true ? 'artifacts/reflection' : '.reflection');
+  const ci = options.ci === true;
+  const rootDir = options.reportDir ?? (ci ? 'artifacts/reflection' : '.reflection');
+  let workers: number;
+  try {
+    workers = resolveWorkerCount(options.workers, ci);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    throw error;
+  }
   const store = await createArtifactStore({ rootDir, runId });
   const checks: CheckResult[] = [];
   let server: ManagedServer | undefined;
@@ -84,11 +95,12 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     startedAt,
     finishedAt,
     mode,
-    ci: options.ci === true,
+    ci,
     environment: {
-      profile: options.ci === true ? 'ci' : 'local',
+      profile: ci ? 'ci' : 'local',
       platform: process.platform,
-      nodeVersion: process.version
+      nodeVersion: process.version,
+      workers
     },
     checks,
     suggestedNextSteps: [{ kind: 'implementation', summary: 'Implement the next contract runner phase.' }]
@@ -116,6 +128,23 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 function createRunId(date: Date): string {
   const stamp = date.toISOString().replaceAll(':', '-').replace(/\.\d{3}Z$/, 'Z');
   return `${stamp}-local`;
+}
+
+function resolveWorkerCount(value: string | number | boolean | undefined, ci: boolean): number {
+  if (value === undefined) {
+    return ci ? 1 : Math.max(1, Math.min(4, availableParallelism()));
+  }
+
+  if (value === true || value === false) {
+    throw new CommanderError(ExitCode.InvalidUsage, 'reflection.invalidWorkers', `Invalid workers "${String(value)}". Expected a positive integer.`);
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || (typeof value === 'string' && !/^[1-9]\d*$/.test(value))) {
+    throw new CommanderError(ExitCode.InvalidUsage, 'reflection.invalidWorkers', `Invalid workers "${value}". Expected a positive integer.`);
+  }
+
+  return parsed;
 }
 
 async function createEnvironmentCheck(mode: RunMode, server: ManagedServer | undefined): Promise<CheckResult> {

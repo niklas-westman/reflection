@@ -1,0 +1,42 @@
+name: Reflection
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  reflection:
+    name: Reflection CI validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Build Reflection
+        run: corepack pnpm build
+
+      - name: Run Reflection in CI mode
+        # Equivalent package command: reflection run --ci --mode design
+        run: node dist/cli.js run --ci --mode design
+
+      - name: Upload Reflection artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflection-artifacts
+          path: artifacts/reflection
+          if-no-files-found: ignore
