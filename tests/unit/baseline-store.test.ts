@@ -68,4 +68,24 @@ describe('createBaselineStore', () => {
     });
     expect(blockingCheck).toMatchObject({ status: 'fail', severity: 'blocking' });
   });
+
+  it('preserves missing-baseline classification and path when callers add metadata', () => {
+    const check = createMissingBaselineCheck({
+      id: 'visual.button',
+      target: 'button component',
+      baselinePath: 'components/button.png',
+      blocking: false,
+      metadata: {
+        classification: 'visual-match',
+        baselinePath: 'components/other.png',
+        statePolicy: 'story-controlled'
+      }
+    });
+
+    expect(check.metadata).toMatchObject({
+      classification: 'missing-baseline',
+      baselinePath: 'components/button.png',
+      statePolicy: 'story-controlled'
+    });
+  });
 });

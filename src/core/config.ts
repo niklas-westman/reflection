@@ -75,6 +75,25 @@ const DesignContractSchema = z.object({
   commands: z.array(DesignCommandSchema).default([])
 });
 
+const ComponentBrowserStateSchema = z
+  .object({
+    kind: z.enum(['hover', 'focus']),
+    selector: z.string().min(1),
+    animationStabilization: z.object({
+      disableAnimations: z.boolean().optional(),
+      waitMs: z.number().int().nonnegative().max(5_000).optional()
+    })
+  })
+  .superRefine((value, context) => {
+    if (value.animationStabilization.disableAnimations !== true && (value.animationStabilization.waitMs ?? 0) <= 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['animationStabilization'],
+        message: 'browser-forced pseudo states require effective animation stabilization'
+      });
+    }
+  });
+
 const ComponentVisualCaseSchema = z.object({
   id: z.string().min(1),
   storyId: z.string().min(1),
@@ -83,7 +102,9 @@ const ComponentVisualCaseSchema = z.object({
   baselineRoot: z.string().optional(),
   threshold: VisualThresholdSchema.optional(),
   blocking: z.boolean().optional(),
-  strict: z.boolean().optional()
+  strict: z.boolean().optional(),
+  stateNote: z.string().min(1).optional(),
+  browserState: ComponentBrowserStateSchema.optional()
 });
 
 const ComponentContractSchema = z.object({

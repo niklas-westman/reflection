@@ -1,5 +1,6 @@
 import { access, mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import type { Page } from 'playwright';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
@@ -20,6 +21,17 @@ export type ComponentVisualCase = {
   threshold?: VisualThreshold | undefined;
   blocking?: boolean | undefined;
   strict?: boolean | undefined;
+  stateNote?: string | undefined;
+  browserState?: ComponentBrowserState | undefined;
+};
+
+export type ComponentBrowserState = {
+  kind: 'hover' | 'focus';
+  selector: string;
+  animationStabilization: {
+    disableAnimations?: boolean | undefined;
+    waitMs?: number | undefined;
+  };
 };
 
 export type ComponentVisualContractConfig = {
@@ -72,7 +84,8 @@ async function runComponentVisualCase(input: {
       id: `visual.${input.visualCase.id}`,
       target,
       baselinePath: input.visualCase.baseline,
-      blocking
+      blocking,
+      metadata: createComponentStateMetadata(input.visualCase)
     });
   }
 
@@ -83,7 +96,8 @@ async function runComponentVisualCase(input: {
     store: input.store,
     path: `${artifactBase}/actual.png`,
     storyUrl: input.storyUrl,
-    viewport
+    viewport,
+    browserState: input.visualCase.browserState
   });
   const diffRelativePath = `${artifactBase}/diff.png`;
   const diffPath = input.store.resolveRunPath(diffRelativePath);
@@ -112,7 +126,8 @@ async function runComponentVisualCase(input: {
       storyId: input.visualCase.storyId,
       storyUrl: input.storyUrl,
       viewport,
-      baselinePath: input.visualCase.baseline
+      baselinePath: input.visualCase.baseline,
+      ...createComponentStateMetadata(input.visualCase)
     },
     ...(result.status === 'pass'
       ? {}
@@ -126,16 +141,44 @@ async function captureComponentScreenshot(input: {
   path: string;
   storyUrl: string;
   viewport: string;
+  browserState?: ComponentBrowserState | undefined;
 }) {
   const context = await createBrowserContext(input.browser, input.viewport);
   try {
     const page = await context.newPage();
     await page.goto(input.storyUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
+    if (input.browserState) {
+      await applyBrowserState(page, input.browserState);
+    }
     return input.store.writeBuffer(input.path, await page.screenshot());
   } finally {
     await context.close();
   }
+}
+
+async function applyBrowserState(page: Page, browserState: ComponentBrowserState): Promise<void> {
+  if (browserState.animationStabilization.disableAnimations !== false) {
+    await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; }' });
+  }
+
+  if (browserState.kind === 'hover') {
+    await page.locator(browserState.selector).hover();
+  } else {
+    await page.locator(browserState.selector).focus();
+  }
+
+  if (browserState.animationStabilization.waitMs && browserState.animationStabilization.waitMs > 0) {
+    await page.waitForTimeout(browserState.animationStabilization.waitMs);
+  }
+}
+
+function createComponentStateMetadata(visualCase: ComponentVisualCase): Record<string, unknown> {
+  return {
+    statePolicy: visualCase.browserState ? 'browser-forced-with-stabilization' : 'story-controlled',
+    ...(visualCase.stateNote ? { stateNote: visualCase.stateNote } : {}),
+    ...(visualCase.browserState ? { browserState: visualCase.browserState } : {})
+  };
 }
 
 function resolveCaseBaselinePath(visualCase: ComponentVisualCase): string {

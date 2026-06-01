@@ -16,6 +16,7 @@ export type MissingBaselineCheckOptions = {
   target: string;
   baselinePath: string;
   blocking: boolean;
+  metadata?: Record<string, unknown> | undefined;
 };
 
 function assertSafeRelativePath(relativePath: string): void {
@@ -70,6 +71,7 @@ export function createMissingBaselineCheck(options: MissingBaselineCheckOptions)
     summary: `Missing approved visual baseline: ${options.baselinePath}.`,
     artifacts: [],
     metadata: {
+      ...(options.metadata ?? {}),
       classification: 'missing-baseline',
       baselinePath: options.baselinePath
     },

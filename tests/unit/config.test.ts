@@ -104,6 +104,84 @@ describe('validateReflectionConfig', () => {
       })
     ).toThrow(/Invalid Reflection config/);
   });
+
+  it('accepts a component visual state note for story-controlled states', () => {
+    const config = validateReflectionConfig({
+      project: 'basic-react',
+      contracts: {
+        component: {
+          storybook: {
+            command: 'pnpm storybook',
+            readyUrl: 'http://127.0.0.1:6006'
+          },
+          cases: [
+            {
+              id: 'button-primary-hover',
+              storyId: 'button--primary-hover',
+              baseline: 'components/button-primary-hover.png',
+              stateNote: 'Hover state is represented by story args/decorators, not browser-forced hover.'
+            }
+          ]
+        }
+      }
+    });
+
+    expect(config.contracts.component?.cases[0]?.stateNote).toBe(
+      'Hover state is represented by story args/decorators, not browser-forced hover.'
+    );
+  });
+
+  it('rejects browser-forced component pseudo states without animation stabilization', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            storybook: {
+              command: 'pnpm storybook',
+              readyUrl: 'http://127.0.0.1:6006'
+            },
+            cases: [
+              {
+                id: 'button-primary-hover',
+                storyId: 'button--primary',
+                baseline: 'components/button-primary-hover.png',
+                browserState: { kind: 'hover', selector: 'button' }
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/animationStabilization/);
+  });
+
+  it('rejects browser-forced component pseudo states with ineffective animation stabilization', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            storybook: {
+              command: 'pnpm storybook',
+              readyUrl: 'http://127.0.0.1:6006'
+            },
+            cases: [
+              {
+                id: 'button-primary-hover',
+                storyId: 'button--primary',
+                baseline: 'components/button-primary-hover.png',
+                browserState: {
+                  kind: 'hover',
+                  selector: 'button',
+                  animationStabilization: { disableAnimations: false, waitMs: 0 }
+                }
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/effective animation stabilization/);
+  });
 });
 
 describe('loadReflectionConfig', () => {

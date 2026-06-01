@@ -777,6 +777,14 @@ Compare one cached expected component image against one Storybook-rendered state
 - Config supports a state note, but implementation first uses story args/decorators.
 - Browser hover/focus can be added only with animation stabilization.
 
+**Phase 5.3 evidence — 2026-06-01:**
+
+- RED: added config and component visual tests for `stateNote` preservation, story-controlled state metadata, and rejection of browser-forced pseudo states without `animationStabilization`; focused tests failed for the expected missing schema/metadata behavior.
+- GREEN: added component `stateNote` metadata, explicit `statePolicy`, and guarded `browserState` support for hover/focus with required effective animation stabilization (`disableAnimations: true` or `waitMs > 0`).
+- Policy behavior: story args/decorators remain the default documented path (`statePolicy: story-controlled`); browser-forced hover/focus is only accepted when stabilization is declared and is reported as `browser-forced-with-stabilization`.
+- Built CLI smoke: ran built `dist/cli.js` against a temporary Storybook hover fixture and hovered baseline under `/tmp/reflection-phase-5-3-smoke-Svz06j`; CLI exited 0, report status was `pass`, and `visual.button-primary-hover` preserved `stateNote`, `browserState`, and `statePolicy` metadata.
+- Verification: focused config/component/Storybook tests, `corepack pnpm typecheck`, `corepack pnpm test` (20 files / 107 tests), `corepack pnpm build`, built CLI smoke, and `git diff --check` passed. Independent review initially found ineffective stabilization and missing-baseline metadata gaps; both were converted into regressions and fixed.
+
 ---
 
 ## Day 6: External spec adapter seam
