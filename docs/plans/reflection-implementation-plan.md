@@ -852,6 +852,15 @@ Make the project understandable and ready for continued dogfooding.
 - Docs clearly distinguish evidence screenshots from baselines.
 - Docs explain that visual diffs are review-only by default.
 
+**Phase 7.1 evidence — 2026-06-01:**
+
+- RED: added `tests/unit/package-surface.test.ts`; the focused test initially failed because `src/index.ts` did not exist, proving the documented `import { defineReflection } from 'reflection'` package surface was not yet wired.
+- GREEN: added a public package entrypoint (`src/index.ts`) plus `main`, `types`, and `exports["."]` in `package.json` so documented config files can import `defineReflection` from the package root after build.
+- Documentation: added `getting-started`, `configuration`, `browser-contract`, `visual-contract`, `artifacts-and-gc`, and `agent-workflows` docs, and expanded the README documentation index.
+- Acceptance smoke: verified required docs exist, README links are present, evidence screenshots are distinguished from baselines, and visual diffs are documented as review-only by default.
+- Independent review: review caught docs/code mismatches around default config loading, config-defined run modes, component baseline promotion, browser artifact paths, manifest semantics, and CI review report roots; docs were corrected to require `--config`, document CLI-selected run modes, document current route-level baseline promotion, use the actual `browser/<route>/<viewport>` artifact layout, narrow manifest claims to report-file retention, and pass `--report-dir artifacts/reflection` for CI review.
+- Validation: `corepack pnpm exec vitest run tests/unit/package-surface.test.ts tests/unit/config.test.ts`, `corepack pnpm typecheck`, `corepack pnpm test`, `corepack pnpm build`, and `git diff --check` passed after review fixes. Final independent re-review passed with no security concerns or logic errors.
+
 ### Phase 7.2 — Dogfood decision gate
 
 **Objective:** Decide whether Reflection is ready for real project dogfooding.

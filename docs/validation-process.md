@@ -5,8 +5,8 @@ Reflection is meant to be a validation protocol that humans, agents, and CI can 
 The command split is intentional:
 
 ```bash
-reflection doctor  # check whether Reflection can run in this project
-reflection run     # produce evidence and report.json
+reflection doctor  # lightweight CLI/setup check; project contracts run through --config
+reflection run     # produce evidence and report.json; pass --config for project contracts
 reflection review  # summarize the latest evidence for humans/agents
 reflection update  # accept intentional visual changes; never automatic
 ```
@@ -17,7 +17,7 @@ Use this loop before claiming frontend work is complete:
 
 ```bash
 reflection doctor
-reflection run --mode smoke
+reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```
 
@@ -26,7 +26,7 @@ If Reflection is being run from this repository during development, build first 
 ```bash
 corepack pnpm build
 node dist/cli.js doctor
-node dist/cli.js run --mode smoke
+node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke
 node dist/cli.js review --json
 ```
 
@@ -44,8 +44,8 @@ Agents should treat Reflection as an evidence gate, not as a self-healing tool.
 
 Required agent behavior:
 
-1. Run `reflection doctor` before the validation flow when setup may be uncertain.
-2. Run `reflection run --mode smoke` to generate current evidence.
+1. Run `reflection doctor` before the validation flow when setup may be uncertain. It is currently a lightweight setup check; the configured project contract is exercised by `reflection run --config ...`.
+2. Run `reflection run --config reflection.config.ts --mode smoke` to generate current evidence.
 3. Run `reflection review --json` to get the machine-readable summary.
 4. Fix blocking failures before finishing the task.
 5. Summarize review items with artifact paths instead of hiding them.
@@ -56,15 +56,17 @@ Agents may propose intentional baseline changes with a dry run:
 
 ```bash
 reflection update --route <routeId> --from-run latest --dry-run
-reflection update --case <caseId> --from-run latest --dry-run
+reflection update --case <routeVisualCaseId> --from-run latest --dry-run
 ```
+
+`reflection update` currently promotes route-level `visualSmoke` baselines. Component visual baselines still require manual review/copy until component baseline promotion is implemented.
 
 Only after explicit human approval may an agent run the matching non-dry update:
 
 ```bash
 reflection update --route <routeId> --from-run latest
 # or
-reflection update --case <caseId> --from-run latest
+reflection update --case <routeVisualCaseId> --from-run latest
 ```
 
 After any non-dry update, inspect the resulting git diff and report exactly which baseline files changed.
@@ -77,9 +79,11 @@ Recommended CI command shape:
 
 ```bash
 reflection doctor
-reflection run --ci --mode smoke
-reflection review --json
+reflection run --ci --config reflection.config.ts --mode smoke
+reflection review --report-dir artifacts/reflection --json
 ```
+
+`reflection run --ci` writes to `artifacts/reflection` by default. `reflection review` defaults to `.reflection`, so CI review commands must pass the CI report root explicitly.
 
 For this repository's built CLI:
 
@@ -87,17 +91,17 @@ For this repository's built CLI:
 corepack pnpm install --frozen-lockfile
 corepack pnpm build
 node dist/cli.js doctor
-node dist/cli.js run --ci --mode smoke
-node dist/cli.js review --json
+node dist/cli.js run --ci --config examples/basic-react/reflection.config.ts --mode smoke
+node dist/cli.js review --report-dir artifacts/reflection --json
 ```
 
 Upload Reflection run artifacts even on failure so humans and agents can inspect what happened:
 
 ```text
-.reflection/runs/**
+artifacts/reflection/**
 ```
 
-If a later project config writes CI reports somewhere else, upload that configured report root instead.
+For local non-CI runs, the default report root remains `.reflection`. If a project config or command uses `--report-dir`, upload and review that explicit report root instead.
 
 ## Baseline update policy
 
@@ -136,7 +140,7 @@ Run:
 
 ```bash
 reflection doctor
-reflection run --mode smoke
+reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```
 
