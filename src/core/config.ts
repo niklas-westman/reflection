@@ -33,7 +33,7 @@ const ViewportSizeSchema = z.object({
 });
 
 const ComponentFramingSchema = z.object({
-  rootSelector: z.string().min(1).default('#storybook-root'),
+  rootSelector: z.string().min(1).optional(),
   background: z.string().min(1).optional(),
   align: z.enum(['center', 'start']).default('center'),
   padding: z.number().int().nonnegative().default(0)
@@ -117,31 +117,89 @@ const ComponentBrowserStateSchema = z
     }
   });
 
-const ComponentVisualCaseSchema = z.object({
-  id: z.string().min(1),
-  storyId: z.string().min(1),
-  viewport: z.string().min(1).default('component'),
-  viewportSize: ViewportSizeSchema.optional(),
-  framing: ComponentFramingSchema.optional(),
-  baseline: z.string().min(1),
-  baselineRoot: z.string().optional(),
-  threshold: VisualThresholdSchema.optional(),
-  blocking: z.boolean().optional(),
-  strict: z.boolean().optional(),
-  stateNote: z.string().min(1).optional(),
-  browserState: ComponentBrowserStateSchema.optional()
-});
+const ComponentVisualCaseSchema = z
+  .object({
+    id: z.string().min(1),
+    storyId: z.string().min(1).optional(),
+    path: z.string().min(1).optional(),
+    viewport: z.string().min(1).default('component'),
+    viewportSize: ViewportSizeSchema.optional(),
+    framing: ComponentFramingSchema.optional(),
+    baseline: z.string().min(1),
+    baselineRoot: z.string().optional(),
+    threshold: VisualThresholdSchema.optional(),
+    blocking: z.boolean().optional(),
+    strict: z.boolean().optional(),
+    stateNote: z.string().min(1).optional(),
+    browserState: ComponentBrowserStateSchema.optional()
+  })
+  .superRefine((value, context) => {
+    if (value.storyId && value.path) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['storyId'],
+        message: 'component visual cases must define either storyId or path, not both'
+      });
+    }
 
-const ComponentContractSchema = z.object({
-  enabled: z.boolean().default(true),
-  storybook: z.object({
-    command: z.string(),
-    readyUrl: z.string().url(),
-    reuseExisting: z.boolean().default(true),
-    timeoutMs: z.number().int().positive().default(60_000)
-  }),
-  cases: z.array(ComponentVisualCaseSchema).default([])
-});
+    if (!value.storyId && !value.path) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['storyId'],
+        message: 'component visual cases must define storyId for Storybook or path for portal'
+      });
+    }
+
+    if (value.path && !value.viewportSize) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['viewportSize'],
+        message: 'portal component visual cases require viewportSize'
+      });
+    }
+  });
+
+const ComponentContractSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    storybook: z
+      .object({
+        command: z.string(),
+        readyUrl: z.string().url(),
+        reuseExisting: z.boolean().default(true),
+        timeoutMs: z.number().int().positive().default(60_000)
+      })
+      .optional(),
+    portal: z
+      .object({
+        entry: z.string().min(1),
+        readyUrl: z.string().url(),
+        reuseExisting: z.boolean().default(true),
+        timeoutMs: z.number().int().positive().default(60_000),
+        viteConfig: z.string().min(1).optional()
+      })
+      .optional(),
+    cases: z.array(ComponentVisualCaseSchema).default([])
+  })
+  .superRefine((value, context) => {
+    for (const [index, visualCase] of value.cases.entries()) {
+      if (visualCase.storyId && !value.storybook) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cases', index, 'storyId'],
+          message: 'storyId component visual cases require component.storybook'
+        });
+      }
+
+      if (visualCase.path && !value.portal) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cases', index, 'path'],
+          message: 'path component visual cases require component.portal'
+        });
+      }
+    }
+  });
 
 const ReflectionConfigSchema = z.object({
   project: z.string().min(1),
@@ -173,7 +231,37 @@ export function validateReflectionConfig(input: unknown): ReflectionConfig {
     throw new Error(`Invalid Reflection config: ${details}`);
   }
 
-  return parsed.data;
+  return normalizeReflectionConfig(parsed.data);
+}
+
+function normalizeReflectionConfig(config: ReflectionConfig): ReflectionConfig {
+  const component = config.contracts.component;
+  if (!component) {
+    return config;
+  }
+
+  return {
+    ...config,
+    contracts: {
+      ...config.contracts,
+      component: {
+        ...component,
+        cases: component.cases.map((visualCase) => {
+          if (!visualCase.framing) {
+            return visualCase;
+          }
+
+          return {
+            ...visualCase,
+            framing: {
+              ...visualCase.framing,
+              rootSelector: visualCase.framing.rootSelector ?? (visualCase.path ? '#reflection-root' : '#storybook-root')
+            }
+          };
+        })
+      }
+    }
+  };
 }
 
 export async function loadReflectionConfig(configPath: string): Promise<ReflectionConfig> {

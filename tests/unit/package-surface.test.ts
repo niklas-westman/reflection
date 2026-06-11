@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import { defineReflection } from '../../src/index.js';
+import { defineReflection, type ReflectionPortalMountInput } from '../../src/index.js';
 
 describe('public package surface', () => {
   it('exports defineReflection for documented config files', () => {
@@ -33,7 +33,7 @@ describe('public package surface', () => {
     };
 
     expect(packageJson.name).toBe('reflection-check');
-    expect(packageJson.version).toBe('0.0.4');
+    expect(packageJson.version).toBe('0.0.5');
     expect(packageJson.private).toBeUndefined();
     expect(packageJson.license).toBe('MIT');
     expect(packageJson.publishConfig?.access).toBe('public');
@@ -43,9 +43,23 @@ describe('public package surface', () => {
     expect(packageJson.bin?.['reflection-check']).toBe('dist/cli.js');
     expect(packageJson.files).toEqual(expect.arrayContaining(['dist', 'docs', 'LICENSE', 'README.md']));
     expect(packageJson.dependencies?.playwright).toBeDefined();
+    expect(packageJson.dependencies?.vite).toBeDefined();
     expect(packageJson.exports?.['.']).toEqual({
       import: './dist/index.js',
       types: './dist/index.d.ts'
     });
+  });
+
+  it('exports portal entry types for generated component portals', () => {
+    const input = {
+      id: 'button-primary',
+      path: '/reflection/button/primary/light',
+      root: {} as HTMLElement,
+      viewport: 'button-default',
+      viewportSize: { width: 390, height: 220 },
+      framing: { align: 'center', padding: 0 }
+    } satisfies ReflectionPortalMountInput;
+
+    expect(input.path).toBe('/reflection/button/primary/light');
   });
 });

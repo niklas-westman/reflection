@@ -82,7 +82,7 @@ If the matching browser route result is missing, the visual check becomes a revi
 
 ## Component visual baselines
 
-Component visual cases use Storybook. Reflection resolves the configured `storyId` through Storybook `/index.json`, opens the iframe URL, captures a screenshot, and compares it with the configured baseline.
+Component visual cases can use Storybook or a Reflection-generated portal. Storybook cases resolve `storyId` through Storybook `/index.json`; portal cases open a configured `path` in a generated Vite runtime.
 
 ```ts
 component: {
@@ -111,11 +111,40 @@ component: {
 }
 ```
 
-For component baselines exported from a design tool, treat `viewportSize` and `framing` as part of the visual contract. The exported PNG width/height and the runtime Storybook screenshot width/height must be identical. `viewport` may be a built-in preset such as `component` or a semantic custom label such as `button-default`; when `viewportSize` is present, the explicit dimensions win.
+Portal cases use the same case fields, but replace `storyId` with `path` and configure `component.portal`:
 
-`framing` is optional and only affects the screenshot when configured. It applies fixed canvas styles before capture so a Storybook story can match a Figma frame:
+```ts
+component: {
+  portal: {
+    entry: './tests/reflection/react-portal.tsx',
+    readyUrl: 'http://127.0.0.1:6106'
+  },
+  cases: [
+    {
+      id: 'button-primary',
+      path: '/reflection/button/primary/light',
+      viewport: 'button-default',
+      viewportSize: { width: 390, height: 220 },
+      framing: {
+        rootSelector: '#reflection-root',
+        background: '#ffffff',
+        align: 'center',
+        padding: 0
+      },
+      baselineRoot: 'tests/fixtures/baselines',
+      baseline: 'components/button/primary.chromium-linux.light.png',
+      threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
+      strict: true
+    }
+  ]
+}
+```
 
-- `rootSelector`: story root to frame; defaults to `#storybook-root`.
+For component baselines exported from a design tool, treat `viewportSize` and `framing` as part of the visual contract. The exported PNG width/height and the runtime screenshot width/height must be identical. `viewport` may be a built-in preset such as `component` or a semantic custom label such as `button-default`; when `viewportSize` is present, the explicit dimensions win. Portal cases require `viewportSize`, and the generated frame uses those dimensions directly.
+
+`framing` is optional and only affects the screenshot when configured. It applies fixed canvas styles before capture so the runtime component can match a Figma frame:
+
+- `rootSelector`: root to frame; defaults to `#storybook-root` for Storybook and `#reflection-root` for portal cases.
 - `background`: CSS background matching the Figma frame fill.
 - `align`: `center` or `start`; `center` places the component in the middle of the frame.
 - `padding`: integer pixel padding inside the frame.
@@ -145,6 +174,7 @@ When the browser must force a state, Reflection requires effective animation sta
 Reports include `statePolicy` metadata:
 
 - `story-controlled` when no `browserState` is configured;
+- `portal-controlled` when the generated portal renders the state;
 - `browser-forced-with-stabilization` when Reflection applies hover/focus in the browser.
 
 ## Thresholds

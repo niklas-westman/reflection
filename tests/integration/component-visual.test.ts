@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -155,6 +155,21 @@ async function writeSolidPng(path: string, width: number, height: number, rgba: 
     }
   }
   await import('node:fs/promises').then(({ writeFile }) => writeFile(path, PNG.sync.write(png)));
+}
+
+async function writePortalEntry(path: string, rgba: [number, number, number, number]): Promise<void> {
+  await writeFile(
+    path,
+    `
+export function mountReflectionCase(input) {
+  input.root.style.width = "100%";
+  input.root.style.height = "100%";
+  input.root.style.background = "rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3] / 255})";
+  input.root.dataset.caseId = input.id;
+}
+`,
+    'utf8'
+  );
 }
 
 function readPixel(png: PNG, x: number, y: number): [number, number, number, number] {
@@ -375,6 +390,125 @@ describe('component visual contract', () => {
     const actual = PNG.sync.read(await readFile(store.resolveRunPath(actualArtifact?.path ?? '')));
     expect(readPixel(actual, 0, 0)).toEqual([255, 255, 255, 255]);
   }, 20_000);
+
+  it('captures portal component visuals with generated frame dimensions and source metadata', async () => {
+    const port = await getFreePort();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-component-portal-'));
+    const baselineRoot = await mkdtemp(join(tmpdir(), 'reflection-component-portal-baseline-'));
+    const entryPath = join(rootDir, 'portal-entry.js');
+    const baseline = 'components/button-primary-portal.png';
+    const viewportSize = { width: 320, height: 180 };
+    const framing = {
+      rootSelector: '#reflection-root',
+      background: '#0c2238',
+      align: 'start' as const,
+      padding: 0
+    };
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(baselineRoot, 'components'), { recursive: true }));
+    await writePortalEntry(entryPath, [12, 34, 56, 255]);
+    await writeSolidPng(join(baselineRoot, baseline), viewportSize.width, viewportSize.height, [12, 34, 56, 255]);
+    const store = await createArtifactStore({ rootDir, runId: 'component-visual-portal' });
+
+    const checks = await runComponentVisualContract(
+      {
+        portal: {
+          entry: entryPath,
+          readyUrl: `http://127.0.0.1:${port}`,
+          reuseExisting: false,
+          timeoutMs: 10_000
+        },
+        cases: [
+          {
+            id: 'button-primary-portal',
+            path: '/reflection/button/primary/light',
+            viewport: 'button-default',
+            viewportSize,
+            baselineRoot,
+            baseline,
+            framing,
+            threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
+            strict: true
+          }
+        ]
+      },
+      store
+    );
+
+    const visualCheck = checks.find((check) => check.id === 'visual.button-primary-portal');
+    expect(visualCheck).toMatchObject({
+      target: '/reflection/button/primary/light button-default',
+      status: 'pass',
+      metadata: {
+        classification: 'visual-match',
+        componentSource: 'portal',
+        path: '/reflection/button/primary/light',
+        portalUrl: `http://127.0.0.1:${port}/reflection/button/primary/light`,
+        viewport: 'button-default',
+        viewportSize,
+        framing,
+        statePolicy: 'portal-controlled'
+      }
+    });
+
+    const actualArtifact = visualCheck?.artifacts.find((artifact) => artifact.role === 'actual');
+    expect(actualArtifact).toBeDefined();
+    const actual = PNG.sync.read(await readFile(store.resolveRunPath(actualArtifact?.path ?? '')));
+    expect({ width: actual.width, height: actual.height }).toEqual(viewportSize);
+    expect(readPixel(actual, 0, 0)).toEqual([12, 34, 56, 255]);
+  }, 30_000);
+
+  it('produces portal expected, actual, and diff artifacts on mismatch', async () => {
+    const port = await getFreePort();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-component-portal-diff-'));
+    const baselineRoot = await mkdtemp(join(tmpdir(), 'reflection-component-portal-baseline-diff-'));
+    const entryPath = join(rootDir, 'portal-entry.js');
+    const baseline = 'components/button-primary-portal-diff.png';
+    const viewportSize = { width: 320, height: 180 };
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(baselineRoot, 'components'), { recursive: true }));
+    await writePortalEntry(entryPath, [12, 34, 56, 255]);
+    await writeSolidPng(join(baselineRoot, baseline), viewportSize.width, viewportSize.height, [255, 0, 0, 255]);
+    const store = await createArtifactStore({ rootDir, runId: 'component-visual-portal-diff' });
+
+    const checks = await runComponentVisualContract(
+      {
+        portal: {
+          entry: entryPath,
+          readyUrl: `http://127.0.0.1:${port}`,
+          reuseExisting: false,
+          timeoutMs: 10_000
+        },
+        cases: [
+          {
+            id: 'button-primary-portal-diff',
+            path: '/reflection/button/primary/light',
+            viewport: 'button-default',
+            viewportSize,
+            baselineRoot,
+            baseline,
+            framing: { background: '#0c2238', align: 'start', padding: 0 },
+            threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
+            strict: true
+          }
+        ]
+      },
+      store
+    );
+
+    const visualCheck = checks.find((check) => check.id === 'visual.button-primary-portal-diff');
+    expect(visualCheck).toMatchObject({
+      status: 'fail',
+      severity: 'blocking',
+      metadata: {
+        classification: 'visual-diff',
+        componentSource: 'portal'
+      }
+    });
+    expect(visualCheck?.artifacts.map((artifact) => [artifact.role, artifact.path])).toEqual([
+      ['expected', 'visual/button-primary-portal-diff/expected.png'],
+      ['actual', 'visual/button-primary-portal-diff/actual.png'],
+      ['diff', 'visual/button-primary-portal-diff/diff.png']
+    ]);
+  }, 30_000);
 
   it('fails strict component visuals when the baseline dimensions do not match the custom viewport size', async () => {
     const baseUrl = await startStorybookFixture();

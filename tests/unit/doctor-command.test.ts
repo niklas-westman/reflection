@@ -91,6 +91,35 @@ describe('doctorCommand', () => {
     expect(output).not.toContain('placeholder');
   });
 
+  it('summarizes portal component runtime and ready URL', async () => {
+    const configPath = await writeConfig(`
+      export default {
+        project: 'portal-fixture',
+        contracts: {
+          component: {
+            portal: {
+              entry: './tests/reflection/react-portal.tsx',
+              readyUrl: 'http://127.0.0.1:6106'
+            },
+            cases: [
+              {
+                id: 'button-primary',
+                path: '/reflection/button/primary/light',
+                viewportSize: { width: 390, height: 220 },
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      };
+    `);
+
+    const output = await captureDoctor({ config: configPath });
+
+    expect(output).toContain('Component contract: enabled, 1 case, runtime portal');
+    expect(output).toContain('Component portal: readyUrl http://127.0.0.1:6106, reuseExisting true, timeoutMs 60000');
+  });
+
   it('exits non-zero when an explicit config is missing', async () => {
     const missingPath = join(tmpdir(), `reflection-missing-${Date.now()}.config.mjs`);
 

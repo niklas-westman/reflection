@@ -215,6 +215,140 @@ describe('validateReflectionConfig', () => {
     });
   });
 
+  it('accepts portal component visual cases with fixed viewport size and framing', () => {
+    const config = validateReflectionConfig({
+      project: 'basic-react',
+      contracts: {
+        component: {
+          portal: {
+            entry: './tests/reflection/react-portal.tsx',
+            readyUrl: 'http://127.0.0.1:6106'
+          },
+          cases: [
+            {
+              id: 'button-primary',
+              path: '/reflection/button/primary/light',
+              viewport: 'button-default',
+              viewportSize: { width: 390, height: 220 },
+              framing: {
+                background: '#ffffff',
+                padding: 0
+              },
+              baseline: 'components/button-primary.png'
+            }
+          ]
+        }
+      }
+    });
+
+    expect(config.contracts.component?.portal).toMatchObject({
+      entry: './tests/reflection/react-portal.tsx',
+      readyUrl: 'http://127.0.0.1:6106',
+      reuseExisting: true,
+      timeoutMs: 60_000
+    });
+    expect(config.contracts.component?.cases[0]).toMatchObject({
+      path: '/reflection/button/primary/light',
+      viewport: 'button-default',
+      viewportSize: { width: 390, height: 220 },
+      framing: {
+        rootSelector: '#reflection-root',
+        background: '#ffffff',
+        align: 'center',
+        padding: 0
+      }
+    });
+  });
+
+  it('rejects portal component visual cases without viewportSize', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            portal: {
+              entry: './tests/reflection/react-portal.tsx',
+              readyUrl: 'http://127.0.0.1:6106'
+            },
+            cases: [
+              {
+                id: 'button-primary',
+                path: '/reflection/button/primary/light',
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/portal component visual cases require viewportSize/);
+  });
+
+  it('rejects component visual cases that define both storyId and path', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            storybook: {
+              command: 'pnpm storybook',
+              readyUrl: 'http://127.0.0.1:6006'
+            },
+            portal: {
+              entry: './tests/reflection/react-portal.tsx',
+              readyUrl: 'http://127.0.0.1:6106'
+            },
+            cases: [
+              {
+                id: 'button-primary',
+                storyId: 'button--primary',
+                path: '/reflection/button/primary/light',
+                viewportSize: { width: 390, height: 220 },
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/must define either storyId or path, not both/);
+  });
+
+  it('rejects component visual cases without the required runtime config', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            cases: [
+              {
+                id: 'button-primary',
+                storyId: 'button--primary',
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/storyId component visual cases require component.storybook/);
+
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            cases: [
+              {
+                id: 'button-primary',
+                path: '/reflection/button/primary/light',
+                viewportSize: { width: 390, height: 220 },
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/path component visual cases require component.portal/);
+  });
+
   it('accepts component framing for fixed Figma baselines', () => {
     const config = validateReflectionConfig({
       project: 'basic-react',

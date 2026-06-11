@@ -7,14 +7,18 @@ import type { CheckResult } from '../../core/report-schema.js';
 import type { ServerConfig } from '../../core/server-manager.js';
 import { createBrowserContext, type ViewportSize } from '../../integrations/playwright/context-factory.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
+import { startReflectionPortalServer, type PortalConfig } from '../../integrations/portal/server.js';
 import { startStorybookServer } from '../../integrations/storybook/server.js';
 import { resolveStoryUrl } from '../../integrations/storybook/story-url.js';
 import { comparePngImages } from '../visual/image-diff.js';
 import type { VisualThreshold } from '../visual/thresholds.js';
 
+export type ComponentSource = 'storybook' | 'portal';
+
 export type ComponentVisualCase = {
   id: string;
-  storyId: string;
+  storyId?: string | undefined;
+  path?: string | undefined;
   baseline: string;
   baselineRoot?: string | undefined;
   viewport?: string | undefined;
@@ -37,15 +41,20 @@ export type ComponentBrowserState = {
 };
 
 export type ComponentFraming = {
-  rootSelector: string;
+  rootSelector?: string | undefined;
   background?: string | undefined;
   align: 'center' | 'start';
   padding: number;
 };
 
+type EffectiveComponentFraming = ComponentFraming & {
+  rootSelector: string;
+};
+
 export type ComponentVisualContractConfig = {
   enabled?: boolean | undefined;
-  storybook: ServerConfig;
+  storybook?: ServerConfig | undefined;
+  portal?: PortalConfig | undefined;
   cases: ComponentVisualCase[];
 };
 
@@ -57,34 +66,90 @@ export async function runComponentVisualContract(
     return [];
   }
 
-  const storybook = await startStorybookServer(config.storybook, {
-    cwd: process.cwd(),
-    logPath: store.resolveRunPath('server/storybook.log')
-  });
+  const storybookCases = config.cases.filter(isStorybookCase);
+  const portalCases = config.cases.filter(isPortalCase);
+  if (storybookCases.length > 0 && !config.storybook) {
+    throw new Error('Storybook component visual cases require component.storybook.');
+  }
+  if (portalCases.length > 0 && !config.portal) {
+    throw new Error('Portal component visual cases require component.portal.');
+  }
+
+  const storybook =
+    storybookCases.length > 0 && config.storybook
+      ? await startStorybookServer(config.storybook, {
+          cwd: process.cwd(),
+          logPath: store.resolveRunPath('server/storybook.log')
+        })
+      : undefined;
+  const portal =
+    portalCases.length > 0 && config.portal
+      ? await startReflectionPortalServer(
+          config.portal,
+          portalCases.map((visualCase) => ({
+            id: visualCase.id,
+            path: visualCase.path,
+            viewport: visualCase.viewport ?? 'component',
+            viewportSize: visualCase.viewportSize,
+            framing: resolveComponentFraming(visualCase.framing, 'portal')
+          })),
+          {
+            cwd: process.cwd(),
+            rootDir: store.resolveRunPath('server/portal')
+          }
+        )
+      : undefined;
   const browser = await launchBrowser();
 
   try {
     const checks: CheckResult[] = [];
-    for (const visualCase of config.cases) {
+    for (const visualCase of storybookCases) {
+      if (!storybook) continue;
       const storyUrl = resolveStoryUrl(storybook.index, storybook.baseUrl, visualCase.storyId);
-      checks.push(await runComponentVisualCase({ visualCase, storyUrl, store, browser }));
+      checks.push(
+        await runComponentVisualCase({
+          visualCase,
+          componentSource: 'storybook',
+          targetUrl: storyUrl,
+          targetLabel: visualCase.storyId,
+          store,
+          browser
+        })
+      );
+    }
+    for (const visualCase of portalCases) {
+      if (!portal) continue;
+      const portalUrl = new URL(visualCase.path, portal.baseUrl).toString();
+      checks.push(
+        await runComponentVisualCase({
+          visualCase,
+          componentSource: 'portal',
+          targetUrl: portalUrl,
+          targetLabel: visualCase.path,
+          store,
+          browser
+        })
+      );
     }
     return checks;
   } finally {
     await browser.close();
-    await storybook.server.stop();
+    await storybook?.server.stop();
+    await portal?.server.stop();
   }
 }
 
 async function runComponentVisualCase(input: {
   visualCase: ComponentVisualCase;
-  storyUrl: string;
+  componentSource: ComponentSource;
+  targetUrl: string;
+  targetLabel: string;
   store: ArtifactStore;
   browser: Awaited<ReturnType<typeof launchBrowser>>;
 }): Promise<CheckResult> {
   const viewport = input.visualCase.viewport ?? 'component';
   const viewportSize = input.visualCase.viewportSize;
-  const target = `${input.visualCase.storyId} ${viewport}`;
+  const target = `${input.targetLabel} ${viewport}`;
   const baselinePath = resolveCaseBaselinePath(input.visualCase);
   const blocking = input.visualCase.blocking === true || input.visualCase.strict === true;
   const strict = input.visualCase.strict === true || input.visualCase.blocking === true;
@@ -95,74 +160,106 @@ async function runComponentVisualCase(input: {
       target,
       baselinePath: input.visualCase.baseline,
       blocking,
-      metadata: createComponentMetadata(input.visualCase)
+      metadata: {
+        ...createComponentSourceMetadata(input),
+        ...createComponentMetadata(input.visualCase, input.componentSource)
+      }
     });
   }
 
   const artifactBase = `visual/${input.visualCase.id}`;
   const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, await readFile(baselinePath));
-  const actualArtifact = await captureComponentScreenshot({
-    browser: input.browser,
-    store: input.store,
-    path: `${artifactBase}/actual.png`,
-    storyUrl: input.storyUrl,
-    viewport,
-    viewportSize,
-    framing: input.visualCase.framing,
-    browserState: input.visualCase.browserState
-  });
-  const diffRelativePath = `${artifactBase}/diff.png`;
-  const diffPath = input.store.resolveRunPath(diffRelativePath);
-  await mkdir(dirname(diffPath), { recursive: true });
 
-  const result = await comparePngImages({
-    expectedPath: baselinePath,
-    actualPath: input.store.resolveRunPath(actualArtifact.path),
-    diffPath,
-    ...(input.visualCase.threshold ? { threshold: input.visualCase.threshold } : {}),
-    strict
-  });
-  const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
-  const severity: CheckResult['severity'] = result.status === 'fail' && blocking ? 'blocking' : 'review';
-
-  return {
-    id: `visual.${input.visualCase.id}`,
-    suite: 'visual',
-    target,
-    status: result.status,
-    severity,
-    summary: createComponentVisualSummary(input.visualCase.id, result),
-    artifacts: [expectedArtifact, actualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
-    metadata: {
-      ...result,
-      storyId: input.visualCase.storyId,
-      storyUrl: input.storyUrl,
+  try {
+    const actualArtifact = await captureComponentScreenshot({
+      browser: input.browser,
+      store: input.store,
+      path: `${artifactBase}/actual.png`,
+      targetUrl: input.targetUrl,
+      componentSource: input.componentSource,
       viewport,
-      baselinePath: input.visualCase.baseline,
-      ...createComponentMetadata(input.visualCase)
-    },
-    ...(result.status === 'pass'
-      ? {}
-      : { suggestedNextStep: 'Inspect expected, actual, and diff artifacts. If intentional, update only this component visual baseline.' })
-  };
+      viewportSize,
+      framing: resolveComponentFraming(input.visualCase.framing, input.componentSource),
+      browserState: input.visualCase.browserState
+    });
+    const diffRelativePath = `${artifactBase}/diff.png`;
+    const diffPath = input.store.resolveRunPath(diffRelativePath);
+    await mkdir(dirname(diffPath), { recursive: true });
+
+    const result = await comparePngImages({
+      expectedPath: baselinePath,
+      actualPath: input.store.resolveRunPath(actualArtifact.path),
+      diffPath,
+      ...(input.visualCase.threshold ? { threshold: input.visualCase.threshold } : {}),
+      strict
+    });
+    const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
+    const severity: CheckResult['severity'] = result.status === 'fail' && blocking ? 'blocking' : 'review';
+
+    return {
+      id: `visual.${input.visualCase.id}`,
+      suite: 'visual',
+      target,
+      status: result.status,
+      severity,
+      summary: createComponentVisualSummary(input.visualCase.id, result),
+      artifacts: [expectedArtifact, actualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
+      metadata: {
+        ...result,
+        ...createComponentSourceMetadata(input),
+        viewport,
+        baselinePath: input.visualCase.baseline,
+        ...createComponentMetadata(input.visualCase, input.componentSource)
+      },
+      ...(result.status === 'pass'
+        ? {}
+        : { suggestedNextStep: 'Inspect expected, actual, and diff artifacts. If intentional, update only this component visual baseline.' })
+    };
+  } catch (error) {
+    const summary = `${input.visualCase.id} component visual capture failed: ${error instanceof Error ? error.message : String(error)}`;
+    return {
+      id: `visual.${input.visualCase.id}`,
+      suite: 'visual',
+      target,
+      status: 'fail',
+      severity: blocking ? 'blocking' : 'review',
+      summary,
+      artifacts: [expectedArtifact],
+      metadata: {
+        classification: 'tool-error',
+        ...createComponentSourceMetadata(input),
+        viewport,
+        baselinePath: input.visualCase.baseline,
+        ...createComponentMetadata(input.visualCase, input.componentSource)
+      },
+      suggestedNextStep: 'Fix the component visual runtime setup, then rerun Reflection.'
+    };
+  }
 }
 
 async function captureComponentScreenshot(input: {
   browser: Awaited<ReturnType<typeof launchBrowser>>;
   store: ArtifactStore;
   path: string;
-  storyUrl: string;
+  targetUrl: string;
+  componentSource: ComponentSource;
   viewport: string;
   viewportSize?: ViewportSize | undefined;
-  framing?: ComponentFraming | undefined;
+  framing?: EffectiveComponentFraming | undefined;
   browserState?: ComponentBrowserState | undefined;
 }) {
   const context = await createBrowserContext(input.browser, input.viewport, input.viewportSize);
   try {
     const page = await context.newPage();
-    await page.goto(input.storyUrl, { waitUntil: 'domcontentloaded' });
+    await page.goto(input.targetUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
-    if (input.framing) {
+    if (input.componentSource === 'portal') {
+      await waitForPortalReady(page);
+      if (!input.viewportSize) {
+        throw new Error('Portal component visual cases require viewportSize.');
+      }
+      await assertPortalFrameDimensions(page, input.viewportSize);
+    } else if (input.framing) {
       await applyComponentFraming(page, input.framing);
     }
     if (input.browserState) {
@@ -174,7 +271,7 @@ async function captureComponentScreenshot(input: {
   }
 }
 
-async function applyComponentFraming(page: Page, framing: ComponentFraming): Promise<void> {
+async function applyComponentFraming(page: Page, framing: EffectiveComponentFraming): Promise<void> {
   await page.locator(framing.rootSelector).waitFor({ state: 'attached', timeout: 2_000 });
 
   const background = framing.background ? `background: ${framing.background} !important;` : '';
@@ -211,6 +308,38 @@ async function applyComponentFraming(page: Page, framing: ComponentFraming): Pro
   });
 }
 
+async function waitForPortalReady(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const portalState = globalThis as unknown as { __reflectionPortalReady?: boolean; __reflectionPortalError?: string };
+      return portalState.__reflectionPortalReady === true || typeof portalState.__reflectionPortalError === 'string';
+    },
+    undefined,
+    { timeout: 5_000 }
+  );
+
+  const portalError = await page.evaluate(() => {
+    const portalState = globalThis as unknown as { __reflectionPortalError?: string };
+    return portalState.__reflectionPortalError;
+  });
+  if (portalError) {
+    throw new Error(portalError);
+  }
+}
+
+async function assertPortalFrameDimensions(page: Page, viewportSize: ViewportSize): Promise<void> {
+  const frame = await page.locator('#reflection-root').boundingBox({ timeout: 2_000 });
+  if (!frame) {
+    throw new Error('Reflection portal frame #reflection-root was not found.');
+  }
+
+  if (frame.width !== viewportSize.width || frame.height !== viewportSize.height) {
+    throw new Error(
+      `Reflection portal frame rendered ${frame.width}x${frame.height}, expected ${viewportSize.width}x${viewportSize.height}.`
+    );
+  }
+}
+
 async function applyBrowserState(page: Page, browserState: ComponentBrowserState): Promise<void> {
   if (browserState.animationStabilization.disableAnimations !== false) {
     await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; }' });
@@ -227,19 +356,43 @@ async function applyBrowserState(page: Page, browserState: ComponentBrowserState
   }
 }
 
-function createComponentStateMetadata(visualCase: ComponentVisualCase): Record<string, unknown> {
+function createComponentStateMetadata(visualCase: ComponentVisualCase, componentSource: ComponentSource): Record<string, unknown> {
   return {
-    statePolicy: visualCase.browserState ? 'browser-forced-with-stabilization' : 'story-controlled',
+    statePolicy: visualCase.browserState ? 'browser-forced-with-stabilization' : componentSource === 'portal' ? 'portal-controlled' : 'story-controlled',
     ...(visualCase.stateNote ? { stateNote: visualCase.stateNote } : {}),
     ...(visualCase.browserState ? { browserState: visualCase.browserState } : {})
   };
 }
 
-function createComponentMetadata(visualCase: ComponentVisualCase): Record<string, unknown> {
+function createComponentMetadata(visualCase: ComponentVisualCase, componentSource: ComponentSource): Record<string, unknown> {
+  const framing = resolveComponentFraming(visualCase.framing, componentSource);
   return {
     ...(visualCase.viewportSize ? { viewportSize: visualCase.viewportSize } : {}),
-    ...(visualCase.framing ? { framing: visualCase.framing } : {}),
-    ...createComponentStateMetadata(visualCase)
+    ...(framing ? { framing } : {}),
+    ...createComponentStateMetadata(visualCase, componentSource)
+  };
+}
+
+function createComponentSourceMetadata(input: { visualCase: ComponentVisualCase; componentSource: ComponentSource; targetUrl: string }): Record<string, unknown> {
+  return {
+    componentSource: input.componentSource,
+    ...(input.visualCase.storyId ? { storyId: input.visualCase.storyId, storyUrl: input.targetUrl } : {}),
+    ...(input.visualCase.path ? { path: input.visualCase.path, portalUrl: input.targetUrl } : {})
+  };
+}
+
+function resolveComponentFraming(framing: ComponentFraming | undefined, componentSource: ComponentSource): EffectiveComponentFraming | undefined {
+  if (!framing && componentSource === 'portal') {
+    return { rootSelector: '#reflection-root', align: 'center', padding: 0 };
+  }
+
+  if (!framing) {
+    return undefined;
+  }
+
+  return {
+    ...framing,
+    rootSelector: framing.rootSelector ?? (componentSource === 'portal' ? '#reflection-root' : '#storybook-root')
   };
 }
 
@@ -269,4 +422,12 @@ function createComponentVisualSummary(id: string, result: { classification: stri
   return `${id} differs from approved component visual baseline by ${(result.diffRatio * 100).toFixed(2)}% (${result.diffPixels} pixels)${
     result.thresholdReason ? `, exceeding ${result.thresholdReason}` : ''
   }.`;
+}
+
+function isStorybookCase(visualCase: ComponentVisualCase): visualCase is ComponentVisualCase & { storyId: string } {
+  return typeof visualCase.storyId === 'string';
+}
+
+function isPortalCase(visualCase: ComponentVisualCase): visualCase is ComponentVisualCase & { path: string; viewportSize: ViewportSize } {
+  return typeof visualCase.path === 'string' && visualCase.viewportSize !== undefined;
 }

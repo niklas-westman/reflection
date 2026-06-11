@@ -30,7 +30,7 @@ The IR currently supports four families:
 | --- | --- | --- | --- |
 | `browser-route` | browser routes | `smoke`, `full` | Render a route and evaluate DOM/layout/console expectations. |
 | `route-visual` | browser visual smoke cases | `smoke`, `full` | Compare route screenshots against read-only baselines. |
-| `component-visual` | Storybook component cases | `visual`, `full` | Compare component story screenshots against read-only baselines. |
+| `component-visual` | Storybook or portal component cases | `visual`, `full` | Compare component screenshots against read-only baselines. |
 | `design-command` | design command checks | `design`, `full` | Run project-owned design contract commands. |
 
 All targets include:
@@ -59,20 +59,20 @@ console.log(ir.targets.map((target) => `${target.family}:${target.id}`));
 // ]
 ```
 
-The compiler preserves visual metadata that matters to later review, including zero-valued thresholds, explicit component `viewportSize` values, and component `framing`. Do not use truthiness checks when copying optional numeric metadata; use explicit `!== undefined` checks so values like `0` survive.
+The compiler preserves visual metadata that matters to later review, including component source (`storybook` or `portal`), portal paths, story ids, zero-valued thresholds, explicit component `viewportSize` values, and component `framing`. Do not use truthiness checks when copying optional numeric metadata; use explicit `!== undefined` checks so values like `0` survive.
 
 ## Adapter contract
 
 Adapters should compile their input into the same target shape and mark targets with `source: 'adapter'`.
 
-Adapters must not make core runners aware of the source format. The runner should receive normalized route/story/visual/command information and should not branch on adapter names.
+Adapters must not make core runners aware of the source format. The runner should receive normalized route/component/visual/command information and should not branch on adapter names.
 
 A good adapter is:
 
 - **optional** — normal Reflection config works without it;
 - **validated** — malformed adapter input fails before runner execution;
 - **neutral** — no external product names leak into core commands or reports unless the user explicitly names their own target ids;
-- **lossless enough for review** — route paths, viewports, component viewport sizes, component framing, expectations, baselines, thresholds, and blocking semantics are preserved in IR.
+- **lossless enough for review** — route paths, component portal paths or Storybook ids, viewports, component viewport sizes, component framing, expectations, baselines, thresholds, and blocking semantics are preserved in IR.
 
 ## Route manifest adapter proof
 

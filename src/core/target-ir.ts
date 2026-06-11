@@ -47,9 +47,11 @@ export type RouteVisualTarget = TargetBase & {
 
 export type ComponentVisualTarget = TargetBase & {
   family: 'component-visual';
-  story: {
-    storyId: string;
-    statePolicy: 'story-controlled' | 'browser-forced-with-stabilization';
+  component: {
+    source: 'storybook' | 'portal';
+    storyId?: string | undefined;
+    path?: string | undefined;
+    statePolicy: 'story-controlled' | 'portal-controlled' | 'browser-forced-with-stabilization';
     stateNote?: string | undefined;
     browserState?: unknown;
   };
@@ -124,9 +126,15 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
         source: 'reflection-config',
         runModes: ['visual', 'full'],
         blocking: componentCase.blocking === true || componentCase.strict === true,
-        story: {
-          storyId: componentCase.storyId,
-          statePolicy: componentCase.browserState ? 'browser-forced-with-stabilization' : 'story-controlled',
+        component: {
+          source: componentCase.path ? 'portal' : 'storybook',
+          ...(componentCase.storyId ? { storyId: componentCase.storyId } : {}),
+          ...(componentCase.path ? { path: componentCase.path } : {}),
+          statePolicy: componentCase.browserState
+            ? 'browser-forced-with-stabilization'
+            : componentCase.path
+              ? 'portal-controlled'
+              : 'story-controlled',
           ...(componentCase.stateNote ? { stateNote: componentCase.stateNote } : {}),
           ...(componentCase.browserState ? { browserState: componentCase.browserState } : {})
         },

@@ -1,6 +1,6 @@
 {
   "name": "reflection-check",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "CLI for evidence-backed rendered UI validation.",
   "license": "MIT",
   "type": "module",
@@ -45,8 +45,9 @@
     "commander": "^14.0.3",
     "jiti": "^2.7.0",
     "pixelmatch": "^7.2.0",
-    "pngjs": "^7.0.0",
     "playwright": "^1.60.0",
+    "pngjs": "^7.0.0",
+    "vite": "^8.0.16",
     "zod": "^4.4.3"
   },
   "devDependencies": {

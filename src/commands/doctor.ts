@@ -115,11 +115,34 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
   );
 
   const component = config.contracts.component;
-  console.log(
-    component
-      ? `Component contract: ${component.enabled === false ? 'disabled' : 'enabled'}, ${formatCount(component.cases.length, 'case')}`
-      : 'Component contract: not configured'
-  );
+  if (component) {
+    const runtime = describeComponentRuntime(component);
+    console.log(`Component contract: ${component.enabled === false ? 'disabled' : 'enabled'}, ${formatCount(component.cases.length, 'case')}, runtime ${runtime}`);
+    if (component.portal) {
+      console.log(`Component portal: readyUrl ${component.portal.readyUrl}, reuseExisting ${component.portal.reuseExisting}, timeoutMs ${component.portal.timeoutMs}`);
+    }
+  } else {
+    console.log('Component contract: not configured');
+  }
+}
+
+function describeComponentRuntime(component: NonNullable<ReflectionConfig['contracts']['component']>): 'storybook' | 'portal' | 'mixed' | 'none' {
+  const hasStorybookCases = component.cases.some((visualCase) => Boolean(visualCase.storyId));
+  const hasPortalCases = component.cases.some((visualCase) => Boolean(visualCase.path));
+
+  if (hasStorybookCases && hasPortalCases) {
+    return 'mixed';
+  }
+
+  if (hasPortalCases) {
+    return 'portal';
+  }
+
+  if (hasStorybookCases) {
+    return 'storybook';
+  }
+
+  return 'none';
 }
 
 async function checkConfiguredServerReachability(config: ReflectionConfig): Promise<string | undefined> {

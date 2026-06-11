@@ -187,6 +187,10 @@ Each design command runs as a project-owned process and writes stdout/stderr evi
 
 ## Component visual contract
 
+Component visuals can render from Storybook or from a Reflection-generated portal. Storybook remains useful for existing projects; the portal is intended for strict design-system baselines where a dedicated route should render exactly one component state.
+
+### Storybook runtime
+
 ```ts
 component: {
   enabled: true,
@@ -229,9 +233,58 @@ component: {
 
 Component visual cases resolve Storybook `/index.json`, open the story iframe, capture an actual screenshot, and compare it against the configured baseline.
 
-`viewport` accepts the built-in presets (`desktop`, `tablet`, `mobile`, `component`) and any custom string label. When `viewportSize` is provided, Reflection captures the Storybook iframe at that exact `{ width, height }` instead of resolving the string preset. Use this for exported Figma baselines: the PNG dimensions must match `viewportSize` exactly or the check fails with `visual-dimension-mismatch`.
+### Generated portal runtime
 
-`framing` lets a component visual case normalize the Storybook canvas before the screenshot:
+```ts
+component: {
+  enabled: true,
+  portal: {
+    entry: './tests/reflection/react-portal.tsx',
+    readyUrl: 'http://127.0.0.1:6106',
+    reuseExisting: true,
+    timeoutMs: 60_000,
+    viteConfig: './vite.config.ts'
+  },
+  cases: [
+    {
+      id: 'primary-button',
+      path: '/reflection/button/primary/light',
+      viewport: 'button-default',
+      viewportSize: { width: 390, height: 220 },
+      framing: {
+        rootSelector: '#reflection-root',
+        background: '#ffffff',
+        align: 'center',
+        padding: 0
+      },
+      baselineRoot: 'tests/fixtures/baselines',
+      baseline: 'components/button/primary.chromium-linux.light.png',
+      threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
+      strict: true
+    }
+  ]
+}
+```
+
+Portal cases use `path` instead of `storyId`. Reflection generates a Vite-backed portal for the run, creates `#reflection-root` and `#reflection-case-root`, imports the configured `portal.entry`, and calls `mountReflectionCase` for the matching path.
+
+The portal entry exports a mount function:
+
+```ts
+import type { ReflectionPortalMountInput } from 'reflection-check';
+
+export function mountReflectionCase(input: ReflectionPortalMountInput) {
+  input.root.textContent = input.id;
+}
+```
+
+Portal cases must define `viewportSize`. Reflection uses that exact size for the browser viewport and for the generated portal frame. This keeps the config as the source of truth for frame dimensions.
+
+### Shared case fields
+
+`viewport` accepts the built-in presets (`desktop`, `tablet`, `mobile`, `component`) and any custom string label. When `viewportSize` is provided, Reflection captures at that exact `{ width, height }` instead of resolving the string preset. Use this for exported Figma baselines: the PNG dimensions must match `viewportSize` exactly or the check fails with `visual-dimension-mismatch`.
+
+`framing` lets a component visual case normalize the runtime frame before the screenshot:
 
 ```ts
 framing: {
@@ -242,11 +295,18 @@ framing: {
 }
 ```
 
-Use it when the approved baseline is a fixed Figma frame: `background` should match the Figma frame fill, `align: 'center'` centers the story root content, and `padding` reserves explicit frame padding. `rootSelector` defaults to `#storybook-root`.
+Use it when the approved baseline is a fixed Figma frame: `background` should match the Figma frame fill, `align: 'center'` centers the component in the frame, and `padding` reserves explicit frame padding. `rootSelector` defaults to `#storybook-root` for Storybook cases and `#reflection-root` for portal cases.
+
+Case/runtime rules:
+
+- Storybook cases use `storyId` and require `component.storybook`.
+- Portal cases use `path` and require `component.portal`.
+- A case cannot define both `storyId` and `path`.
+- Portal cases require `viewportSize`; strict Figma baselines should not rely on implicit preset dimensions.
 
 Pseudo-state policy:
 
-- Prefer story-controlled variants for hover, focus, active, selected, open, and disabled states.
+- Prefer runtime-controlled variants for hover, focus, active, selected, open, and disabled states.
 - If a browser-forced state is necessary, configure `browserState` with `kind: 'hover' | 'focus'`, a selector, and effective animation stabilization.
 - Reflection records `statePolicy` metadata in reports so reviewers can tell whether the state came from the story or was forced in the browser.
 

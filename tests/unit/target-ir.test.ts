@@ -86,7 +86,7 @@ describe('compileReflectionTargets', () => {
       family: 'component-visual',
       id: 'button-primary',
       runModes: ['visual', 'full'],
-      story: { storyId: 'button--primary', statePolicy: 'story-controlled', stateNote: 'Use story args for state.' },
+      component: { source: 'storybook', storyId: 'button--primary', statePolicy: 'story-controlled', stateNote: 'Use story args for state.' },
       visual: {
         baseline: 'components/button-primary.png',
         viewport: 'button-default',
@@ -101,6 +101,51 @@ describe('compileReflectionTargets', () => {
       runModes: ['design', 'full'],
       blocking: true,
       command: { command: 'pnpm tokens:check' }
+    });
+  });
+
+  it('compiles portal component visuals with path and frame metadata', () => {
+    const config = validateReflectionConfig({
+      project: 'portal-product',
+      contracts: {
+        component: {
+          portal: {
+            entry: './tests/reflection/react-portal.tsx',
+            readyUrl: 'http://127.0.0.1:6106'
+          },
+          cases: [
+            {
+              id: 'button-primary',
+              path: '/reflection/button/primary/light',
+              viewport: 'button-default',
+              viewportSize: { width: 390, height: 220 },
+              framing: { background: '#ffffff', padding: 0 },
+              baseline: 'components/button-primary.png',
+              threshold: { maxDiffPixels: 0 },
+              strict: true
+            }
+          ]
+        }
+      }
+    });
+
+    expect(compileReflectionTargets(config).targets[0]).toMatchObject({
+      family: 'component-visual',
+      id: 'button-primary',
+      runModes: ['visual', 'full'],
+      blocking: true,
+      component: {
+        source: 'portal',
+        path: '/reflection/button/primary/light',
+        statePolicy: 'portal-controlled'
+      },
+      visual: {
+        baseline: 'components/button-primary.png',
+        viewport: 'button-default',
+        viewportSize: { width: 390, height: 220 },
+        framing: { rootSelector: '#reflection-root', background: '#ffffff', align: 'center', padding: 0 },
+        threshold: { maxDiffPixels: 0 }
+      }
     });
   });
 

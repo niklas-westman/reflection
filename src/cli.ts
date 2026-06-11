@@ -16,7 +16,7 @@ export function createCli(): Command {
   program
     .name('reflection')
     .description('Evidence-backed rendered UI validation.')
-    .version('0.0.4')
+    .version('0.0.5')
     .configureOutput({
       outputError: (message, write) => write(message)
     });

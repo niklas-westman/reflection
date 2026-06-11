@@ -44,9 +44,12 @@ Typical files:
   server/
     app.log
     storybook.log
+    portal/
+      index.html
+      reflection-portal.js
 ```
 
-Not every run contains every folder. For example, a browser-only run may have screenshots but no component visual artifacts.
+Not every run contains every folder. For example, a browser-only run may have screenshots but no component visual artifacts. Portal component runs keep the generated wrapper under `server/portal/` so the exact runtime shell used for the capture is available for inspection.
 
 ## `report.json`
 
