@@ -121,12 +121,27 @@ function ConsoleErrorRoute() {
   );
 }
 
+function AuthRoute() {
+  const user = window.localStorage.getItem('reflection:auth-user');
+  const session = window.sessionStorage.getItem('reflection:auth-session');
+  const authenticated = user === 'fixture-user-secret' && session === 'fixture-session-secret';
+
+  return (
+    <main style={pageStyle}>
+      <section style={panelStyle}>
+        <h1>{authenticated ? `Authenticated fixture-user` : 'Unauthenticated fixture'}</h1>
+        <p>Storage-backed auth fixture for Reflection browser setup.</p>
+      </section>
+    </main>
+  );
+}
+
 function NotFoundRoute() {
   return (
     <main style={pageStyle}>
       <section style={panelStyle}>
         <h1>Fixture route not found</h1>
-        <p>Use /login, /overflow, or /console-error.</p>
+        <p>Use /login, /auth, /overflow, or /console-error.</p>
       </section>
     </main>
   );
@@ -141,6 +156,8 @@ function App() {
       return <OverflowRoute />;
     case '/console-error':
       return <ConsoleErrorRoute />;
+    case '/auth':
+      return <AuthRoute />;
     default:
       return <NotFoundRoute />;
   }

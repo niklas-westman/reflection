@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createReport,
+  deriveSuggestedNextSteps,
   deriveExitCode,
   deriveReportStatus,
   summarizeChecks,
@@ -68,6 +70,73 @@ describe('report status derivation', () => {
       blockingFailures: 1,
       reviewItems: 1
     });
+  });
+});
+
+describe('deriveSuggestedNextSteps', () => {
+  it('suggests fixing named blocking checks before visual updates', () => {
+    const steps = deriveSuggestedNextSteps([
+      check({ id: 'browser.admin.mobile', status: 'fail', severity: 'blocking', summary: 'Admin route leaked private UI.' }),
+      check({ id: 'visual.login-mobile', suite: 'visual', status: 'warn', severity: 'review', summary: 'Login visual changed.' })
+    ]);
+
+    expect(steps).toEqual([
+      {
+        kind: 'fix',
+        summary: 'Fix blocking checks before updating baselines: browser.admin.mobile.'
+      }
+    ]);
+  });
+
+  it('suggests dry-run update for review-only visual diffs', () => {
+    const steps = deriveSuggestedNextSteps([
+      check({ status: 'pass', severity: 'blocking' }),
+      check({ id: 'visual.login-mobile', suite: 'visual', status: 'warn', severity: 'review', summary: 'Login visual changed.' })
+    ]);
+
+    expect(steps).toEqual([
+      {
+        kind: 'review',
+        summary: 'Inspect review-only visual artifacts, then run `reflection update --dry-run --case <caseId> --from-run latest` for intentional route visual changes.'
+      }
+    ]);
+  });
+
+  it('suggests baseline creation when visual checks are missing approved baselines', () => {
+    const steps = deriveSuggestedNextSteps([
+      check({
+        id: 'visual.login-mobile',
+        suite: 'visual',
+        status: 'warn',
+        severity: 'review',
+        summary: 'Missing approved visual baseline.',
+        metadata: { classification: 'missing-baseline' }
+      })
+    ]);
+
+    expect(steps[0]?.summary).toContain('Review actual screenshots for missing baselines');
+  });
+
+  it('suggests no action when all checks pass', () => {
+    expect(deriveSuggestedNextSteps([check({ status: 'pass', severity: 'blocking' })])).toEqual([
+      { kind: 'pass', summary: 'No action required; expand route or visual coverage when useful.' }
+    ]);
+  });
+
+  it('uses derived suggestions by default when creating reports', () => {
+    const report = createReport({
+      runId: 'derived-steps',
+      project: 'report-fixture',
+      startedAt: new Date('2026-05-31T12:00:00.000Z'),
+      finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+      mode: 'smoke',
+      ci: false,
+      checks: [check({ status: 'pass', severity: 'blocking' })]
+    });
+
+    expect(report.suggestedNextSteps).toEqual([
+      { kind: 'pass', summary: 'No action required; expand route or visual coverage when useful.' }
+    ]);
   });
 });
 

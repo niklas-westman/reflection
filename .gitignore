@@ -6,6 +6,7 @@ dist/
 artifacts/reflection/
 coverage/
 *.log
+*.tgz
 .DS_Store
 
 # Keep reviewed baselines if repo-owned baseline mode is enabled later.

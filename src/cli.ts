@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Command, CommanderError } from 'commander';
 import { doctorCommand } from './commands/doctor.js';
 import { gcCommand } from './commands/gc.js';
+import { initCommand } from './commands/init.js';
 import { reviewCommand } from './commands/review.js';
 import { runCommand } from './commands/run.js';
 import { updateCommand } from './commands/update.js';
@@ -14,9 +16,18 @@ export function createCli(): Command {
   program
     .name('reflection')
     .description('Evidence-backed rendered UI validation.')
-    .version('0.0.0')
+    .version('0.0.4')
     .configureOutput({
       outputError: (message, write) => write(message)
+    });
+
+  program
+    .command('init')
+    .description('Preview Reflection setup for this project.')
+    .option('--dry-run', 'Show proposed setup without writing files')
+    .option('--preset <preset>', 'Setup preset: vite-react', 'vite-react')
+    .action(async (options: { dryRun?: boolean; preset?: string }) => {
+      await initCommand(options);
     });
 
   program
@@ -71,7 +82,8 @@ export function createCli(): Command {
     .command('doctor')
     .description('Check whether Reflection can run correctly in this project.')
     .option('--config <path>', 'Path to reflection.config.ts')
-    .action(async (options: { config?: string }) => {
+    .option('--check-server', 'Check configured server readyUrl without starting the server')
+    .action(async (options: { config?: string; checkServer?: boolean }) => {
       await doctorCommand(options);
     });
 
@@ -96,7 +108,7 @@ async function main(): Promise<void> {
   }
 }
 
-const executedPath = process.argv[1] ? fileURLToPath(import.meta.url) === process.argv[1] : false;
+const executedPath = process.argv[1] ? realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]) : false;
 
 if (executedPath) {
   void main();

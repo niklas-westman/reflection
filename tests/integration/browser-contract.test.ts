@@ -12,7 +12,7 @@ async function startBasicReactFixture(): Promise<string> {
   const readyUrl = 'http://127.0.0.1:5173';
   const server = await startManagedServer(
     {
-      command: 'corepack pnpm dev --host 127.0.0.1',
+      command: 'pnpm dev --host 127.0.0.1',
       readyUrl,
       reuseExisting: true,
       timeoutMs: 10_000
@@ -106,5 +106,54 @@ describe('browser contract', () => {
     expect(checks[1]?.metadata.classification).toBe('console-error');
     expect(checks[1]?.summary).toContain('console error');
     expect(checks.every((check) => check.artifacts.some((artifact) => artifact.type === 'screenshot'))).toBe(true);
+  }, 20_000);
+
+  it('applies browser and route storage setup before route navigation without leaking values to metadata', async () => {
+    const baseUrl = await startBasicReactFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-browser-contract-setup-'));
+    const store = await createArtifactStore({ rootDir, runId: 'browser-setup' });
+
+    const checks = await runBrowserContract(
+      {
+        baseUrl,
+        blocking: true,
+        setup: {
+          localStorage: {
+            'reflection:auth-user': 'fixture-user-secret'
+          }
+        },
+        routes: [
+          {
+            id: 'auth',
+            path: '/auth',
+            viewports: ['desktop'],
+            setup: {
+              sessionStorage: {
+                'reflection:auth-session': 'fixture-session-secret'
+              }
+            },
+            expects: [{ text: 'Authenticated fixture-user' }, { noConsoleErrors: true }]
+          }
+        ]
+      },
+      store
+    );
+
+    expect(checks).toHaveLength(1);
+    const check = checks[0];
+    expect(check?.status).toBe('pass');
+    expect(check?.metadata.setup).toEqual({
+      localStorageKeys: ['reflection:auth-user'],
+      sessionStorageKeys: ['reflection:auth-session']
+    });
+    expect(JSON.stringify(check?.metadata)).not.toContain('fixture-user-secret');
+    expect(JSON.stringify(check?.metadata)).not.toContain('fixture-session-secret');
+
+    const metadataArtifact = check?.artifacts.find((artifact) => artifact.type === 'metadata' && artifact.path.endsWith('/metadata.json'));
+    const metadata = await readFile(store.resolveRunPath(metadataArtifact?.path ?? ''), 'utf8');
+    expect(metadata).toContain('reflection:auth-user');
+    expect(metadata).toContain('reflection:auth-session');
+    expect(metadata).not.toContain('fixture-user-secret');
+    expect(metadata).not.toContain('fixture-session-secret');
   }, 20_000);
 });

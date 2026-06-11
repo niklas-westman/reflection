@@ -6,24 +6,42 @@ Use this guide when adding Reflection to a new repository manually.
 
 ## 1. Install
 
-Reflection is currently private and developed in this repository. In a consuming repo, install it the same way you install internal tooling once it is published or linked.
-
-For local development inside this repository:
+Install the package as a development dependency:
 
 ```bash
-corepack pnpm install
-corepack pnpm build
-node dist/cli.js doctor
+pnpm add -D reflection-check
 ```
 
-A package install should expose the CLI as:
+Then verify the CLI is available:
 
 ```bash
-reflection doctor
-reflection run
-reflection review
-reflection update
-reflection gc
+pnpm exec reflection doctor
+```
+
+The package install exposes both `reflection` and `reflection-check` binaries. The docs use `reflection` as the primary command.
+
+You can preview the setup Reflection would suggest without writing files:
+
+```bash
+pnpm exec reflection init --dry-run --preset vite-react
+```
+
+`init --dry-run` prints proposed install commands, config, and script guidance. It is read-only; creating or updating files still happens manually.
+
+For local tarball testing before a registry publish, create and install a packed artifact instead.
+
+From the Reflection repository:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm pack
+```
+
+From the consuming repository:
+
+```bash
+pnpm add -D /absolute/path/to/reflection/reflection-check-0.0.1.tgz
+pnpm exec reflection doctor
 ```
 
 ## 2. Add a minimal config
@@ -31,7 +49,7 @@ reflection gc
 Create `reflection.config.ts` at the repository root:
 
 ```ts
-import { defineReflection } from 'reflection';
+import { defineReflection } from 'reflection-check';
 
 export default defineReflection({
   project: 'my-app',
@@ -64,7 +82,7 @@ export default defineReflection({
 });
 ```
 
-If the package is not yet published, use the in-repo helper import path shown in `examples/basic-react/reflection.config.ts` while developing Reflection itself.
+During Reflection repository development, the in-repo fixture imports the helper from source instead of the published package.
 
 ## 3. Run the local validation loop
 
@@ -74,18 +92,24 @@ reflection run --config reflection.config.ts --mode smoke
 reflection review --latest
 ```
 
+Pass the config to `doctor` when you want a read-only preflight of the consuming repository setup:
+
+```bash
+reflection doctor --config reflection.config.ts
+```
+
 During Reflection development, use the built CLI:
 
 ```bash
-corepack pnpm build
-node dist/cli.js doctor
+pnpm build
+node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke
 node dist/cli.js review --latest
 ```
 
 `reflection run` writes reports and artifacts under `.reflection/runs/<run-id>/` by default.
 
-`reflection doctor` is currently a lightweight setup check. The configured project contract is exercised by `reflection run --config reflection.config.ts ...`.
+`reflection doctor --config` validates that the config can be loaded, summarizes enabled contracts and server settings, checks local runtime readiness, and does not start servers or mutate baselines. Use `--check-server` when you explicitly want it to probe the configured server `readyUrl` without starting the server.
 
 Important files:
 
@@ -137,7 +161,7 @@ Use Reflection as the UI evidence gate before claiming frontend work is complete
 Run:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```

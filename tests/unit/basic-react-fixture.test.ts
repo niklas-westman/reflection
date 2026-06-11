@@ -48,7 +48,7 @@ describe('basic React example fixture', () => {
 
     expect(config).toContain("project: 'basic-react'");
     expect(config).toContain("baseUrl: 'http://127.0.0.1:5173'");
-    expect(config).toContain("command: 'corepack pnpm --dir examples/basic-react dev --host 127.0.0.1'");
+    expect(config).toContain("command: 'pnpm --dir examples/basic-react dev --host 127.0.0.1'");
     expect(config).toContain("readyUrl: 'http://127.0.0.1:5173'");
     expect(config).toContain("id: 'login'");
     expect(config).toContain("path: '/login'");

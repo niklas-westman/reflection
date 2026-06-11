@@ -96,7 +96,13 @@ component: {
     {
       id: 'button-primary',
       storyId: 'atoms-button--primary',
-      viewport: 'component',
+      viewport: 'button-default',
+      viewportSize: { width: 390, height: 220 },
+      framing: {
+        background: '#ffffff',
+        align: 'center',
+        padding: 0
+      },
       baselineRoot: 'tests/fixtures/baselines',
       baseline: 'components/button/primary.chromium-linux.light.png',
       threshold: { maxDiffPixelRatio: 0.005 }
@@ -104,6 +110,15 @@ component: {
   ]
 }
 ```
+
+For component baselines exported from a design tool, treat `viewportSize` and `framing` as part of the visual contract. The exported PNG width/height and the runtime Storybook screenshot width/height must be identical. `viewport` may be a built-in preset such as `component` or a semantic custom label such as `button-default`; when `viewportSize` is present, the explicit dimensions win.
+
+`framing` is optional and only affects the screenshot when configured. It applies fixed canvas styles before capture so a Storybook story can match a Figma frame:
+
+- `rootSelector`: story root to frame; defaults to `#storybook-root`.
+- `background`: CSS background matching the Figma frame fill.
+- `align`: `center` or `start`; `center` places the component in the middle of the frame.
+- `padding`: integer pixel padding inside the frame.
 
 ### Pseudo states
 

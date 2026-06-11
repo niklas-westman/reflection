@@ -33,6 +33,18 @@ reflection update
 reflection doctor
 ```
 
+## Install
+
+```bash
+pnpm add -D reflection-check
+```
+
+Use the package root helper in `reflection.config.ts`:
+
+```ts
+import { defineReflection } from 'reflection-check';
+```
+
 ## Local development
 
 ```bash

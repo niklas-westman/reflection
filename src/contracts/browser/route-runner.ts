@@ -11,6 +11,12 @@ export type BrowserRoute = {
   path: string;
   viewports: string[];
   expects: BrowserExpectation[];
+  setup?: BrowserSetup | undefined;
+};
+
+export type BrowserSetup = {
+  localStorage?: Record<string, string>;
+  sessionStorage?: Record<string, string>;
 };
 
 export type RouteRunInput = {
@@ -21,6 +27,7 @@ export type RouteRunInput = {
   viewport: string;
   blocking: boolean;
   maskSelectors?: string[];
+  setup?: BrowserSetup | undefined;
 };
 
 export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult> {
@@ -31,8 +38,11 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
   const artifacts = [];
   const maskSelectors = input.maskSelectors ?? [];
   let maskedSelectors: string[] = [];
+  const setup = mergeBrowserSetup(input.setup, input.route.setup);
+  const setupMetadata = createSetupMetadata(setup);
 
   try {
+    await applyBrowserSetup(page, setup);
     await page.goto(new URL(input.route.path, input.baseUrl).toString(), { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
 
@@ -60,7 +70,8 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
         failures,
         privacyWarning: shouldCaptureScreenshot(input.route.expects) ? 'Screenshots may contain private UI data. Use maskSelectors for sensitive regions.' : undefined,
         maskSelectors,
-        maskedSelectors
+        maskedSelectors,
+        setup: setupMetadata
       })
     );
   } catch (error) {
@@ -95,6 +106,7 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
       viewport: input.viewport,
       classification: firstFailure?.classification,
       failures,
+      setup: setupMetadata,
       ...(shouldCaptureScreenshot(input.route.expects)
         ? {
             privacyWarning: 'Screenshots may contain private UI data. Use maskSelectors for sensitive regions.',
@@ -105,6 +117,57 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
     },
     ...(failures.length > 0 ? { suggestedNextStep: 'Inspect screenshot and browser metadata, then fix the rendered UI contract failure.' } : {})
   };
+}
+
+function mergeBrowserSetup(base: BrowserSetup | undefined, route: BrowserSetup | undefined): BrowserSetup {
+  return {
+    localStorage: {
+      ...(base?.localStorage ?? {}),
+      ...(route?.localStorage ?? {})
+    },
+    sessionStorage: {
+      ...(base?.sessionStorage ?? {}),
+      ...(route?.sessionStorage ?? {})
+    }
+  };
+}
+
+async function applyBrowserSetup(page: Page, setup: BrowserSetup): Promise<void> {
+  const localStorage = setup.localStorage ?? {};
+  const sessionStorage = setup.sessionStorage ?? {};
+
+  if (Object.keys(localStorage).length === 0 && Object.keys(sessionStorage).length === 0) {
+    return;
+  }
+
+  await page.addInitScript(
+    (storageSetup) => {
+      const target = globalThis as unknown as {
+        localStorage: { setItem(key: string, value: string): void };
+        sessionStorage: { setItem(key: string, value: string): void };
+      };
+
+      for (const [key, value] of Object.entries(storageSetup.localStorage)) {
+        target.localStorage.setItem(key, value);
+      }
+
+      for (const [key, value] of Object.entries(storageSetup.sessionStorage)) {
+        target.sessionStorage.setItem(key, value);
+      }
+    },
+    { localStorage, sessionStorage }
+  );
+}
+
+function createSetupMetadata(setup: BrowserSetup): { localStorageKeys: string[]; sessionStorageKeys: string[] } | undefined {
+  const localStorageKeys = Object.keys(setup.localStorage ?? {}).sort();
+  const sessionStorageKeys = Object.keys(setup.sessionStorage ?? {}).sort();
+
+  if (localStorageKeys.length === 0 && sessionStorageKeys.length === 0) {
+    return undefined;
+  }
+
+  return { localStorageKeys, sessionStorageKeys };
 }
 
 async function applyMaskSelectors(page: Page, selectors: string[]): Promise<string[]> {

@@ -155,6 +155,11 @@ async function readLatestRunId(rootDir: string): Promise<string> {
 
 function renderUpdateSummary(plan: UpdatePlanItem[], dryRun: boolean): string {
   const lines = ['Reflection update', '', `Dry run: ${dryRun ? 'yes' : 'no'}`, ''];
+  if (dryRun) {
+    lines.push('No baseline files were written.');
+    lines.push('Run the same command without --dry-run only after explicit human approval.');
+    lines.push('');
+  }
   lines.push(dryRun ? 'Would update:' : 'Updated:');
   for (const item of plan) {
     lines.push(`- ${item.checkId}: ${relative(process.cwd(), item.sourcePath)} -> ${relative(process.cwd(), item.baselinePath)}`);
@@ -174,6 +179,7 @@ function isTruthyCi(value: string | undefined): boolean {
 
 async function ensureBaselineDestinationInside(baselineRoot: string, baselinePath: string): Promise<void> {
   ensureInside(baselineRoot, baselinePath);
+  await mkdir(baselineRoot, { recursive: true });
   const realRoot = await realpath(baselineRoot);
   await ensureDirectoryInsideBaselineRoot(baselineRoot, dirname(baselinePath), realRoot);
 

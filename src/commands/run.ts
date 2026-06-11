@@ -118,8 +118,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       nodeVersion: process.version,
       workers
     },
-    checks,
-    suggestedNextSteps: [{ kind: 'implementation', summary: 'Implement the next contract runner phase.' }]
+    checks
   });
   const reportArtifacts = await writeReports(store, report);
   const manifest = createRunManifest({ report: { ...report, artifacts: reportArtifacts }, files: reportArtifacts });

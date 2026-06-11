@@ -41,6 +41,9 @@ describe('compileReflectionTargets', () => {
             {
               id: 'button-primary',
               storyId: 'button--primary',
+              viewport: 'button-default',
+              viewportSize: { width: 320, height: 180 },
+              framing: { background: '#ffffff', padding: 12 },
               baseline: 'components/button-primary.png',
               threshold: { maxDiffPixelRatio: 0 },
               stateNote: 'Use story args for state.'
@@ -84,7 +87,13 @@ describe('compileReflectionTargets', () => {
       id: 'button-primary',
       runModes: ['visual', 'full'],
       story: { storyId: 'button--primary', statePolicy: 'story-controlled', stateNote: 'Use story args for state.' },
-      visual: { baseline: 'components/button-primary.png', viewport: 'component', threshold: { maxDiffPixelRatio: 0 } }
+      visual: {
+        baseline: 'components/button-primary.png',
+        viewport: 'button-default',
+        viewportSize: { width: 320, height: 180 },
+        framing: { rootSelector: '#storybook-root', background: '#ffffff', align: 'center', padding: 12 },
+        threshold: { maxDiffPixelRatio: 0 }
+      }
     });
     expect(ir.targets[3]).toMatchObject({
       family: 'design-command',

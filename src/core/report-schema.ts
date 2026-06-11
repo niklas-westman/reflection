@@ -111,6 +111,56 @@ export function deriveExitCode(status: ReportStatus): ExitCode {
   return ExitCode.Success;
 }
 
+export function deriveSuggestedNextSteps(checks: CheckResult[]): SuggestedNextStep[] {
+  const blockingFailures = checks.filter(
+    (check) => check.severity === 'blocking' && (check.status === 'fail' || check.status === 'error')
+  );
+  if (blockingFailures.length > 0) {
+    return [
+      {
+        kind: 'fix',
+        summary: `Fix blocking checks before updating baselines: ${formatCheckList(blockingFailures)}.`
+      }
+    ];
+  }
+
+  const missingBaselines = checks.filter(
+    (check) => check.suite === 'visual' && check.severity === 'review' && check.metadata.classification === 'missing-baseline'
+  );
+  if (missingBaselines.length > 0) {
+    return [
+      {
+        kind: 'baseline',
+        summary:
+          'Review actual screenshots for missing baselines, then run `reflection update --dry-run --case <caseId> --from-run latest` for intentional first baselines.'
+      }
+    ];
+  }
+
+  const visualReviewItems = checks.filter((check) => check.suite === 'visual' && check.severity === 'review' && (check.status === 'warn' || check.status === 'fail'));
+  if (visualReviewItems.length > 0) {
+    return [
+      {
+        kind: 'review',
+        summary:
+          'Inspect review-only visual artifacts, then run `reflection update --dry-run --case <caseId> --from-run latest` for intentional route visual changes.'
+      }
+    ];
+  }
+
+  const reviewItems = checks.filter((check) => check.severity === 'review' && (check.status === 'warn' || check.status === 'fail'));
+  if (reviewItems.length > 0) {
+    return [
+      {
+        kind: 'review',
+        summary: `Inspect review-only checks: ${formatCheckList(reviewItems)}.`
+      }
+    ];
+  }
+
+  return [{ kind: 'pass', summary: 'No action required; expand route or visual coverage when useful.' }];
+}
+
 export function validateReport(report: unknown): ReflectionReport {
   const parsed = ReflectionReportSchema.safeParse(report);
   if (!parsed.success) {
@@ -147,6 +197,15 @@ export function createReport(input: {
     summary: summarizeChecks(input.checks),
     checks: input.checks,
     artifacts: input.artifacts ?? [],
-    suggestedNextSteps: input.suggestedNextSteps ?? []
+    suggestedNextSteps: input.suggestedNextSteps ?? deriveSuggestedNextSteps(input.checks)
   });
+}
+
+function formatCheckList(checks: CheckResult[]): string {
+  const ids = checks.map((check) => check.id);
+  if (ids.length <= 3) {
+    return ids.join(', ');
+  }
+
+  return `${ids.slice(0, 3).join(', ')} and ${ids.length - 3} more`;
 }

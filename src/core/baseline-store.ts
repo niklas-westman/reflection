@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
-import type { CheckResult } from './report-schema.js';
+import type { ArtifactRef, CheckResult } from './report-schema.js';
 
 export type BaselineStore = {
   rootDir: string;
@@ -16,6 +16,7 @@ export type MissingBaselineCheckOptions = {
   target: string;
   baselinePath: string;
   blocking: boolean;
+  artifacts?: ArtifactRef[] | undefined;
   metadata?: Record<string, unknown> | undefined;
 };
 
@@ -69,7 +70,7 @@ export function createMissingBaselineCheck(options: MissingBaselineCheckOptions)
     status,
     severity,
     summary: `Missing approved visual baseline: ${options.baselinePath}.`,
-    artifacts: [],
+    artifacts: options.artifacts ?? [],
     metadata: {
       ...(options.metadata ?? {}),
       classification: 'missing-baseline',

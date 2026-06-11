@@ -7,7 +7,7 @@ The loader supports TypeScript config files (`.ts`, `.mts`, `.cts`) through `jit
 ## Minimal shape
 
 ```ts
-import { defineReflection } from 'reflection';
+import { defineReflection } from 'reflection-check';
 
 export default defineReflection({
   project: 'my-app',
@@ -59,6 +59,11 @@ browser: {
     reuseExisting: true,
     timeoutMs: 60_000
   },
+  setup: {
+    localStorage: {
+      'reflection:test-mode': 'enabled'
+    }
+  },
   maskSelectors: ['[data-reflection-mask]'],
   routes: [
     {
@@ -66,6 +71,11 @@ browser: {
       name: 'Home route',
       path: '/',
       viewports: ['desktop', 'mobile'],
+      setup: {
+        sessionStorage: {
+          'reflection:route-state': 'ready'
+        }
+      },
       expects: [
         { role: 'heading', name: 'Home' },
         { noHorizontalOverflow: true },
@@ -96,9 +106,25 @@ Browser fields:
 | `blocking` | Defaults to `true`; route assertion failures are blocking unless configured otherwise by current runner behavior. |
 | `baseUrl` | Absolute URL used to visit route paths. |
 | `server` | Optional managed server. If omitted, Reflection assumes `baseUrl` is already reachable. |
+| `setup` | Optional browser-level storage setup applied before route navigation. Values are not written to report metadata. |
 | `maskSelectors` | Selectors masked in browser screenshots. |
 | `routes` | Route assertions executed in `smoke` and `full` modes. |
 | `visualSmoke` | Route screenshot baseline comparisons driven from successful browser screenshots. |
+
+Route setup fields:
+
+```ts
+setup: {
+  localStorage: {
+    'reflection:test-user': 'fixture-user'
+  },
+  sessionStorage: {
+    'reflection:test-session': 'fixture-session'
+  }
+}
+```
+
+Browser-level setup applies to every route. Route-level setup extends or overrides browser-level keys for that route. Reflection records only storage key names in metadata, never storage values. Use this for non-secret test-mode state, mock auth, or local fixture tokens. Do not commit real credentials or production session values in config.
 
 Supported browser expectations:
 
@@ -175,6 +201,12 @@ component: {
       id: 'primary-button',
       storyId: 'atoms-button--primary',
       viewport: 'component',
+      viewportSize: { width: 390, height: 220 },
+      framing: {
+        background: '#ffffff',
+        align: 'center',
+        padding: 0
+      },
       baselineRoot: 'tests/fixtures/baselines',
       baseline: 'components/button/primary.chromium-linux.light.png',
       threshold: { maxDiffPixelRatio: 0.005 },
@@ -196,6 +228,21 @@ component: {
 ```
 
 Component visual cases resolve Storybook `/index.json`, open the story iframe, capture an actual screenshot, and compare it against the configured baseline.
+
+`viewport` accepts the built-in presets (`desktop`, `tablet`, `mobile`, `component`) and any custom string label. When `viewportSize` is provided, Reflection captures the Storybook iframe at that exact `{ width, height }` instead of resolving the string preset. Use this for exported Figma baselines: the PNG dimensions must match `viewportSize` exactly or the check fails with `visual-dimension-mismatch`.
+
+`framing` lets a component visual case normalize the Storybook canvas before the screenshot:
+
+```ts
+framing: {
+  rootSelector: '#storybook-root',
+  background: '#ffffff',
+  align: 'center',
+  padding: 0
+}
+```
+
+Use it when the approved baseline is a fixed Figma frame: `background` should match the Figma frame fill, `align: 'center'` centers the story root content, and `padding` reserves explicit frame padding. `rootSelector` defaults to `#storybook-root`.
 
 Pseudo-state policy:
 

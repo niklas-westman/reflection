@@ -121,6 +121,8 @@ describe('updateCommand', () => {
 
     expect(stdout).toContain('Reflection update');
     expect(stdout).toContain('Dry run: yes');
+    expect(stdout).toContain('No baseline files were written.');
+    expect(stdout).toContain('Run the same command without --dry-run only after explicit human approval.');
     expect(stdout).toContain('visual.login-mobile');
     expect(stdout).not.toContain('visual.admin-mobile');
     await expect(readFile(join(baselineRoot, 'browser/login/mobile.png'), 'utf8')).resolves.toBe('OLD-BASELINE');
@@ -142,6 +144,25 @@ describe('updateCommand', () => {
 
     await expect(readFile(join(baselineRoot, 'browser/login/mobile.png'), 'utf8')).resolves.toBe('LOGIN-ACTUAL');
     await expect(readFile(join(baselineRoot, 'browser/admin/mobile.png'), 'utf8')).resolves.toBe('OLD-ADMIN');
+  });
+
+  it('promotes an actual screenshot for a missing baseline into a new baseline path', async () => {
+    const root = await makeTempDir('reflection-update');
+    const reportRoot = join(root, 'artifacts');
+    const baselineRoot = join(root, 'baselines');
+    await mkdir(join(reportRoot, 'runs'), { recursive: true });
+    await writeRun(reportRoot, 'update-run');
+    const configPath = await writeFixtureConfig(root, baselineRoot);
+
+    const dryRunStdout = await captureUpdate({ config: configPath, reportDir: reportRoot, fromRun: 'update-run', case: 'login-mobile', dryRun: true });
+
+    expect(dryRunStdout).toContain('Dry run: yes');
+    expect(dryRunStdout).toContain('visual.login-mobile');
+    await expect(stat(join(baselineRoot, 'browser/login/mobile.png'))).rejects.toMatchObject({ code: 'ENOENT' });
+
+    await captureUpdate({ config: configPath, reportDir: reportRoot, fromRun: 'update-run', case: 'login-mobile' });
+
+    await expect(readFile(join(baselineRoot, 'browser/login/mobile.png'), 'utf8')).resolves.toBe('LOGIN-ACTUAL');
   });
 
   it('refuses baseline updates in CI mode', async () => {

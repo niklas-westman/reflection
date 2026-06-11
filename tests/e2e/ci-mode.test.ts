@@ -83,6 +83,10 @@ describe('CI mode', () => {
     expect(report.ci).toBe(true);
     expect(report.environment.profile).toBe('ci');
     expect(report.environment.workers).toBe(1);
+    expect(report.suggestedNextSteps.map((step) => step.summary)).toEqual([
+      'No action required; expand route or visual coverage when useful.'
+    ]);
+    expect(JSON.stringify(report.suggestedNextSteps)).not.toContain('Implement the next contract runner phase');
     await expect(stat(join(root, 'artifacts/reflection/runs/latest'))).resolves.toBeTruthy();
   });
 
@@ -121,6 +125,7 @@ describe('CI mode', () => {
   it('documents public CI exit codes and baseline update policy', async () => {
     const docs = await readFile('docs/ci.md', 'utf8');
 
+    expect(docs).toContain('pnpm add -D reflection-check');
     expect(docs).toContain('reflection run --ci');
     expect(docs).toContain('artifacts/reflection');
     expect(docs).toContain('Exit code');

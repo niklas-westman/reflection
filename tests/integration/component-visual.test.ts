@@ -9,7 +9,10 @@ import { createArtifactStore } from '../../src/core/artifact-store.js';
 import { runComponentVisualContract } from '../../src/contracts/component/component-visual-contract.js';
 import type { ManagedServer } from '../../src/core/server-manager.js';
 
+type FixtureViewport = { width: number; height: number };
+
 const activeServers: Array<Server | ManagedServer> = [];
+const componentViewport: FixtureViewport = { width: 390, height: 220 };
 
 async function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -101,11 +104,11 @@ async function startStorybookFixture(color = '#375dfb', hoverColor = color): Pro
   return baseUrl;
 }
 
-async function captureBaseline(baseUrl: string, baselinePath: string): Promise<void> {
+async function captureBaseline(baseUrl: string, baselinePath: string, viewport: FixtureViewport = componentViewport): Promise<void> {
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({
-      viewport: { width: 390, height: 220 },
+      viewport,
       deviceScaleFactor: 1,
       locale: 'en-US',
       timezoneId: 'Europe/Stockholm',
@@ -120,11 +123,11 @@ async function captureBaseline(baseUrl: string, baselinePath: string): Promise<v
   }
 }
 
-async function captureHoveredBaseline(baseUrl: string, baselinePath: string): Promise<void> {
+async function captureHoveredBaseline(baseUrl: string, baselinePath: string, viewport: FixtureViewport = componentViewport): Promise<void> {
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({
-      viewport: { width: 390, height: 220 },
+      viewport,
       deviceScaleFactor: 1,
       locale: 'en-US',
       timezoneId: 'Europe/Stockholm',
@@ -152,6 +155,11 @@ async function writeSolidPng(path: string, width: number, height: number, rgba: 
     }
   }
   await import('node:fs/promises').then(({ writeFile }) => writeFile(path, PNG.sync.write(png)));
+}
+
+function readPixel(png: PNG, x: number, y: number): [number, number, number, number] {
+  const idx = (png.width * y + x) << 2;
+  return [png.data[idx], png.data[idx + 1], png.data[idx + 2], png.data[idx + 3]];
 }
 
 afterEach(async () => {
@@ -261,6 +269,156 @@ describe('component visual contract', () => {
       metadata: {
         classification: 'visual-diff',
         storyId: 'button--primary'
+      }
+    });
+  }, 20_000);
+
+  it('captures component visuals with a custom viewport size and stores it in metadata', async () => {
+    const baseUrl = await startStorybookFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-component-visual-custom-'));
+    const baselineRoot = await mkdtemp(join(tmpdir(), 'reflection-component-baseline-custom-'));
+    const baseline = 'components/button-primary-custom.png';
+    const viewportSize = { width: 320, height: 180 };
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(baselineRoot, 'components'), { recursive: true }));
+    await captureBaseline(baseUrl, join(baselineRoot, baseline), viewportSize);
+    const store = await createArtifactStore({ rootDir, runId: 'component-visual-custom' });
+
+    const checks = await runComponentVisualContract(
+      {
+        storybook: {
+          command: 'node -e "process.exit(42)"',
+          readyUrl: baseUrl,
+          reuseExisting: true,
+          timeoutMs: 1_000
+        },
+        cases: [
+          {
+            id: 'button-primary-custom',
+            storyId: 'button--primary',
+            viewport: 'button-default',
+            viewportSize,
+            baselineRoot,
+            baseline,
+            threshold: { maxDiffPixelRatio: 0 }
+          }
+        ]
+      },
+      store
+    );
+
+    const visualCheck = checks.find((check) => check.id === 'visual.button-primary-custom');
+    expect(visualCheck).toMatchObject({
+      target: 'button--primary button-default',
+      status: 'pass',
+      metadata: {
+        classification: 'visual-match',
+        viewport: 'button-default',
+        viewportSize
+      }
+    });
+
+    const actualArtifact = visualCheck?.artifacts.find((artifact) => artifact.role === 'actual');
+    expect(actualArtifact).toBeDefined();
+    const actual = PNG.sync.read(await readFile(store.resolveRunPath(actualArtifact?.path ?? '')));
+    expect({ width: actual.width, height: actual.height }).toEqual(viewportSize);
+  }, 20_000);
+
+  it('applies component framing before screenshot capture and stores it in metadata', async () => {
+    const baseUrl = await startStorybookFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-component-visual-framing-'));
+    const baselineRoot = await mkdtemp(join(tmpdir(), 'reflection-component-baseline-framing-'));
+    const baseline = 'components/button-primary-framed.png';
+    const framing = {
+      rootSelector: '#storybook-root',
+      background: '#ffffff',
+      align: 'center' as const,
+      padding: 24
+    };
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(baselineRoot, 'components'), { recursive: true }));
+    await writeSolidPng(join(baselineRoot, baseline), 390, 220, [255, 255, 255, 255]);
+    const store = await createArtifactStore({ rootDir, runId: 'component-visual-framing' });
+
+    const checks = await runComponentVisualContract(
+      {
+        storybook: {
+          command: 'node -e "process.exit(42)"',
+          readyUrl: baseUrl,
+          reuseExisting: true,
+          timeoutMs: 1_000
+        },
+        cases: [
+          {
+            id: 'button-primary-framing',
+            storyId: 'button--primary',
+            viewport: 'component',
+            baselineRoot,
+            baseline,
+            framing,
+            threshold: { maxDiffPixelRatio: 0 }
+          }
+        ]
+      },
+      store
+    );
+
+    const visualCheck = checks.find((check) => check.id === 'visual.button-primary-framing');
+    expect(visualCheck).toMatchObject({
+      status: 'warn',
+      metadata: {
+        classification: 'visual-diff',
+        framing
+      }
+    });
+
+    const actualArtifact = visualCheck?.artifacts.find((artifact) => artifact.role === 'actual');
+    expect(actualArtifact).toBeDefined();
+    const actual = PNG.sync.read(await readFile(store.resolveRunPath(actualArtifact?.path ?? '')));
+    expect(readPixel(actual, 0, 0)).toEqual([255, 255, 255, 255]);
+  }, 20_000);
+
+  it('fails strict component visuals when the baseline dimensions do not match the custom viewport size', async () => {
+    const baseUrl = await startStorybookFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-component-visual-size-mismatch-'));
+    const baselineRoot = await mkdtemp(join(tmpdir(), 'reflection-component-baseline-size-mismatch-'));
+    const baseline = 'components/button-primary-wrong-size.png';
+    const viewportSize = { width: 320, height: 180 };
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(baselineRoot, 'components'), { recursive: true }));
+    await captureBaseline(baseUrl, join(baselineRoot, baseline));
+    const store = await createArtifactStore({ rootDir, runId: 'component-visual-size-mismatch' });
+
+    const checks = await runComponentVisualContract(
+      {
+        storybook: {
+          command: 'node -e "process.exit(42)"',
+          readyUrl: baseUrl,
+          reuseExisting: true,
+          timeoutMs: 1_000
+        },
+        cases: [
+          {
+            id: 'button-primary-size-mismatch',
+            storyId: 'button--primary',
+            viewport: 'button-default',
+            viewportSize,
+            baselineRoot,
+            baseline,
+            threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
+            strict: true
+          }
+        ]
+      },
+      store
+    );
+
+    expect(checks.find((check) => check.id === 'visual.button-primary-size-mismatch')).toMatchObject({
+      status: 'fail',
+      severity: 'blocking',
+      metadata: {
+        classification: 'visual-dimension-mismatch',
+        viewport: 'button-default',
+        viewportSize,
+        expected: componentViewport,
+        actual: viewportSize
       }
     });
   }, 20_000);

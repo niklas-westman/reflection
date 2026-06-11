@@ -12,7 +12,7 @@ async function startBasicReactFixture(): Promise<string> {
   const readyUrl = 'http://127.0.0.1:5174';
   const server = await startManagedServer(
     {
-      command: 'corepack pnpm dev --host 127.0.0.1 --port 5174',
+      command: 'pnpm dev --host 127.0.0.1 --port 5174',
       readyUrl,
       reuseExisting: true,
       timeoutMs: 10_000
@@ -141,5 +141,9 @@ describe('route visual smoke', () => {
         classification: 'missing-baseline'
       }
     });
+
+    const missingBaselineCheck = checks.find((check) => check.id === 'visual.login-mobile-missing');
+    expect(missingBaselineCheck?.artifacts.map((artifact) => [artifact.role, artifact.path])).toEqual([['actual', 'visual/login-mobile-missing/actual.png']]);
+    await expect(readFile(store.resolveRunPath('visual/login-mobile-missing/actual.png'))).resolves.toBeInstanceOf(Buffer);
   }, 20_000);
 });

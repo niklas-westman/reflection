@@ -12,7 +12,7 @@ export default defineReflection({
       blocking: true,
       baseUrl: 'http://127.0.0.1:5173',
       server: {
-        command: 'corepack pnpm --dir examples/basic-react dev --host 127.0.0.1',
+        command: 'pnpm --dir examples/basic-react dev --host 127.0.0.1',
         readyUrl: 'http://127.0.0.1:5173',
         reuseExisting: true,
         timeoutMs: 60_000

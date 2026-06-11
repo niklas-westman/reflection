@@ -4,8 +4,18 @@ Reflection is designed to be safe in CI: runs create evidence artifacts, but the
 
 ## Recommended command
 
+Install Reflection in the consuming repository:
+
 ```bash
+pnpm add -D reflection-check
+```
+
+Then run the CI evidence loop:
+
+```bash
+reflection doctor --config reflection.config.ts
 reflection run --ci --config reflection.config.ts --mode smoke
+reflection review --report-dir artifacts/reflection --json
 ```
 
 When `--ci` is enabled and `--report-dir` is not provided, Reflection writes artifacts to:
@@ -41,4 +51,4 @@ artifacts/reflection/runs/latest
 
 ## GitHub Actions example
 
-See `.github/workflows/reflection.yml` for a repo-owned example that installs dependencies, builds Reflection, runs `reflection run --ci`, and uploads `artifacts/reflection` for review.
+See `.github/workflows/reflection.yml` for a repo-owned example that installs dependencies, builds Reflection, runs `reflection run --ci`, reviews `artifacts/reflection`, and uploads the report root for inspection.

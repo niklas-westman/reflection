@@ -125,19 +125,19 @@ Goal: prove Reflection works as an installable npm-style package from a consumin
 1. Reflection can be packed locally:
 
    ```bash
-   corepack pnpm pack
+   pnpm pack
    ```
 
 2. A temporary consuming project can install the tarball:
 
    ```bash
-   corepack pnpm add -D /absolute/path/to/reflection-0.0.0.tgz
+   pnpm add -D /absolute/path/to/reflection-check-0.0.1.tgz
    ```
 
 3. The consuming project can write a config using the package root import:
 
    ```ts
-   import { defineReflection } from 'reflection';
+   import { defineReflection } from 'reflection-check';
 
    export default defineReflection({
      project: 'consumer-app',
@@ -171,9 +171,9 @@ Goal: prove Reflection works as an installable npm-style package from a consumin
 4. The consuming project can run the package binary:
 
    ```bash
-   corepack pnpm exec reflection doctor --config reflection.config.ts
-   corepack pnpm exec reflection run --config reflection.config.ts --mode smoke
-   corepack pnpm exec reflection review --json
+   pnpm exec reflection doctor --config reflection.config.ts
+   pnpm exec reflection run --config reflection.config.ts --mode smoke
+   pnpm exec reflection review --json
    ```
 
 5. Docs make package install the primary dogfood path instead of source-repo execution.
@@ -182,16 +182,17 @@ Goal: prove Reflection works as an installable npm-style package from a consumin
 
    - package root exports `defineReflection`.
    - package root exports config types.
-   - `bin.reflection` points at `dist/cli.js`.
-   - package tarball contains `dist`, docs, README, and package metadata.
-   - tarball install smoke can import `defineReflection` from `reflection`.
+   - `bin.reflection` and `bin.reflection-check` point at `dist/cli.js`.
+   - package tarball contains `dist`, docs, LICENSE, README, and package metadata.
+   - tarball install smoke can import `defineReflection` from `reflection-check`.
 
 ### Likely files to modify
 
 - `package.json`
-  - Decide if package name should remain `reflection` or become scoped, for example `@greenhouse/reflection` or another private scope.
+  - Keep the public package name as `reflection-check`.
   - Keep `main`, `types`, `exports`, and `bin` aligned with `dist` output.
-  - Consider removing `private: true` only if actually publishing. For local tarball dogfood, `private: true` may still allow `pnpm pack`, but verify.
+  - Keep runtime dependencies in `dependencies`; `playwright` must be available in a consuming install.
+  - Keep `publishConfig.access` set to `public` for npm publishing.
 - `src/index.ts`
   - Keep the public package surface minimal.
   - Export only `defineReflection` and stable config types unless more public API is intentionally needed.
@@ -202,7 +203,7 @@ Goal: prove Reflection works as an installable npm-style package from a consumin
 - `docs/getting-started.md`
   - Make package install the primary path.
 - `docs/configuration.md`
-  - Keep `import { defineReflection } from 'reflection'` as the canonical config import.
+  - Keep `import { defineReflection } from 'reflection-check'` as the canonical config import.
 - `docs/agent-workflows.md`
   - Use `pnpm exec reflection ...` for consuming repos.
 - `docs/validation-process.md`
@@ -249,20 +250,20 @@ Pick a React/Vite app with:
 1. Target repo installs Reflection as dev dependency, initially from packed tarball if unpublished:
 
    ```bash
-   corepack pnpm add -D /path/to/reflection-0.0.0.tgz
+   pnpm add -D /path/to/reflection-check-0.0.1.tgz
    ```
 
 2. Target repo has `reflection.config.ts` using:
 
    ```ts
-   import { defineReflection } from 'reflection';
+   import { defineReflection } from 'reflection-check';
    ```
 
 3. Target repo can run:
 
    ```bash
-   corepack pnpm exec reflection run --config reflection.config.ts --mode smoke
-   corepack pnpm exec reflection review --json
+   pnpm exec reflection run --config reflection.config.ts --mode smoke
+   pnpm exec reflection review --json
    ```
 
 4. Agent can summarize:
@@ -304,11 +305,10 @@ Do not claim these are solved yet:
 From the unzipped repo root:
 
 ```bash
-corepack enable
-corepack pnpm install
-corepack pnpm typecheck
-corepack pnpm test
-corepack pnpm build
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
 Run the current fixture validation:
@@ -329,8 +329,8 @@ The current fixture intentionally contains failing routes (`overflow` and `conso
 cd /path/to/reflection
 git status --short --branch
 read docs/plans/reflection-implementation-plan.md around Phase 7.2
-corepack pnpm build
-corepack pnpm pack
+pnpm build
+pnpm pack
 ```
 
 Then implement **Phase 7.2A — Package-install dogfood readiness** with TDD and independent review before committing.

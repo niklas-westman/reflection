@@ -5,7 +5,7 @@ import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
 import type { ServerConfig } from '../../core/server-manager.js';
-import { createBrowserContext } from '../../integrations/playwright/context-factory.js';
+import { createBrowserContext, type ViewportSize } from '../../integrations/playwright/context-factory.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { startStorybookServer } from '../../integrations/storybook/server.js';
 import { resolveStoryUrl } from '../../integrations/storybook/story-url.js';
@@ -18,6 +18,8 @@ export type ComponentVisualCase = {
   baseline: string;
   baselineRoot?: string | undefined;
   viewport?: string | undefined;
+  viewportSize?: ViewportSize | undefined;
+  framing?: ComponentFraming | undefined;
   threshold?: VisualThreshold | undefined;
   blocking?: boolean | undefined;
   strict?: boolean | undefined;
@@ -32,6 +34,13 @@ export type ComponentBrowserState = {
     disableAnimations?: boolean | undefined;
     waitMs?: number | undefined;
   };
+};
+
+export type ComponentFraming = {
+  rootSelector: string;
+  background?: string | undefined;
+  align: 'center' | 'start';
+  padding: number;
 };
 
 export type ComponentVisualContractConfig = {
@@ -74,6 +83,7 @@ async function runComponentVisualCase(input: {
   browser: Awaited<ReturnType<typeof launchBrowser>>;
 }): Promise<CheckResult> {
   const viewport = input.visualCase.viewport ?? 'component';
+  const viewportSize = input.visualCase.viewportSize;
   const target = `${input.visualCase.storyId} ${viewport}`;
   const baselinePath = resolveCaseBaselinePath(input.visualCase);
   const blocking = input.visualCase.blocking === true || input.visualCase.strict === true;
@@ -85,7 +95,7 @@ async function runComponentVisualCase(input: {
       target,
       baselinePath: input.visualCase.baseline,
       blocking,
-      metadata: createComponentStateMetadata(input.visualCase)
+      metadata: createComponentMetadata(input.visualCase)
     });
   }
 
@@ -97,6 +107,8 @@ async function runComponentVisualCase(input: {
     path: `${artifactBase}/actual.png`,
     storyUrl: input.storyUrl,
     viewport,
+    viewportSize,
+    framing: input.visualCase.framing,
     browserState: input.visualCase.browserState
   });
   const diffRelativePath = `${artifactBase}/diff.png`;
@@ -127,7 +139,7 @@ async function runComponentVisualCase(input: {
       storyUrl: input.storyUrl,
       viewport,
       baselinePath: input.visualCase.baseline,
-      ...createComponentStateMetadata(input.visualCase)
+      ...createComponentMetadata(input.visualCase)
     },
     ...(result.status === 'pass'
       ? {}
@@ -141,13 +153,18 @@ async function captureComponentScreenshot(input: {
   path: string;
   storyUrl: string;
   viewport: string;
+  viewportSize?: ViewportSize | undefined;
+  framing?: ComponentFraming | undefined;
   browserState?: ComponentBrowserState | undefined;
 }) {
-  const context = await createBrowserContext(input.browser, input.viewport);
+  const context = await createBrowserContext(input.browser, input.viewport, input.viewportSize);
   try {
     const page = await context.newPage();
     await page.goto(input.storyUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
+    if (input.framing) {
+      await applyComponentFraming(page, input.framing);
+    }
     if (input.browserState) {
       await applyBrowserState(page, input.browserState);
     }
@@ -155,6 +172,43 @@ async function captureComponentScreenshot(input: {
   } finally {
     await context.close();
   }
+}
+
+async function applyComponentFraming(page: Page, framing: ComponentFraming): Promise<void> {
+  await page.locator(framing.rootSelector).waitFor({ state: 'attached', timeout: 2_000 });
+
+  const background = framing.background ? `background: ${framing.background} !important;` : '';
+  const alignment =
+    framing.align === 'center'
+      ? 'display: grid !important; place-items: center !important;'
+      : 'display: block !important;';
+
+  await page.addStyleTag({
+    content: `
+      html,
+      body {
+        margin: 0 !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        height: 100% !important;
+        min-height: 100% !important;
+        overflow: hidden !important;
+        ${background}
+      }
+
+      ${framing.rootSelector} {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        height: 100% !important;
+        min-height: 100% !important;
+        margin: 0 !important;
+        padding: ${framing.padding}px !important;
+        ${background}
+        ${alignment}
+      }
+    `
+  });
 }
 
 async function applyBrowserState(page: Page, browserState: ComponentBrowserState): Promise<void> {
@@ -178,6 +232,14 @@ function createComponentStateMetadata(visualCase: ComponentVisualCase): Record<s
     statePolicy: visualCase.browserState ? 'browser-forced-with-stabilization' : 'story-controlled',
     ...(visualCase.stateNote ? { stateNote: visualCase.stateNote } : {}),
     ...(visualCase.browserState ? { browserState: visualCase.browserState } : {})
+  };
+}
+
+function createComponentMetadata(visualCase: ComponentVisualCase): Record<string, unknown> {
+  return {
+    ...(visualCase.viewportSize ? { viewportSize: visualCase.viewportSize } : {}),
+    ...(visualCase.framing ? { framing: visualCase.framing } : {}),
+    ...createComponentStateMetadata(visualCase)
   };
 }
 

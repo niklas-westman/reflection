@@ -59,7 +59,7 @@ console.log(ir.targets.map((target) => `${target.family}:${target.id}`));
 // ]
 ```
 
-The compiler preserves visual metadata that matters to later review, including zero-valued thresholds. Do not use truthiness checks when copying optional numeric metadata; use explicit `!== undefined` checks so values like `0` survive.
+The compiler preserves visual metadata that matters to later review, including zero-valued thresholds, explicit component `viewportSize` values, and component `framing`. Do not use truthiness checks when copying optional numeric metadata; use explicit `!== undefined` checks so values like `0` survive.
 
 ## Adapter contract
 
@@ -72,7 +72,7 @@ A good adapter is:
 - **optional** — normal Reflection config works without it;
 - **validated** — malformed adapter input fails before runner execution;
 - **neutral** — no external product names leak into core commands or reports unless the user explicitly names their own target ids;
-- **lossless enough for review** — route paths, viewports, expectations, baselines, thresholds, and blocking semantics are preserved in IR.
+- **lossless enough for review** — route paths, viewports, component viewport sizes, component framing, expectations, baselines, thresholds, and blocking semantics are preserved in IR.
 
 ## Route manifest adapter proof
 

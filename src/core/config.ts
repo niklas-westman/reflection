@@ -27,6 +27,18 @@ const VisualThresholdSchema = z.object({
   maxDiffPixelRatio: z.number().min(0).max(1).optional()
 });
 
+const ViewportSizeSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive()
+});
+
+const ComponentFramingSchema = z.object({
+  rootSelector: z.string().min(1).default('#storybook-root'),
+  background: z.string().min(1).optional(),
+  align: z.enum(['center', 'start']).default('center'),
+  padding: z.number().int().nonnegative().default(0)
+});
+
 const RouteVisualSmokeCaseSchema = z.object({
   id: z.string().min(1),
   route: z.string().min(1),
@@ -38,12 +50,22 @@ const RouteVisualSmokeCaseSchema = z.object({
   strict: z.boolean().optional()
 });
 
+const BrowserStorageSetupSchema = z.record(z.string().min(1), z.string()).optional().default({});
+
+const BrowserSetupSchema = z
+  .object({
+    localStorage: BrowserStorageSetupSchema,
+    sessionStorage: BrowserStorageSetupSchema
+  })
+  .default({ localStorage: {}, sessionStorage: {} });
+
 const BrowserRouteSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
   path: z.string().min(1),
   viewports: z.array(z.string().min(1)).default(['desktop']),
-  expects: z.array(BrowserExpectationSchema).default([])
+  expects: z.array(BrowserExpectationSchema).default([]),
+  setup: BrowserSetupSchema.optional()
 });
 
 const BrowserContractSchema = z.object({
@@ -60,7 +82,8 @@ const BrowserContractSchema = z.object({
     .optional(),
   routes: z.array(BrowserRouteSchema).default([]),
   maskSelectors: z.array(z.string().min(1)).default([]),
-  visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([])
+  visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([]),
+  setup: BrowserSetupSchema.optional()
 });
 
 const DesignCommandSchema = z.object({
@@ -98,6 +121,8 @@ const ComponentVisualCaseSchema = z.object({
   id: z.string().min(1),
   storyId: z.string().min(1),
   viewport: z.string().min(1).default('component'),
+  viewportSize: ViewportSizeSchema.optional(),
+  framing: ComponentFramingSchema.optional(),
   baseline: z.string().min(1),
   baselineRoot: z.string().optional(),
   threshold: VisualThresholdSchema.optional(),

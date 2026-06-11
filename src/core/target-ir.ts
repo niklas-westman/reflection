@@ -55,6 +55,8 @@ export type ComponentVisualTarget = TargetBase & {
   };
   visual: {
     viewport: string;
+    viewportSize?: { width: number; height: number } | undefined;
+    framing?: unknown;
     baseline: string;
     baselineRoot?: string | undefined;
     threshold?: unknown;
@@ -130,6 +132,8 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
         },
         visual: {
           viewport: componentCase.viewport ?? 'component',
+          ...(componentCase.viewportSize ? { viewportSize: componentCase.viewportSize } : {}),
+          ...(componentCase.framing ? { framing: componentCase.framing } : {}),
           baseline: componentCase.baseline,
           ...(componentCase.baselineRoot ? { baselineRoot: componentCase.baselineRoot } : {}),
           ...(componentCase.threshold !== undefined ? { threshold: componentCase.threshold } : {})

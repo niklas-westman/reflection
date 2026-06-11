@@ -3,7 +3,7 @@ import type { CheckResult } from '../../core/report-schema.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { runRouteVisualSmoke } from '../visual/visual-contract.js';
 import type { RouteVisualBaselineCase } from '../visual/baseline-compare.js';
-import { runBrowserRoute, type BrowserRoute } from './route-runner.js';
+import { runBrowserRoute, type BrowserRoute, type BrowserSetup } from './route-runner.js';
 
 export type BrowserContractConfig = {
   enabled?: boolean;
@@ -12,6 +12,7 @@ export type BrowserContractConfig = {
   routes: BrowserRoute[];
   visualSmoke?: RouteVisualBaselineCase[];
   maskSelectors?: string[];
+  setup?: BrowserSetup | undefined;
 };
 
 export async function runBrowserContract(config: BrowserContractConfig, store: ArtifactStore): Promise<CheckResult[]> {
@@ -33,7 +34,8 @@ export async function runBrowserContract(config: BrowserContractConfig, store: A
             route,
             viewport,
             blocking: config.blocking ?? true,
-            maskSelectors: config.maskSelectors ?? []
+            maskSelectors: config.maskSelectors ?? [],
+            setup: config.setup
           })
         );
       }

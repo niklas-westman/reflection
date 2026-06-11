@@ -7,20 +7,28 @@ Reflection is meant to give agents an evidence gate for rendered UI work. Agents
 Before claiming frontend work is complete:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```
 
-`reflection doctor` is currently a lightweight setup check. Treat `reflection run --config ...` as the command that exercises project contracts.
+`reflection doctor --config` validates config loading/schema, summarizes enabled contracts and server settings, checks local runtime readiness, and remains read-only.
 
 If the project uses a non-default config path or report root, pass it explicitly:
 
 ```bash
-reflection doctor
+reflection doctor --config path/to/reflection.config.ts
 reflection run --config path/to/reflection.config.ts --mode smoke --report-dir .reflection
 reflection review --report-dir .reflection --json
 ```
+
+For first-time setup discovery, agents may run the read-only preview:
+
+```bash
+reflection init --dry-run --preset vite-react
+```
+
+The init command currently previews proposed config and scripts only. Do not assume it wrote files, and do not run any future write mode without explicit human approval.
 
 ## How to interpret review JSON
 
@@ -100,7 +108,7 @@ Use Reflection as the UI evidence gate before claiming frontend work is complete
 Run:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```
@@ -121,7 +129,7 @@ Full protocol: `docs/validation-process.md`.
 CI should run Reflection and upload artifacts, but never update baselines:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --ci --config reflection.config.ts --mode smoke
 reflection review --report-dir artifacts/reflection --json
 ```

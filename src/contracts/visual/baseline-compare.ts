@@ -50,11 +50,20 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
   }
 
   if (!(await pathExists(baselinePath))) {
+    const artifactBase = `visual/${input.visualCase.id}`;
+    const actualRunPath = input.store.resolveRunPath(actualArtifact.path);
+    const actualVisualArtifact = await input.store.writeBuffer(`${artifactBase}/actual.png`, await readFile(actualRunPath));
+
     return createMissingBaselineCheck({
       id: `visual.${input.visualCase.id}`,
       target,
       baselinePath: input.visualCase.baseline,
-      blocking
+      blocking,
+      artifacts: [actualVisualArtifact],
+      metadata: {
+        routeId: input.visualCase.route,
+        viewport: input.visualCase.viewport
+      }
     });
   }
 

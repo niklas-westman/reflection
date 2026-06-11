@@ -5,7 +5,7 @@ Reflection is meant to be a validation protocol that humans, agents, and CI can 
 The command split is intentional:
 
 ```bash
-reflection doctor  # lightweight CLI/setup check; project contracts run through --config
+reflection doctor  # runtime check; pass --config for project preflight
 reflection run     # produce evidence and report.json; pass --config for project contracts
 reflection review  # summarize the latest evidence for humans/agents
 reflection update  # accept intentional visual changes; never automatic
@@ -16,7 +16,7 @@ reflection update  # accept intentional visual changes; never automatic
 Use this loop before claiming frontend work is complete:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```
@@ -24,8 +24,8 @@ reflection review --json
 If Reflection is being run from this repository during development, build first and use the local CLI:
 
 ```bash
-corepack pnpm build
-node dist/cli.js doctor
+pnpm build
+node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke
 node dist/cli.js review --json
 ```
@@ -38,13 +38,22 @@ Interpret the review result as the contract:
 
 Always include the `reportPath`, blocking failures, review items, and artifact paths when reporting results to a human.
 
+## Suggested next steps
+
+Reports include derived next steps based on the run result:
+
+- Blocking failures: fix the named blocking checks before considering visual baseline updates.
+- Missing baselines: inspect the actual screenshots, then use `reflection update --dry-run --case <caseId> --from-run latest` for intentional first baselines.
+- Review-only visual diffs: inspect expected, actual, and diff artifacts before proposing a targeted dry-run update.
+- Passing runs: no action is required; expand route or visual coverage only when useful.
+
 ## Agent instructions
 
 Agents should treat Reflection as an evidence gate, not as a self-healing tool.
 
 Required agent behavior:
 
-1. Run `reflection doctor` before the validation flow when setup may be uncertain. It is currently a lightweight setup check; the configured project contract is exercised by `reflection run --config ...`.
+1. Run `reflection doctor --config reflection.config.ts` before the validation flow when setup may be uncertain. It validates config loading/schema, summarizes configured contracts, checks runtime readiness, and remains read-only.
 2. Run `reflection run --config reflection.config.ts --mode smoke` to generate current evidence.
 3. Run `reflection review --json` to get the machine-readable summary.
 4. Fix blocking failures before finishing the task.
@@ -78,7 +87,7 @@ CI should generate and publish evidence, but must never update baselines.
 Recommended CI command shape:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --ci --config reflection.config.ts --mode smoke
 reflection review --report-dir artifacts/reflection --json
 ```
@@ -88,9 +97,9 @@ reflection review --report-dir artifacts/reflection --json
 For this repository's built CLI:
 
 ```bash
-corepack pnpm install --frozen-lockfile
-corepack pnpm build
-node dist/cli.js doctor
+pnpm install --frozen-lockfile
+pnpm build
+node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --ci --config examples/basic-react/reflection.config.ts --mode smoke
 node dist/cli.js review --report-dir artifacts/reflection --json
 ```
@@ -139,7 +148,7 @@ Use Reflection as the UI evidence gate before claiming frontend work is complete
 Run:
 
 ```bash
-reflection doctor
+reflection doctor --config reflection.config.ts
 reflection run --config reflection.config.ts --mode smoke
 reflection review --json
 ```

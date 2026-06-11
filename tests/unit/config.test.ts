@@ -81,6 +81,62 @@ describe('validateReflectionConfig', () => {
     expect(config.contracts.browser.maskSelectors).toEqual(['[data-private]', '.secret']);
   });
 
+  it('accepts browser-level and route-level storage setup without exposing values through config normalization', () => {
+    const config = validateReflectionConfig({
+      project: 'basic-react',
+      contracts: {
+        browser: {
+          enabled: true,
+          baseUrl: 'http://127.0.0.1:5173',
+          setup: {
+            localStorage: {
+              'reflection:test-user': 'fixture-user'
+            }
+          },
+          routes: [
+            {
+              id: 'auth',
+              path: '/auth',
+              setup: {
+                sessionStorage: {
+                  'reflection:test-session': 'fixture-session'
+                }
+              }
+            }
+          ]
+        }
+      }
+    });
+
+    expect(config.contracts.browser.setup?.localStorage).toEqual({ 'reflection:test-user': 'fixture-user' });
+    expect(config.contracts.browser.routes[0]?.setup?.sessionStorage).toEqual({ 'reflection:test-session': 'fixture-session' });
+  });
+
+  it('rejects empty browser setup storage keys', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          browser: {
+            enabled: true,
+            baseUrl: 'http://127.0.0.1:5173',
+            routes: [
+              {
+                id: 'auth',
+                path: '/auth',
+                setup: {
+                  localStorage: {
+                    '': 'fixture-user'
+                  }
+                }
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/Invalid Reflection config/);
+  });
+
   it('rejects impossible visual diff ratios', () => {
     expect(() =>
       validateReflectionConfig({
@@ -129,6 +185,121 @@ describe('validateReflectionConfig', () => {
     expect(config.contracts.component?.cases[0]?.stateNote).toBe(
       'Hover state is represented by story args/decorators, not browser-forced hover.'
     );
+  });
+
+  it('accepts a custom component viewport size for fixed Figma baselines', () => {
+    const config = validateReflectionConfig({
+      project: 'basic-react',
+      contracts: {
+        component: {
+          storybook: {
+            command: 'pnpm storybook',
+            readyUrl: 'http://127.0.0.1:6006'
+          },
+          cases: [
+            {
+              id: 'button-primary',
+              storyId: 'button--primary',
+              viewport: 'button-default',
+              viewportSize: { width: 320, height: 180 },
+              baseline: 'components/button-primary.png'
+            }
+          ]
+        }
+      }
+    });
+
+    expect(config.contracts.component?.cases[0]).toMatchObject({
+      viewport: 'button-default',
+      viewportSize: { width: 320, height: 180 }
+    });
+  });
+
+  it('accepts component framing for fixed Figma baselines', () => {
+    const config = validateReflectionConfig({
+      project: 'basic-react',
+      contracts: {
+        component: {
+          storybook: {
+            command: 'pnpm storybook',
+            readyUrl: 'http://127.0.0.1:6006'
+          },
+          cases: [
+            {
+              id: 'button-primary',
+              storyId: 'button--primary',
+              viewport: 'button-default',
+              viewportSize: { width: 390, height: 220 },
+              framing: {
+                background: '#ffffff',
+                padding: 16
+              },
+              baseline: 'components/button-primary.png'
+            }
+          ]
+        }
+      }
+    });
+
+    expect(config.contracts.component?.cases[0]?.framing).toEqual({
+      rootSelector: '#storybook-root',
+      background: '#ffffff',
+      align: 'center',
+      padding: 16
+    });
+  });
+
+  it('rejects invalid component framing options', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            storybook: {
+              command: 'pnpm storybook',
+              readyUrl: 'http://127.0.0.1:6006'
+            },
+            cases: [
+              {
+                id: 'button-primary',
+                storyId: 'button--primary',
+                framing: {
+                  rootSelector: '',
+                  align: 'middle',
+                  padding: -1
+                },
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/Invalid Reflection config/);
+  });
+
+  it('rejects invalid custom component viewport sizes', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'basic-react',
+        contracts: {
+          component: {
+            storybook: {
+              command: 'pnpm storybook',
+              readyUrl: 'http://127.0.0.1:6006'
+            },
+            cases: [
+              {
+                id: 'button-primary',
+                storyId: 'button--primary',
+                viewport: 'button-default',
+                viewportSize: { width: 320.5, height: 0 },
+                baseline: 'components/button-primary.png'
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/Invalid Reflection config/);
   });
 
   it('rejects browser-forced component pseudo states without animation stabilization', () => {

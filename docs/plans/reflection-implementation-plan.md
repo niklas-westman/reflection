@@ -32,14 +32,17 @@ Target path:
 /opt/data/workspace/repos/reflection
 ```
 
-Initial package identity:
+Public package identity:
 
 ```json
 {
-  "name": "reflection",
-  "private": true,
+  "name": "reflection-check",
   "bin": {
-    "reflection": "./dist/cli.js"
+    "reflection": "./dist/cli.js",
+    "reflection-check": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
 ```
@@ -165,7 +168,7 @@ reflection doctor
 Config helper:
 
 ```ts
-import { defineReflection } from 'reflection';
+import { defineReflection } from 'reflection-check';
 
 export default defineReflection({
   project: 'basic-react',
@@ -385,7 +388,7 @@ screenshot
 **Phase 1.5 evidence — 2026-05-31:**
 
 - RED: `corepack pnpm exec vitest run tests/integration/browser-contract.test.ts` failed because `src/contracts/browser/browser-contract.js` did not exist yet.
-- GREEN: Added Playwright Chromium launch/context helpers, route runner, browser assertions, console-error observer, horizontal-overflow check, screenshot/metadata artifacts, and browser contract aggregation. Added `playwright` as a dev dependency.
+- GREEN: Added Playwright Chromium launch/context helpers, route runner, browser assertions, console-error observer, horizontal-overflow check, screenshot/metadata artifacts, and browser contract aggregation. Added `playwright` for browser execution.
 - Fixture correction: `/login` mobile initially failed `noHorizontalOverflow`; fixed the fixture panel to use `boxSizing: 'border-box'` so the passing route is genuinely stable on mobile.
 - CLI wiring: `reflection run` now starts the configured server, runs browser checks for `smoke`/`full`, writes screenshot artifacts into `browser/<route>/<viewport>/actual.png`, writes per-route metadata, summarizes check statuses, and exits `1` on blocking browser failures.
 - Focused verification: `corepack pnpm exec vitest run tests/integration/browser-contract.test.ts` passed; `/login` passed desktop/mobile, `/overflow` failed as `layout-overflow`, and `/console-error` failed as `console-error`.
@@ -422,7 +425,7 @@ pnpm reflection doctor --config examples/basic-react/reflection.config.ts
 - Decision: baked in runtime `reflection.config.ts` loading now instead of continuing with temporary JavaScript configs, using `jiti` as the smallest practical loader for TypeScript config files.
 - RED: `node dist/cli.js run --config examples/basic-react/reflection.config.ts --report-dir <tmp>` exited `2` because the built CLI could not import the TypeScript config/helper path.
 - GREEN: `loadReflectionConfig` now resolves config paths to absolute paths and uses `jiti` for `.ts`, `.mts`, and `.cts` modules while preserving native dynamic import for JavaScript modules. Added regression coverage for TypeScript config files and relative TypeScript config paths.
-- Fixture adjustment: the example config server command now uses `corepack pnpm --dir examples/basic-react dev --host 127.0.0.1` so the built CLI can start the fixture from the repo root in environments where bare `pnpm` is not on `PATH`.
+- Fixture adjustment: the example config server command now uses `pnpm --dir examples/basic-react dev --host 127.0.0.1` so the built CLI can start the fixture from the repo root.
 - CLI smoke pass case: a temporary TypeScript login-only config exited `0`, reported status `pass`, project `basic-react-login-only`, and wrote desktop/mobile screenshot evidence.
 - CLI smoke fail case: `node dist/cli.js run --config examples/basic-react/reflection.config.ts --report-dir <tmp>` exited `1`, reported status `fail`, project `basic-react`, 2 blocking failures, and classified them as `layout-overflow` and `console-error`.
 - Verification: `corepack pnpm typecheck`, `corepack pnpm test` (8 files / 30 tests), `corepack pnpm build`, and `git diff --check` passed.
@@ -854,7 +857,7 @@ Make the project understandable and ready for continued dogfooding.
 
 **Phase 7.1 evidence — 2026-06-01:**
 
-- RED: added `tests/unit/package-surface.test.ts`; the focused test initially failed because `src/index.ts` did not exist, proving the documented `import { defineReflection } from 'reflection'` package surface was not yet wired.
+- RED: added `tests/unit/package-surface.test.ts`; the focused test initially failed because `src/index.ts` did not exist, proving the documented `import { defineReflection } from 'reflection-check'` package surface was not yet wired.
 - GREEN: added a public package entrypoint (`src/index.ts`) plus `main`, `types`, and `exports["."]` in `package.json` so documented config files can import `defineReflection` from the package root after build.
 - Documentation: added `getting-started`, `configuration`, `browser-contract`, `visual-contract`, `artifacts-and-gc`, and `agent-workflows` docs, and expanded the README documentation index.
 - Acceptance smoke: verified required docs exist, README links are present, evidence screenshots are distinguished from baselines, and visual diffs are documented as review-only by default.

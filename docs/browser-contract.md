@@ -30,12 +30,22 @@ browser: {
     reuseExisting: true,
     timeoutMs: 60_000
   },
+  setup: {
+    localStorage: {
+      'reflection:test-mode': 'enabled'
+    }
+  },
   maskSelectors: ['[data-reflection-mask]'],
   routes: [
     {
       id: 'login',
       path: '/login',
       viewports: ['desktop', 'mobile'],
+      setup: {
+        sessionStorage: {
+          'reflection:login-state': 'ready'
+        }
+      },
       expects: [
         { role: 'heading', name: 'Login' },
         { label: 'Email' },
@@ -50,6 +60,27 @@ browser: {
   ]
 }
 ```
+
+## Route setup for authenticated fixtures
+
+Use `setup.localStorage` and `setup.sessionStorage` to seed non-secret test state before Reflection navigates to a route:
+
+```ts
+routes: [
+  {
+    id: 'authenticated-home',
+    path: '/',
+    setup: {
+      localStorage: {
+        'reflection:test-user': 'fixture-user'
+      }
+    },
+    expects: [{ text: 'Welcome fixture-user' }]
+  }
+]
+```
+
+Browser-level setup applies to every route, and route-level setup extends or overrides it. Reflection records only setup key names in metadata so reports show that setup ran without logging values. Keep real credentials and production session values out of committed config; prefer test-mode auth or mock fixture tokens.
 
 ## Expectations
 

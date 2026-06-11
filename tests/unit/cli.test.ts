@@ -65,6 +65,13 @@ describe('reflection CLI', () => {
     expect(result.stdout.toLowerCase()).not.toContain('greenhouse');
   });
 
+  it('reports the package release version', async () => {
+    const result = await runCli(['--version']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe('0.0.4');
+  });
+
   it('returns usage exit code for an invalid mode', async () => {
     const result = await runCli(['run', '--mode', 'unknown']);
 
@@ -79,11 +86,30 @@ describe('reflection CLI', () => {
     expect(result.stderr).toContain('Reflection config not found');
   });
 
-  it('doctor prints a concise setup check placeholder', async () => {
+  it('doctor prints a concise setup check', async () => {
     const result = await runCli(['doctor']);
 
     expect(result.exitCode).toBeUndefined();
     expect(result.stdout).toContain('Reflection doctor');
+    expect(result.stdout).toContain('Status: pass');
+    expect(result.stdout).toContain('Config: not provided');
+    expect(result.stdout).not.toContain('placeholder');
+  });
+
+  it('wires doctor --config through the CLI and returns config errors as tool failures', async () => {
+    const result = await runCli(['doctor', '--config', '/tmp/reflection-missing.config.mjs']);
+
+    expect(result.exitCode).toBe(ExitCode.ToolOrConfigError);
+    expect(result.stderr).toContain('Reflection config not found');
+  });
+
+  it('wires init --dry-run through the CLI', async () => {
+    const result = await runCli(['init', '--dry-run', '--preset', 'vite-react']);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stdout).toContain('Reflection init');
+    expect(result.stdout).toContain('Dry run: yes');
+    expect(result.stdout).toContain('Install:');
   });
 
   it('wires review --json through the CLI', async () => {
