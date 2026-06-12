@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
-import { comparePngImages } from './image-diff.js';
+import { comparePngImages, formatVisualDiagnosticsDetails } from './image-diff.js';
 import type { VisualThreshold } from './thresholds.js';
 
 export type RouteVisualBaselineCase = {
@@ -85,6 +85,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
   const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
 
   const severity = result.status === 'fail' && blocking ? 'blocking' : 'review';
+  const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics);
 
   return {
     id: `visual.${input.visualCase.id}`,
@@ -93,6 +94,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
     status: result.status,
     severity,
     summary: createVisualSummary(input.visualCase.id, result),
+    ...(details ? { details } : {}),
     artifacts: [expectedArtifact, actualVisualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
     metadata: {
       ...result,

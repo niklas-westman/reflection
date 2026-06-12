@@ -66,7 +66,11 @@ describe('comparePngImages', () => {
       classification: 'visual-dimension-mismatch',
       dimensionMismatch: true,
       expected: { width: 2, height: 2 },
-      actual: { width: 3, height: 2 }
+      actual: { width: 3, height: 2 },
+      diagnostics: {
+        categories: ['dimension-mismatch'],
+        summary: 'Expected 2x2, actual 3x2.'
+      }
     });
   });
 
@@ -95,8 +99,16 @@ describe('comparePngImages', () => {
       classification: 'visual-diff',
       diffPixels: 1,
       diffRatio: 0.25,
-      threshold: { maxDiffPixelRatio: 0.2 }
+      threshold: { maxDiffPixelRatio: 0.2 },
+      diagnostics: {
+        categories: ['localized-change'],
+        boundingBox: { x: 0, y: 0, width: 1, height: 1 },
+        changedAreaRatio: 0.25,
+        density: 1
+      }
     });
+    expect(reviewResult.diagnostics?.summary).toContain('localized change');
+    expect(reviewResult.diagnostics?.likelyCauses[0]).toContain('localized icon');
     expect(strictResult).toMatchObject({ status: 'fail', classification: 'visual-diff' });
   });
 });

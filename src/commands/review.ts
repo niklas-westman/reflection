@@ -16,10 +16,14 @@ type ReviewSummary = {
   project: string;
   status: ReflectionReport['status'];
   reportPath: string;
-  blockingFailures: Array<Pick<CheckResult, 'id' | 'summary' | 'target' | 'status'>>;
-  reviewItems: Array<Pick<CheckResult, 'id' | 'summary' | 'target' | 'status'>>;
+  blockingFailures: ReviewCheck[];
+  reviewItems: ReviewCheck[];
   artifactPaths: string[];
   suggestedNextSteps: string[];
+};
+
+type ReviewCheck = Pick<CheckResult, 'id' | 'summary' | 'target' | 'status'> & {
+  details?: string | undefined;
 };
 
 export async function reviewCommand(options: ReviewCommandOptions = {}): Promise<void> {
@@ -103,6 +107,9 @@ function renderReview(summary: ReviewSummary): string {
     lines.push('Blocking:');
     for (const item of summary.blockingFailures) {
       lines.push(`- ${item.id} — ${item.summary}`);
+      if (item.details) {
+        lines.push(...renderReviewDetails(item.details));
+      }
     }
   }
 
@@ -111,6 +118,9 @@ function renderReview(summary: ReviewSummary): string {
     lines.push('Review:');
     for (const item of summary.reviewItems) {
       lines.push(`- ${item.id} — ${item.summary}`);
+      if (item.details) {
+        lines.push(...renderReviewDetails(item.details));
+      }
     }
   }
 
@@ -141,13 +151,18 @@ function isReviewItem(check: CheckResult): boolean {
   return check.severity === 'review' && (check.status === 'warn' || check.status === 'fail');
 }
 
-function toReviewCheck(check: CheckResult): Pick<CheckResult, 'id' | 'summary' | 'target' | 'status'> {
+function toReviewCheck(check: CheckResult): ReviewCheck {
   return {
     id: check.id,
     summary: check.summary,
     target: check.target,
-    status: check.status
+    status: check.status,
+    ...(check.details ? { details: check.details } : {})
   };
+}
+
+function renderReviewDetails(details: string): string[] {
+  return details.split('\n').map((line) => `  ${line}`);
 }
 
 function collectArtifactPaths(report: ReflectionReport, runDir: string): string[] {

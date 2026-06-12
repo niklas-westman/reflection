@@ -38,6 +38,7 @@ export function renderMarkdownReport(report: ReflectionReport): string {
     lines.push('');
     for (const check of blocking) {
       lines.push(renderCheckLine(check));
+      lines.push(...renderCheckDetails(check));
     }
   }
 
@@ -48,6 +49,7 @@ export function renderMarkdownReport(report: ReflectionReport): string {
     lines.push('');
     for (const check of review) {
       lines.push(renderCheckLine(check));
+      lines.push(...renderCheckDetails(check));
     }
   }
 
@@ -56,6 +58,7 @@ export function renderMarkdownReport(report: ReflectionReport): string {
   lines.push('');
   for (const check of report.checks) {
     lines.push(renderCheckLine(check));
+    lines.push(...renderCheckDetails(check));
     if (check.artifacts.length > 0) {
       for (const artifact of check.artifacts) {
         lines.push(`  - ${artifact.role ?? artifact.type}: ${artifact.path}`);
@@ -86,4 +89,12 @@ function isReviewItem(check: CheckResult): boolean {
 
 function renderCheckLine(check: CheckResult): string {
   return `- ${check.status.toUpperCase()} ${check.id}: ${check.summary}`;
+}
+
+function renderCheckDetails(check: CheckResult): string[] {
+  if (!check.details) {
+    return [];
+  }
+
+  return check.details.split('\n').map((line) => `  - ${line}`);
 }

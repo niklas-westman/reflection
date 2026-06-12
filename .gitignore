@@ -3,6 +3,7 @@ dist/
 .reflection/runs/
 .reflection/tmp/
 .reflection/cache/
+.playwright-mcp/
 artifacts/reflection/
 coverage/
 *.log

@@ -59,7 +59,16 @@ describe('manifest and report writer', () => {
   it('writes manifest, report.json, and readable report.md', async () => {
     const root = await tempRoot();
     const store = await createArtifactStore({ rootDir: join(root, '.reflection'), runId: 'run-002' });
-    const checks = [check(), check({ id: 'visual.login.mobile', suite: 'visual', status: 'warn', severity: 'review' })];
+    const checks = [
+      check(),
+      check({
+        id: 'visual.login.mobile',
+        suite: 'visual',
+        status: 'warn',
+        severity: 'review',
+        details: 'Visual diagnostics: sparse text or antialiasing; diff bounding box covers 12.0% of the image.'
+      })
+    ];
     const report: ReflectionReport = {
       schemaVersion: 1,
       runId: 'run-002',
@@ -95,6 +104,7 @@ describe('manifest and report writer', () => {
     expect(reportMd).toContain('# Reflection Report');
     expect(reportMd).toContain('Status: pass-with-review');
     expect(reportMd).toContain('## Review items');
+    expect(reportMd).toContain('Visual diagnostics: sparse text or antialiasing');
     expect(manifestJson).toMatchObject({ schemaVersion: 1, runId: 'run-002', status: 'pass-with-review' });
 
     await rm(root, { recursive: true, force: true });

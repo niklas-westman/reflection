@@ -190,6 +190,19 @@ threshold: {
 
 `maxDiffPixelRatio: 0` is valid and means exact pixel matching. Reflection preserves zero-valued thresholds intentionally.
 
+## Diff diagnostics
+
+When a visual comparison fails or warns, Reflection records lightweight diagnostics in `report.json`, `report.md`, and `reflection review --json`. These diagnostics do not replace human review, but they make the first triage more useful than a raw percentage.
+
+The diagnostic layer reports:
+
+- the changed bounding box;
+- changed-area ratio and changed-pixel density;
+- whether the change looks broad/framing-related, localized, sparse text/antialiasing-related, or color/token-related;
+- likely next checks such as viewport/framing, typography, text wrapping, theme tokens, state variants, borders, and icons.
+
+Treat these as heuristics. A `sparse-text-or-antialiasing` category should push review toward font loading, font weight, letter spacing, line height, and wrapping before changing thresholds. A `color-or-token-drift` category should push review toward theme mode, token bindings, opacity, state variant, and border/background colors.
+
 ## Updating baselines
 
 Always inspect artifacts first:

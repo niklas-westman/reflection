@@ -10,7 +10,7 @@ import { launchBrowser } from '../../integrations/playwright/browser-manager.js'
 import { startReflectionPortalServer, type PortalConfig } from '../../integrations/portal/server.js';
 import { startStorybookServer } from '../../integrations/storybook/server.js';
 import { resolveStoryUrl } from '../../integrations/storybook/story-url.js';
-import { comparePngImages } from '../visual/image-diff.js';
+import { comparePngImages, formatVisualDiagnosticsDetails } from '../visual/image-diff.js';
 import type { VisualThreshold } from '../visual/thresholds.js';
 
 export type ComponentSource = 'storybook' | 'portal';
@@ -195,6 +195,7 @@ async function runComponentVisualCase(input: {
     });
     const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
     const severity: CheckResult['severity'] = result.status === 'fail' && blocking ? 'blocking' : 'review';
+    const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics);
 
     return {
       id: `visual.${input.visualCase.id}`,
@@ -203,6 +204,7 @@ async function runComponentVisualCase(input: {
       status: result.status,
       severity,
       summary: createComponentVisualSummary(input.visualCase.id, result),
+      ...(details ? { details } : {}),
       artifacts: [expectedArtifact, actualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
       metadata: {
         ...result,

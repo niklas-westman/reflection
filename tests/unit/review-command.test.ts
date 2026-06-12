@@ -39,7 +39,15 @@ async function writeRun(root: string, runId: string) {
     ci: false,
     checks: [
       check({ id: 'browser.login.mobile', status: 'pass', severity: 'blocking', artifacts: [{ type: 'screenshot', role: 'actual', path: 'browser/login/mobile/actual.png' }] }),
-      check({ id: 'visual.login-mobile', suite: 'visual', status: 'warn', severity: 'review', summary: 'Login mobile visual changed.', artifacts: [{ type: 'visual-diff', role: 'diff', path: 'visual/login-mobile/diff.png' }] }),
+      check({
+        id: 'visual.login-mobile',
+        suite: 'visual',
+        status: 'warn',
+        severity: 'review',
+        summary: 'Login mobile visual changed.',
+        details: 'Visual diagnostics: localized change near middle/center.',
+        artifacts: [{ type: 'visual-diff', role: 'diff', path: 'visual/login-mobile/diff.png' }]
+      }),
       check({ id: 'browser.admin.mobile', status: 'fail', severity: 'blocking', summary: 'Admin route leaked private UI.' })
     ],
     suggestedNextSteps: [{ kind: 'fix', summary: 'Fix the admin auth gate before updating baselines.' }]
@@ -80,6 +88,7 @@ describe('reviewCommand', () => {
     expect(stdout).toContain('browser.admin.mobile — Admin route leaked private UI.');
     expect(stdout).toContain('Review:');
     expect(stdout).toContain('visual.login-mobile — Login mobile visual changed.');
+    expect(stdout).toContain('Visual diagnostics: localized change near middle/center.');
     expect(stdout).toContain('Artifacts:');
     expect(stdout).toContain('visual/login-mobile/diff.png');
     expect(stdout).toContain('Next:');
@@ -94,7 +103,7 @@ describe('reviewCommand', () => {
     const parsed = JSON.parse(stdout) as {
       status: string;
       blockingFailures: Array<{ id: string }>;
-      reviewItems: Array<{ id: string }>;
+      reviewItems: Array<{ id: string; details?: string }>;
       artifactPaths: string[];
       reportPath: string;
     };
@@ -102,6 +111,7 @@ describe('reviewCommand', () => {
     expect(parsed.status).toBe('fail');
     expect(parsed.blockingFailures.map((item) => item.id)).toEqual(['browser.admin.mobile']);
     expect(parsed.reviewItems.map((item) => item.id)).toEqual(['visual.login-mobile']);
+    expect(parsed.reviewItems[0]?.details).toContain('Visual diagnostics: localized change');
     expect(parsed.artifactPaths).toContain('visual/login-mobile/diff.png');
     expect(parsed.reportPath).toMatch(/agent-run\/report\.json$/);
   });
