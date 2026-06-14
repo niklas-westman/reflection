@@ -57,14 +57,24 @@ Not every run contains every folder. For example, a browser-only run may have sc
 
 - `runId`, `project`, mode, CI flag, and environment metadata;
 - overall status: `pass`, `pass-with-review`, `fail`, or `error`;
-- structured checks with `id`, `suite`, `target`, `status`, `severity`, artifacts, metadata, and suggested next steps;
+- structured checks with `id`, `suite`, `target`, `status`, `severity`, artifacts, metadata, diagnostics, evidence, recommendations, and suggested next steps;
+- optional `failureClass` and `confidence` fields for classified visual/component failures;
 - top-level artifact references.
 
 Use `reflection review --json` rather than hand-parsing reports when an agent needs a compact summary of latest evidence.
 
 ## `report.md`
 
-`report.md` is the human-readable report. Link this in PRs or task summaries when the recipient wants to inspect the run quickly.
+`report.md` is the human-readable run summary. It links to `report.json` and keeps the PR/task surface compact:
+
+- run identity and status;
+- summary counts;
+- suite-level counts;
+- blocking failures and review items, when present;
+- highest visual threshold usage;
+- suggested next steps.
+
+Use `report.json` for the complete check list, artifact paths, hashes, metadata, and diagnostics.
 
 ## `manifest.json`
 

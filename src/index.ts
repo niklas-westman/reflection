@@ -1,5 +1,6 @@
 export { defineReflection } from './core/define-reflection.js';
 export type { ReflectionConfig, ReflectionConfigInput, RunMode } from './core/config.js';
+export type { CheckDiagnostic, DiagnosticEvidence, FailureClass, ReflectionReport } from './core/report-schema.js';
 export type {
   ReflectionPortalCleanup,
   ReflectionPortalFraming,

@@ -2,6 +2,7 @@ import { spawn, type ChildProcess, type SpawnOptionsWithoutStdio } from 'node:ch
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import type { Readable } from 'node:stream';
 import { createRedactionTransform } from '../core/redaction.js';
 
 export type ManagedProcessOptions = {
@@ -32,21 +33,35 @@ export async function spawnManagedProcess(command: string, options: ManagedProce
 
   const child = spawn(command, spawnOptions);
   child.stdin?.end();
+  const closePromise = waitForChildClose(child);
+  const logPipePromises: Array<Promise<void>> = [];
 
   if (logStream) {
-    child.stdout?.pipe(createRedactionTransform()).pipe(logStream, { end: false });
-    child.stderr?.pipe(createRedactionTransform()).pipe(logStream, { end: false });
+    if (child.stdout) {
+      logPipePromises.push(pipeRedactedLog(child.stdout, logStream));
+    }
+    if (child.stderr) {
+      logPipePromises.push(pipeRedactedLog(child.stderr, logStream));
+    }
   }
 
   return {
     pid: child.pid,
-    stop: () => stopChildProcess(child, logStream)
+    stop: () => stopChildProcess(child, { closePromise, logPipePromises, logStream })
   };
 }
 
-async function stopChildProcess(child: ChildProcess, logStream?: WriteStream): Promise<void> {
+type StopChildProcessOptions = {
+  closePromise: Promise<void>;
+  logPipePromises: Array<Promise<void>>;
+  logStream: WriteStream | undefined;
+};
+
+async function stopChildProcess(child: ChildProcess, options: StopChildProcessOptions): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) {
-    await closeLogStream(logStream);
+    await options.closePromise;
+    await Promise.allSettled(options.logPipePromises);
+    await closeLogStream(options.logStream);
     return;
   }
 
@@ -57,7 +72,7 @@ async function stopChildProcess(child: ChildProcess, logStream?: WriteStream): P
       }
     }, 1_000);
 
-    child.once('close', () => {
+    options.closePromise.then(() => {
       clearTimeout(timeout);
       resolve();
     });
@@ -65,7 +80,41 @@ async function stopChildProcess(child: ChildProcess, logStream?: WriteStream): P
     killProcessGroup(child, 'SIGTERM');
   });
 
-  await closeLogStream(logStream);
+  await Promise.allSettled(options.logPipePromises);
+  await closeLogStream(options.logStream);
+}
+
+function waitForChildClose(child: ChildProcess): Promise<void> {
+  return new Promise((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      resolve();
+      return;
+    }
+
+    child.once('close', () => resolve());
+  });
+}
+
+function pipeRedactedLog(source: Readable, logStream: WriteStream): Promise<void> {
+  const redaction = createRedactionTransform();
+  source.pipe(redaction).pipe(logStream, { end: false });
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    const finish = () => {
+      if (resolved) {
+        return;
+      }
+
+      resolved = true;
+      resolve();
+    };
+
+    redaction.once('end', finish);
+    redaction.once('close', finish);
+    redaction.once('error', finish);
+    source.once('error', finish);
+  });
 }
 
 function killProcessGroup(child: ChildProcess, signal: NodeJS.Signals): void {

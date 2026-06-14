@@ -234,6 +234,16 @@ describe('validateReflectionConfig', () => {
                 background: '#ffffff',
                 padding: 0
               },
+              probes: {
+                parts: {
+                  root: {
+                    selector: '[data-reflection-part="root"]',
+                    styles: ['backgroundColor', 'borderColor'],
+                    cssVariables: ['--mw-color-primary'],
+                    text: true
+                  }
+                }
+              },
               baseline: 'components/button-primary.png'
             }
           ]
@@ -256,6 +266,17 @@ describe('validateReflectionConfig', () => {
         background: '#ffffff',
         align: 'center',
         padding: 0
+      },
+      probes: {
+        parts: {
+          root: {
+            selector: '[data-reflection-part="root"]',
+            bounds: true,
+            styles: ['backgroundColor', 'borderColor'],
+            cssVariables: ['--mw-color-primary'],
+            text: true
+          }
+        }
       }
     });
   });

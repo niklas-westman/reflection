@@ -1,6 +1,6 @@
 {
   "name": "reflection-check",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "CLI for evidence-backed rendered UI validation.",
   "license": "MIT",
   "type": "module",

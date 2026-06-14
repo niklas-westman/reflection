@@ -1,6 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import { defineReflection, type ReflectionPortalMountInput } from '../../src/index.js';
+import {
+  defineReflection,
+  type FailureClass,
+  type ReflectionPortalMountInput,
+  type ReflectionReport
+} from '../../src/index.js';
 
 describe('public package surface', () => {
   it('exports defineReflection for documented config files', () => {
@@ -33,7 +38,7 @@ describe('public package surface', () => {
     };
 
     expect(packageJson.name).toBe('reflection-check');
-    expect(packageJson.version).toBe('0.0.6');
+    expect(packageJson.version).toBe('0.0.7');
     expect(packageJson.private).toBeUndefined();
     expect(packageJson.license).toBe('MIT');
     expect(packageJson.publishConfig?.access).toBe('public');
@@ -61,5 +66,45 @@ describe('public package surface', () => {
     } satisfies ReflectionPortalMountInput;
 
     expect(input.path).toBe('/reflection/button/primary/light');
+  });
+
+  it('exports report diagnostic types for consumers', () => {
+    const failureClass = 'token-mismatch' satisfies FailureClass;
+    const report = {
+      schemaVersion: 1,
+      runId: 'typed-report',
+      project: 'documented-app',
+      startedAt: '2026-05-31T18:00:00.000Z',
+      finishedAt: '2026-05-31T18:00:01.000Z',
+      status: 'fail',
+      mode: 'visual',
+      ci: false,
+      environment: {},
+      summary: {
+        passed: 0,
+        failed: 1,
+        warnings: 0,
+        skipped: 0,
+        blockingFailures: 1,
+        reviewItems: 0
+      },
+      checks: [
+        {
+          id: 'visual.button',
+          suite: 'visual',
+          target: 'button',
+          status: 'fail',
+          severity: 'blocking',
+          summary: 'Button differs.',
+          artifacts: [],
+          metadata: {},
+          failureClass
+        }
+      ],
+      artifacts: [],
+      suggestedNextSteps: []
+    } satisfies ReflectionReport;
+
+    expect(report.checks[0]?.failureClass).toBe('token-mismatch');
   });
 });

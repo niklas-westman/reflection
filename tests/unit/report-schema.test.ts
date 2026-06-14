@@ -167,4 +167,42 @@ describe('validateReport', () => {
 
     expect(validateReport(report).status).toBe('pass-with-review');
   });
+
+  it('accepts classified diagnostics and structured evidence on checks', () => {
+    const report = createReport({
+      runId: 'diagnostic-report',
+      project: 'report-fixture',
+      startedAt: new Date('2026-05-31T12:00:00.000Z'),
+      finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+      mode: 'visual',
+      ci: false,
+      checks: [
+        check({
+          id: 'visual.button',
+          suite: 'visual',
+          status: 'fail',
+          severity: 'blocking',
+          summary: 'Button differs.',
+          failureClass: 'token-mismatch',
+          confidence: 0.75,
+          diagnostics: [
+            {
+              kind: 'visual-diff',
+              message: 'Color drift detected.',
+              severity: 'warning',
+              evidence: [{ kind: 'runtime-probes', summary: '1 probed part' }]
+            }
+          ],
+          evidence: [{ kind: 'visual-diff', data: { diffPixels: 12 } }],
+          recommendations: ['Check theme mode and bound tokens.']
+        })
+      ]
+    });
+
+    expect(report.checks[0]).toMatchObject({
+      failureClass: 'token-mismatch',
+      confidence: 0.75,
+      recommendations: ['Check theme mode and bound tokens.']
+    });
+  });
 });

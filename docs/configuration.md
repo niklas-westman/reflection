@@ -260,7 +260,23 @@ component: {
       baselineRoot: 'tests/fixtures/baselines',
       baseline: 'components/button/primary.chromium-linux.light.png',
       threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
-      strict: true
+      strict: true,
+      probes: {
+        parts: {
+          frame: {
+            selector: '#reflection-root',
+            bounds: true,
+            styles: ['backgroundColor', 'padding']
+          },
+          component: {
+            selector: '[data-reflection-part="root"]',
+            bounds: true,
+            styles: ['backgroundColor', 'borderColor', 'fontSize'],
+            cssVariables: ['--design-token-color-primary'],
+            text: true
+          }
+        }
+      }
     }
   ]
 }
@@ -296,6 +312,12 @@ framing: {
 ```
 
 Use it when the approved baseline is a fixed Figma frame: `background` should match the Figma frame fill, `align: 'center'` centers the component in the frame, and `padding` reserves explicit frame padding. `rootSelector` defaults to `#storybook-root` for Storybook cases and `#reflection-root` for portal cases.
+
+`probes` are optional diagnostics. Reflection evaluates each selector after the
+component is ready and before the screenshot, then stores bounds, computed
+styles, selected CSS variables, text, and font metrics in `report.json`. Use
+probes to make failures easier to classify; they do not mutate the page or
+change pass/fail behavior.
 
 Case/runtime rules:
 

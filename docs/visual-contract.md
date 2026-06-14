@@ -5,7 +5,7 @@ The visual contract compares current screenshots against approved baseline image
 Reflection currently supports two visual surfaces:
 
 - route-level visual smoke cases from browser route screenshots;
-- Storybook component visual cases.
+- component visual cases rendered through Storybook or the Reflection-generated portal.
 
 ## Evidence screenshots vs baselines
 
@@ -134,7 +134,17 @@ component: {
       baselineRoot: 'tests/fixtures/baselines',
       baseline: 'components/button/primary.chromium-linux.light.png',
       threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
-      strict: true
+      strict: true,
+      probes: {
+        parts: {
+          root: {
+            selector: '[data-reflection-part="root"]',
+            bounds: true,
+            styles: ['backgroundColor', 'borderColor', 'fontSize'],
+            cssVariables: ['--mw-color-primary-base']
+          }
+        }
+      }
     }
   ]
 }
@@ -148,6 +158,25 @@ For component baselines exported from a design tool, treat `viewportSize` and `f
 - `background`: CSS background matching the Figma frame fill.
 - `align`: `center` or `start`; `center` places the component in the middle of the frame.
 - `padding`: integer pixel padding inside the frame.
+
+`probes` are optional runtime diagnostics for portal and Storybook component
+cases. They do not change screenshot capture. They record DOM bounds, computed
+styles, selected CSS variables, text, and font metrics into `report.json` so a
+consumer can map a visual failure back to tokens, framing, or fixture state.
+
+```ts
+probes: {
+  parts: {
+    root: {
+      selector: '[data-reflection-part="root"]',
+      bounds: true,
+      styles: ['backgroundColor', 'borderColor', 'fontSize'],
+      cssVariables: ['--design-token-color-primary'],
+      text: true
+    }
+  }
+}
+```
 
 ### Pseudo states
 
@@ -192,7 +221,7 @@ threshold: {
 
 ## Diff diagnostics
 
-When a visual comparison fails or warns, Reflection records lightweight diagnostics in `report.json`, `report.md`, and `reflection review --json`. These diagnostics do not replace human review, but they make the first triage more useful than a raw percentage.
+When a visual comparison fails or warns, Reflection records lightweight diagnostics in `report.json` and `reflection review --json`. The human `report.md` stays compact, links to `report.json`, and surfaces summary-level visual budget categories. These diagnostics do not replace human review, but they make the first triage more useful than a raw percentage.
 
 The diagnostic layer reports:
 
@@ -200,6 +229,8 @@ The diagnostic layer reports:
 - changed-area ratio and changed-pixel density;
 - whether the change looks broad/framing-related, localized, sparse text/antialiasing-related, or color/token-related;
 - likely next checks such as viewport/framing, typography, text wrapping, theme tokens, state variants, borders, and icons.
+- a first-pass `failureClass` such as `framing-layout-mismatch`, `token-mismatch`, `runtime-implementation-mismatch`, `adapter-fixture-mismatch`, or `render-noise`;
+- optional structured `evidence`, `diagnostics`, and `recommendations` fields on each failed or review visual check.
 
 Treat these as heuristics. A `sparse-text-or-antialiasing` category should push review toward font loading, font weight, letter spacing, line height, and wrapping before changing thresholds. A `color-or-token-drift` category should push review toward theme mode, token bindings, opacity, state variant, and border/background colors.
 

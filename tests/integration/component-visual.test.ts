@@ -157,6 +157,21 @@ async function writeSolidPng(path: string, width: number, height: number, rgba: 
   await import('node:fs/promises').then(({ writeFile }) => writeFile(path, PNG.sync.write(png)));
 }
 
+async function writeProbeBaselinePng(path: string, width: number, height: number): Promise<void> {
+  const png = new PNG({ width, height });
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const idx = (width * y + x) << 2;
+      const insideButton = x >= 100 && x < 220 && y >= 66 && y < 114;
+      png.data[idx] = insideButton ? 255 : 12;
+      png.data[idx + 1] = insideButton ? 0 : 34;
+      png.data[idx + 2] = insideButton ? 0 : 56;
+      png.data[idx + 3] = 255;
+    }
+  }
+  await import('node:fs/promises').then(({ writeFile }) => writeFile(path, PNG.sync.write(png)));
+}
+
 async function writePortalEntry(path: string, rgba: [number, number, number, number]): Promise<void> {
   await writeFile(
     path,
@@ -166,6 +181,22 @@ export function mountReflectionCase(input) {
   input.root.style.height = "100%";
   input.root.style.background = "rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3] / 255})";
   input.root.dataset.caseId = input.id;
+}
+`,
+    'utf8'
+  );
+}
+
+async function writeProbePortalEntry(path: string, rgba: [number, number, number, number]): Promise<void> {
+  await writeFile(
+    path,
+    `
+export function mountReflectionCase(input) {
+  input.root.style.width = "100%";
+  input.root.style.height = "100%";
+  input.root.style.background = "rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3] / 255})";
+  input.root.style.setProperty("--probe-color", "rgb(${rgba[0]}, ${rgba[1]}, ${rgba[2]})");
+  input.root.innerHTML = '<button data-reflection-part="root" style="width: 120px; height: 48px; color: white; background: var(--probe-color); border: 1px solid rgb(1, 2, 3); font: 700 16px system-ui;">Probe</button>';
 }
 `,
     'utf8'
@@ -455,6 +486,79 @@ describe('component visual contract', () => {
     const actual = PNG.sync.read(await readFile(store.resolveRunPath(actualArtifact?.path ?? '')));
     expect({ width: actual.width, height: actual.height }).toEqual(viewportSize);
     expect(readPixel(actual, 0, 0)).toEqual([12, 34, 56, 255]);
+  }, 30_000);
+
+  it('captures configured portal runtime probes in visual metadata and evidence', async () => {
+    const port = await getFreePort();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-component-portal-probes-'));
+    const baselineRoot = await mkdtemp(join(tmpdir(), 'reflection-component-portal-baseline-probes-'));
+    const entryPath = join(rootDir, 'portal-entry.js');
+    const baseline = 'components/button-primary-portal-probes.png';
+    const viewportSize = { width: 320, height: 180 };
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(baselineRoot, 'components'), { recursive: true }));
+    await writeProbePortalEntry(entryPath, [12, 34, 56, 255]);
+    await writeProbeBaselinePng(join(baselineRoot, baseline), viewportSize.width, viewportSize.height);
+    const store = await createArtifactStore({ rootDir, runId: 'component-visual-portal-probes' });
+
+    const checks = await runComponentVisualContract(
+      {
+        portal: {
+          entry: entryPath,
+          readyUrl: `http://127.0.0.1:${port}`,
+          reuseExisting: false,
+          timeoutMs: 10_000
+        },
+        cases: [
+          {
+            id: 'button-primary-portal-probes',
+            path: '/reflection/button/primary/light',
+            viewport: 'button-default',
+            viewportSize,
+            baselineRoot,
+            baseline,
+            framing: { background: '#0c2238', align: 'center', padding: 0 },
+            threshold: { maxDiffPixels: 0, maxDiffPixelRatio: 0 },
+            strict: true,
+            probes: {
+              parts: {
+                root: {
+                  selector: '[data-reflection-part="root"]',
+                  styles: ['backgroundColor', 'borderColor', 'fontSize'],
+                  cssVariables: ['--probe-color'],
+                  text: true
+                }
+              }
+            }
+          }
+        ]
+      },
+      store
+    );
+
+    const visualCheck = checks.find((check) => check.id === 'visual.button-primary-portal-probes');
+    expect(visualCheck).toMatchObject({
+      status: 'fail',
+      failureClass: 'token-mismatch',
+      metadata: {
+        runtimeProbes: {
+          parts: {
+            root: {
+              found: true,
+              styles: {
+                backgroundColor: 'rgb(12, 34, 56)',
+                borderColor: 'rgb(1, 2, 3)',
+                fontSize: '16px'
+              },
+              cssVariables: {
+                '--probe-color': 'rgb(12, 34, 56)'
+              },
+              text: 'Probe'
+            }
+          }
+        }
+      }
+    });
+    expect(visualCheck?.evidence?.some((entry) => entry.kind === 'runtime-probes')).toBe(true);
   }, 30_000);
 
   it('produces portal expected, actual, and diff artifacts on mismatch', async () => {

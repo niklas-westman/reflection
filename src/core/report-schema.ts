@@ -8,6 +8,43 @@ export const CheckSuiteSchema = z.enum(['design', 'browser', 'visual', 'componen
 export const ReportStatusSchema = z.enum(['pass', 'fail', 'pass-with-review', 'error']);
 export const ArtifactTypeSchema = z.enum(['report', 'screenshot', 'image', 'visual-diff', 'trace', 'video', 'log', 'metadata']);
 export const ArtifactRoleSchema = z.enum(['evidence', 'expected', 'actual', 'diff', 'trace', 'debug']);
+export const FailureClassSchema = z.enum([
+  'source-node-mismatch',
+  'token-mismatch',
+  'baseline-export-mismatch',
+  'framing-layout-mismatch',
+  'adapter-fixture-mismatch',
+  'runtime-implementation-mismatch',
+  'render-noise',
+  'unknown',
+  'route-failure',
+  'auth-gate-failure',
+  'dom-contract-failure',
+  'accessibility-contract-failure',
+  'layout-overflow',
+  'console-error',
+  'network-error',
+  'visual-diff',
+  'component-drift',
+  'environment-mismatch',
+  'missing-baseline',
+  'flaky-unstable-screenshot',
+  'artifact-redaction-warning',
+  'tool-error'
+]);
+
+export const DiagnosticEvidenceSchema = z.object({
+  kind: z.string().min(1),
+  summary: z.string().min(1).optional(),
+  data: z.record(z.string(), z.unknown()).optional()
+});
+
+export const CheckDiagnosticSchema = z.object({
+  kind: z.string().min(1),
+  message: z.string().min(1),
+  severity: z.enum(['info', 'warning', 'error']).optional(),
+  evidence: z.array(DiagnosticEvidenceSchema).optional()
+});
 
 export const ArtifactRefSchema = z.object({
   type: ArtifactTypeSchema,
@@ -27,6 +64,11 @@ export const CheckResultSchema = z.object({
   details: z.string().optional(),
   artifacts: z.array(ArtifactRefSchema),
   metadata: z.record(z.string(), z.unknown()),
+  failureClass: FailureClassSchema.optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  diagnostics: z.array(CheckDiagnosticSchema).optional(),
+  evidence: z.array(DiagnosticEvidenceSchema).optional(),
+  recommendations: z.array(z.string().min(1)).optional(),
   suggestedNextStep: z.string().optional()
 });
 
@@ -65,6 +107,9 @@ export type CheckSeverity = z.output<typeof CheckSeveritySchema>;
 export type CheckSuite = z.output<typeof CheckSuiteSchema>;
 export type ReportStatus = z.output<typeof ReportStatusSchema>;
 export type ArtifactRef = z.output<typeof ArtifactRefSchema>;
+export type FailureClass = z.output<typeof FailureClassSchema>;
+export type DiagnosticEvidence = z.output<typeof DiagnosticEvidenceSchema>;
+export type CheckDiagnostic = z.output<typeof CheckDiagnosticSchema>;
 export type CheckResult = z.output<typeof CheckResultSchema>;
 export type ReflectionReport = z.output<typeof ReflectionReportSchema>;
 export type ReportSummary = z.output<typeof ReportSummarySchema>;

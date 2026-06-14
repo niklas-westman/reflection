@@ -299,7 +299,8 @@ describe('design command adapter', () => {
     expect(result.stdout).toContain('design.tokens');
     expect(report.status).toBe('pass');
     expect(report.checks.map((check) => check.id)).toEqual(['design.tokens']);
-    expect(markdown).toContain('token/source contract');
+    expect(markdown).toContain('Full machine report: [report.json](report.json)');
+    expect(markdown).not.toContain('token/source contract');
     expect(markdown.toLowerCase()).not.toContain('visual parity');
     await expect(readFile(join(reportRoot, 'runs', latest, 'design/tokens.log'), 'utf8')).resolves.toContain('design source contract ok');
   });

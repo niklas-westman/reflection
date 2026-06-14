@@ -1,28 +1,19 @@
-import type { CheckResult } from './report-schema.js';
+import { FailureClassSchema, type CheckResult, type FailureClass } from './report-schema.js';
 
-export type FailureClass =
-  | 'route-failure'
-  | 'auth-gate-failure'
-  | 'dom-contract-failure'
-  | 'accessibility-contract-failure'
-  | 'layout-overflow'
-  | 'console-error'
-  | 'network-error'
-  | 'visual-diff'
-  | 'component-drift'
-  | 'environment-mismatch'
-  | 'missing-baseline'
-  | 'flaky-unstable-screenshot'
-  | 'artifact-redaction-warning'
-  | 'tool-error';
+export type { FailureClass } from './report-schema.js';
 
 export function classifyFailure(check: CheckResult): FailureClass | undefined {
   if (check.status !== 'fail' && check.status !== 'error') {
     return undefined;
   }
 
+  if (check.failureClass) {
+    return check.failureClass;
+  }
+
   if (check.metadata.failureClass && typeof check.metadata.failureClass === 'string') {
-    return check.metadata.failureClass as FailureClass;
+    const parsed = FailureClassSchema.safeParse(check.metadata.failureClass);
+    return parsed.success ? parsed.data : 'unknown';
   }
 
   if (check.status === 'error') {

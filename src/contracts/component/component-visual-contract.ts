@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import type { Page } from 'playwright';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
-import type { CheckResult } from '../../core/report-schema.js';
+import type { CheckDiagnostic, CheckResult, DiagnosticEvidence, FailureClass } from '../../core/report-schema.js';
 import type { ServerConfig } from '../../core/server-manager.js';
 import { createBrowserContext, type ViewportSize } from '../../integrations/playwright/context-factory.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
@@ -29,6 +29,7 @@ export type ComponentVisualCase = {
   strict?: boolean | undefined;
   stateNote?: string | undefined;
   browserState?: ComponentBrowserState | undefined;
+  probes?: ComponentProbes | undefined;
 };
 
 export type ComponentBrowserState = {
@@ -45,6 +46,37 @@ export type ComponentFraming = {
   background?: string | undefined;
   align: 'center' | 'start';
   padding: number;
+};
+
+export type ComponentProbes = {
+  parts: Record<string, ComponentProbePart>;
+};
+
+export type ComponentProbePart = {
+  selector: string;
+  bounds?: boolean | undefined;
+  styles?: string[] | undefined;
+  cssVariables?: string[] | undefined;
+  text?: boolean | undefined;
+};
+
+type RuntimeProbePartResult = {
+  selector: string;
+  found: boolean;
+  bounds?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  styles?: Record<string, string>;
+  cssVariables?: Record<string, string>;
+  font?: Record<'fontFamily' | 'fontSize' | 'fontWeight' | 'lineHeight' | 'letterSpacing', string>;
+  text?: string;
+};
+
+type RuntimeProbeResult = {
+  parts: Record<string, RuntimeProbePartResult>;
 };
 
 type EffectiveComponentFraming = ComponentFraming & {
@@ -171,7 +203,7 @@ async function runComponentVisualCase(input: {
   const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, await readFile(baselinePath));
 
   try {
-    const actualArtifact = await captureComponentScreenshot({
+    const capture = await captureComponentScreenshot({
       browser: input.browser,
       store: input.store,
       path: `${artifactBase}/actual.png`,
@@ -180,8 +212,10 @@ async function runComponentVisualCase(input: {
       viewport,
       viewportSize,
       framing: resolveComponentFraming(input.visualCase.framing, input.componentSource),
-      browserState: input.visualCase.browserState
+      browserState: input.visualCase.browserState,
+      probes: input.visualCase.probes
     });
+    const actualArtifact = capture.artifact;
     const diffRelativePath = `${artifactBase}/diff.png`;
     const diffPath = input.store.resolveRunPath(diffRelativePath);
     await mkdir(dirname(diffPath), { recursive: true });
@@ -196,6 +230,10 @@ async function runComponentVisualCase(input: {
     const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
     const severity: CheckResult['severity'] = result.status === 'fail' && blocking ? 'blocking' : 'review';
     const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics);
+    const failureClass = result.status === 'pass' ? undefined : classifyComponentVisualFailure(result, capture.runtimeProbes);
+    const evidence = createComponentVisualEvidence(result, capture.runtimeProbes);
+    const diagnostics = createComponentVisualDiagnostics(result, capture.runtimeProbes);
+    const recommendations = createComponentVisualRecommendations(failureClass, result);
 
     return {
       id: `visual.${input.visualCase.id}`,
@@ -211,8 +249,14 @@ async function runComponentVisualCase(input: {
         ...createComponentSourceMetadata(input),
         viewport,
         baselinePath: input.visualCase.baseline,
-        ...createComponentMetadata(input.visualCase, input.componentSource)
+        ...createComponentMetadata(input.visualCase, input.componentSource),
+        ...(capture.runtimeProbes ? { runtimeProbes: capture.runtimeProbes } : {}),
+        ...(failureClass ? { failureClass } : {})
       },
+      ...(failureClass ? { failureClass, confidence: classifyComponentVisualConfidence(failureClass, result, capture.runtimeProbes) } : {}),
+      ...(diagnostics.length > 0 ? { diagnostics } : {}),
+      ...(evidence.length > 0 ? { evidence } : {}),
+      ...(recommendations.length > 0 ? { recommendations } : {}),
       ...(result.status === 'pass'
         ? {}
         : { suggestedNextStep: 'Inspect expected, actual, and diff artifacts. If intentional, update only this component visual baseline.' })
@@ -227,8 +271,19 @@ async function runComponentVisualCase(input: {
       severity: blocking ? 'blocking' : 'review',
       summary,
       artifacts: [expectedArtifact],
+      failureClass: input.componentSource === 'portal' ? 'adapter-fixture-mismatch' : 'tool-error',
+      confidence: 0.9,
+      diagnostics: [
+        {
+          kind: 'component-capture-error',
+          severity: 'error',
+          message: summary
+        }
+      ],
+      recommendations: ['Fix the component visual runtime setup, then rerun Reflection.'],
       metadata: {
         classification: 'tool-error',
+        failureClass: input.componentSource === 'portal' ? 'adapter-fixture-mismatch' : 'tool-error',
         ...createComponentSourceMetadata(input),
         viewport,
         baselinePath: input.visualCase.baseline,
@@ -249,6 +304,7 @@ async function captureComponentScreenshot(input: {
   viewportSize?: ViewportSize | undefined;
   framing?: EffectiveComponentFraming | undefined;
   browserState?: ComponentBrowserState | undefined;
+  probes?: ComponentProbes | undefined;
 }) {
   const context = await createBrowserContext(input.browser, input.viewport, input.viewportSize);
   try {
@@ -267,10 +323,76 @@ async function captureComponentScreenshot(input: {
     if (input.browserState) {
       await applyBrowserState(page, input.browserState);
     }
-    return input.store.writeBuffer(input.path, await page.screenshot());
+    const runtimeProbes = input.probes ? await collectRuntimeProbes(page, input.probes) : undefined;
+    const artifact = await input.store.writeBuffer(input.path, await page.screenshot());
+    return { artifact, ...(runtimeProbes ? { runtimeProbes } : {}) };
   } finally {
     await context.close();
   }
+}
+
+async function collectRuntimeProbes(page: Page, probes: ComponentProbes): Promise<RuntimeProbeResult> {
+  return page.evaluate((input) => {
+    function round(value: number): number {
+      return Math.round(value * 100) / 100;
+    }
+
+    function kebabCase(value: string): string {
+      return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+    }
+
+    function readStyle(styles: CSSStyleDeclaration, property: string): string {
+      return styles.getPropertyValue(property) || styles.getPropertyValue(kebabCase(property)) || String(styles.getPropertyValue(property));
+    }
+
+    const parts: Record<string, RuntimeProbePartResult> = {};
+    for (const [partName, part] of Object.entries(input.parts)) {
+      const element = document.querySelector(part.selector) as HTMLElement | null;
+      if (!element) {
+        parts[partName] = { selector: part.selector, found: false };
+        continue;
+      }
+
+      const computed = window.getComputedStyle(element);
+      const result: RuntimeProbePartResult = {
+        selector: part.selector,
+        found: true,
+        font: {
+          fontFamily: computed.fontFamily,
+          fontSize: computed.fontSize,
+          fontWeight: computed.fontWeight,
+          lineHeight: computed.lineHeight,
+          letterSpacing: computed.letterSpacing
+        }
+      };
+
+      if (part.bounds !== false) {
+        const bounds = element.getBoundingClientRect();
+        result.bounds = {
+          x: round(bounds.x),
+          y: round(bounds.y),
+          width: round(bounds.width),
+          height: round(bounds.height)
+        };
+      }
+
+      if (part.styles && part.styles.length > 0) {
+        result.styles = Object.fromEntries(part.styles.map((property) => [property, readStyle(computed, property)]));
+      }
+
+      if (part.cssVariables && part.cssVariables.length > 0) {
+        result.cssVariables = Object.fromEntries(part.cssVariables.map((property) => [property, computed.getPropertyValue(property).trim()]));
+      }
+
+      if (part.text === true) {
+        result.text = element.textContent?.trim() ?? '';
+      }
+
+      parts[partName] = result;
+    }
+
+    return { parts };
+  }, probes);
 }
 
 async function applyComponentFraming(page: Page, framing: EffectiveComponentFraming): Promise<void> {
@@ -424,6 +546,166 @@ function createComponentVisualSummary(id: string, result: { classification: stri
   return `${id} differs from approved component visual baseline by ${(result.diffRatio * 100).toFixed(2)}% (${result.diffPixels} pixels)${
     result.thresholdReason ? `, exceeding ${result.thresholdReason}` : ''
   }.`;
+}
+
+function classifyComponentVisualFailure(
+  result: {
+    classification: string;
+    diagnostics?: {
+      categories?: string[];
+      density?: number;
+      changedAreaRatio?: number;
+    };
+  },
+  runtimeProbes: RuntimeProbeResult | undefined
+): FailureClass {
+  if (result.classification === 'visual-dimension-mismatch') {
+    return 'framing-layout-mismatch';
+  }
+
+  const categories = result.diagnostics?.categories ?? [];
+  if (categories.includes('color-or-token-drift')) {
+    return 'token-mismatch';
+  }
+
+  if (categories.includes('broad-framing-or-layout')) {
+    return 'framing-layout-mismatch';
+  }
+
+  if (categories.includes('sparse-text-or-antialiasing')) {
+    return 'render-noise';
+  }
+
+  if (runtimeProbes && Object.values(runtimeProbes.parts).some((part) => !part.found)) {
+    return 'adapter-fixture-mismatch';
+  }
+
+  if (categories.includes('localized-change')) {
+    return 'runtime-implementation-mismatch';
+  }
+
+  return 'unknown';
+}
+
+function classifyComponentVisualConfidence(
+  failureClass: FailureClass,
+  result: {
+    classification: string;
+    diagnostics?: {
+      categories?: string[];
+    };
+  },
+  runtimeProbes: RuntimeProbeResult | undefined
+): number {
+  if (failureClass === 'framing-layout-mismatch' && result.classification === 'visual-dimension-mismatch') {
+    return 0.95;
+  }
+
+  if (failureClass === 'adapter-fixture-mismatch' && runtimeProbes && Object.values(runtimeProbes.parts).some((part) => !part.found)) {
+    return 0.9;
+  }
+
+  if (result.diagnostics?.categories?.length) {
+    return 0.75;
+  }
+
+  return 0.5;
+}
+
+function createComponentVisualEvidence(
+  result: {
+    expected: unknown;
+    actual: unknown;
+    diffPixels: number;
+    diffRatio: number;
+    diagnostics?: unknown;
+  },
+  runtimeProbes: RuntimeProbeResult | undefined
+): DiagnosticEvidence[] {
+  return [
+    {
+      kind: 'visual-diff',
+      summary: `${result.diffPixels} changed pixel(s), ratio ${result.diffRatio}`,
+      data: {
+        expected: result.expected,
+        actual: result.actual,
+        diagnostics: result.diagnostics ?? null
+      }
+    },
+    ...(runtimeProbes
+      ? [
+          {
+            kind: 'runtime-probes',
+            summary: `${Object.keys(runtimeProbes.parts).length} probed part(s)`,
+            data: runtimeProbes
+          } satisfies DiagnosticEvidence
+        ]
+      : [])
+  ];
+}
+
+function createComponentVisualDiagnostics(
+  result: {
+    classification: string;
+    diagnostics?: {
+      summary: string;
+      likelyCauses: string[];
+    };
+  },
+  runtimeProbes: RuntimeProbeResult | undefined
+): CheckDiagnostic[] {
+  const diagnostics: CheckDiagnostic[] = [];
+  if (result.diagnostics) {
+    diagnostics.push({
+      kind: result.classification,
+      message: result.diagnostics.summary,
+      severity: 'warning',
+      evidence: result.diagnostics.likelyCauses.map((cause) => ({
+        kind: 'likely-cause',
+        summary: cause
+      }))
+    });
+  }
+
+  if (runtimeProbes) {
+    const missing = Object.entries(runtimeProbes.parts).filter(([, part]) => !part.found);
+    if (missing.length > 0) {
+      diagnostics.push({
+        kind: 'runtime-probe-missing-part',
+        message: `Runtime probe selectors did not match: ${missing.map(([name]) => name).join(', ')}.`,
+        severity: 'error'
+      });
+    }
+  }
+
+  return diagnostics;
+}
+
+function createComponentVisualRecommendations(
+  failureClass: FailureClass | undefined,
+  result: {
+    diagnostics?: {
+      likelyCauses: string[];
+    };
+  }
+): string[] {
+  if (!failureClass) {
+    return [];
+  }
+
+  if (result.diagnostics?.likelyCauses.length) {
+    return result.diagnostics.likelyCauses;
+  }
+
+  if (failureClass === 'adapter-fixture-mismatch') {
+    return ['Check the portal fixture, selector wiring, and mounted component state before changing baselines.'];
+  }
+
+  if (failureClass === 'framing-layout-mismatch') {
+    return ['Check viewportSize, portal frame dimensions, centering, and padding before changing baselines.'];
+  }
+
+  return ['Inspect expected, actual, diff, and runtime probe metadata before changing thresholds or baselines.'];
 }
 
 function isStorybookCase(visualCase: ComponentVisualCase): visualCase is ComponentVisualCase & { storyId: string } {

@@ -102,9 +102,11 @@ describe('manifest and report writer', () => {
 
     expect(reportJson.status).toBe('pass-with-review');
     expect(reportMd).toContain('# Reflection Report');
+    expect(reportMd).toContain('Full machine report: [report.json](report.json)');
     expect(reportMd).toContain('Status: pass-with-review');
-    expect(reportMd).toContain('## Review items');
+    expect(reportMd).toContain('### Review items');
     expect(reportMd).toContain('Visual diagnostics: sparse text or antialiasing');
+    expect(reportMd).not.toContain('PASS browser.login.mobile');
     expect(manifestJson).toMatchObject({ schemaVersion: 1, runId: 'run-002', status: 'pass-with-review' });
 
     await rm(root, { recursive: true, force: true });

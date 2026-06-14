@@ -39,6 +39,18 @@ const ComponentFramingSchema = z.object({
   padding: z.number().int().nonnegative().default(0)
 });
 
+const ComponentProbePartSchema = z.object({
+  selector: z.string().min(1),
+  bounds: z.boolean().default(true),
+  styles: z.array(z.string().min(1)).default([]),
+  cssVariables: z.array(z.string().min(1)).default([]),
+  text: z.boolean().default(false)
+});
+
+const ComponentProbesSchema = z.object({
+  parts: z.record(z.string().min(1), ComponentProbePartSchema).default({})
+});
+
 const RouteVisualSmokeCaseSchema = z.object({
   id: z.string().min(1),
   route: z.string().min(1),
@@ -131,7 +143,8 @@ const ComponentVisualCaseSchema = z
     blocking: z.boolean().optional(),
     strict: z.boolean().optional(),
     stateNote: z.string().min(1).optional(),
-    browserState: ComponentBrowserStateSchema.optional()
+    browserState: ComponentBrowserStateSchema.optional(),
+    probes: ComponentProbesSchema.optional()
   })
   .superRefine((value, context) => {
     if (value.storyId && value.path) {
