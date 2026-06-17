@@ -1,4 +1,5 @@
 import { mkdtemp, readFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -9,12 +10,13 @@ import { runBrowserContract } from '../../src/contracts/browser/browser-contract
 const activeServers: ManagedServer[] = [];
 
 async function startBasicReactFixture(): Promise<string> {
-  const readyUrl = 'http://127.0.0.1:5173';
+  const port = await getFreePort();
+  const readyUrl = `http://127.0.0.1:${port}`;
   const server = await startManagedServer(
     {
-      command: 'pnpm dev --host 127.0.0.1',
+      command: `pnpm dev --host 127.0.0.1 --port ${port}`,
       readyUrl,
-      reuseExisting: true,
+      reuseExisting: false,
       timeoutMs: 10_000
     },
     {
@@ -24,6 +26,24 @@ async function startBasicReactFixture(): Promise<string> {
   );
   activeServers.push(server);
   return readyUrl;
+}
+
+async function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      server.close(() => {
+        if (address && typeof address === 'object') {
+          resolve(address.port);
+          return;
+        }
+
+        reject(new Error('Unable to allocate a free local port.'));
+      });
+    });
+  });
 }
 
 afterEach(async () => {

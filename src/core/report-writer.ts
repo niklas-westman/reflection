@@ -1,15 +1,18 @@
 import type { ArtifactStore } from './artifact-store.js';
 import type { ArtifactRef, CheckResult, CheckStatus, CheckSuite, ReflectionReport } from './report-schema.js';
+import { renderHtmlReport } from './report-html.js';
 
 export async function writeReports(store: ArtifactStore, report: ReflectionReport): Promise<ArtifactRef[]> {
   await store.ensureRunDir();
   const reportJson = await store.writeJson('report.json', report);
   const reportMd = await store.writeText('report.md', renderMarkdownReport(report));
+  const reportHtml = await store.writeText('report.html', renderHtmlReport(report));
   await store.updateLatestPointer();
 
   return [
     { ...reportJson, type: 'report', role: 'evidence' },
-    { ...reportMd, type: 'report', role: 'evidence' }
+    { ...reportMd, type: 'report', role: 'evidence' },
+    { ...reportHtml, type: 'report', role: 'evidence' }
   ];
 }
 

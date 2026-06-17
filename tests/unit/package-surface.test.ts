@@ -38,7 +38,7 @@ describe('public package surface', () => {
     };
 
     expect(packageJson.name).toBe('reflection-check');
-    expect(packageJson.version).toBe('0.0.7');
+    expect(packageJson.version).toBe('0.0.8');
     expect(packageJson.private).toBeUndefined();
     expect(packageJson.license).toBe('MIT');
     expect(packageJson.publishConfig?.access).toBe('public');

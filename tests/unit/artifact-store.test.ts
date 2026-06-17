@@ -56,7 +56,7 @@ describe('artifact store', () => {
 });
 
 describe('manifest and report writer', () => {
-  it('writes manifest, report.json, and readable report.md', async () => {
+  it('writes manifest, report.json, readable report.md, and report.html', async () => {
     const root = await tempRoot();
     const store = await createArtifactStore({ rootDir: join(root, '.reflection'), runId: 'run-002' });
     const checks = [
@@ -98,6 +98,7 @@ describe('manifest and report writer', () => {
 
     const reportJson = JSON.parse(await readFile(join(root, '.reflection/runs/run-002/report.json'), 'utf8')) as ReflectionReport;
     const reportMd = await readFile(join(root, '.reflection/runs/run-002/report.md'), 'utf8');
+    const reportHtml = await readFile(join(root, '.reflection/runs/run-002/report.html'), 'utf8');
     const manifestJson = JSON.parse(await readFile(join(root, '.reflection/runs/run-002/manifest.json'), 'utf8')) as unknown;
 
     expect(reportJson.status).toBe('pass-with-review');
@@ -107,6 +108,10 @@ describe('manifest and report writer', () => {
     expect(reportMd).toContain('### Review items');
     expect(reportMd).toContain('Visual diagnostics: sparse text or antialiasing');
     expect(reportMd).not.toContain('PASS browser.login.mobile');
+    expect(reportHtml).toContain('<title>Reflection Report · reflection-test · pass-with-review</title>');
+    expect(reportHtml).toContain('id="check-search"');
+    expect(reportHtml).toContain('href="report.json"');
+    expect(written.map((artifact) => artifact.path)).toContain('report.html');
     expect(manifestJson).toMatchObject({ schemaVersion: 1, runId: 'run-002', status: 'pass-with-review' });
 
     await rm(root, { recursive: true, force: true });

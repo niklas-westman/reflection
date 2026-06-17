@@ -28,6 +28,7 @@ Typical files:
 
 ```text
 .reflection/runs/<run-id>/
+  report.html
   report.md
   report.json
   manifest.json
@@ -62,6 +63,16 @@ Not every run contains every folder. For example, a browser-only run may have sc
 - top-level artifact references.
 
 Use `reflection review --json` rather than hand-parsing reports when an agent needs a compact summary of latest evidence.
+
+## `report.html`
+
+`report.html` is the friendly static report portal for humans. It is generated beside
+the JSON and Markdown reports and can be opened directly from the run directory or
+uploaded as a CI artifact with the rest of the run bundle.
+
+The portal embeds the report data and links to run-local artifacts such as
+`expected.png`, `actual.png`, and `diff.png`. Keep the full run folder together
+when sharing it so image previews and artifact links resolve correctly.
 
 ## `report.md`
 

@@ -115,6 +115,7 @@ Important files:
 
 ```text
 .reflection/runs/latest
+.reflection/runs/<run-id>/report.html
 .reflection/runs/<run-id>/report.md
 .reflection/runs/<run-id>/report.json
 .reflection/runs/<run-id>/manifest.json
