@@ -124,6 +124,15 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
   } else {
     console.log('Component contract: not configured');
   }
+
+  const print = config.contracts.print;
+  console.log(
+    print
+      ? `Print contract: ${print.enabled === false ? 'disabled' : 'enabled'}, ${formatCount(print.cases.length, 'case')}`
+      : 'Print contract: not configured'
+  );
+
+  console.log(`Lifecycle beforeRun: ${formatCount(config.lifecycle.beforeRun.length, 'hook')}`);
 }
 
 function describeComponentRuntime(component: NonNullable<ReflectionConfig['contracts']['component']>): 'storybook' | 'portal' | 'mixed' | 'none' {

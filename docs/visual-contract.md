@@ -2,10 +2,12 @@
 
 The visual contract compares current screenshots against approved baseline images. It is deliberately review-first: visual diffs are review-only by default, and baseline updates are explicit human-approved mutations.
 
-Reflection currently supports two visual surfaces:
+Reflection currently supports four visual surfaces:
 
 - route-level visual smoke cases from browser route screenshots;
-- component visual cases rendered through Storybook or the Reflection-generated portal.
+- selector-scoped route visual smoke cases for long documents;
+- component visual cases rendered through Storybook or the Reflection-generated portal;
+- print/PDF rendered page cases when `contracts.print` is configured.
 
 ## Evidence screenshots vs baselines
 
@@ -53,7 +55,7 @@ Promote a visual case to blocking only when the baseline is stable and the team 
 
 ## Route-level visual smoke
 
-Route visual smoke cases reuse browser route screenshots. A case must point at a configured route id and viewport:
+Route visual smoke cases reuse browser route screenshots by default. A case must point at a configured route id and viewport:
 
 ```ts
 browser: {
@@ -75,6 +77,19 @@ browser: {
       threshold: { maxDiffPixelRatio: 0.01 }
     }
   ]
+}
+```
+
+For long documents, capture a single page or region with a selector:
+
+```ts
+{
+  id: 'annual-report-page-7',
+  route: 'annual-report-print',
+  viewport: 'desktop',
+  capture: { selector: '.page[data-page="7"]' },
+  baselineRoot: 'tests/fixtures/baselines',
+  baseline: 'browser/annual-report-print/page-7.chromium-linux.light.png'
 }
 ```
 
@@ -205,6 +220,12 @@ Reports include `statePolicy` metadata:
 - `story-controlled` when no `browserState` is configured;
 - `portal-controlled` when the generated portal renders the state;
 - `browser-forced-with-stabilization` when Reflection applies hover/focus in the browser.
+
+## Print page baselines
+
+`contracts.print` can generate a PDF from a browser route, render configured PDF pages to PNG with Poppler, and compare those page PNGs against baselines. Poppler is optional by default; when it is missing, Reflection keeps the generated PDF artifact and emits a review warning instead of failing the run.
+
+Use `reflection update --case <renderedPageId> --from-run latest --dry-run` to propose an intentional print page baseline update.
 
 ## Thresholds
 

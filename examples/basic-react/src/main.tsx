@@ -136,12 +136,93 @@ function AuthRoute() {
   );
 }
 
+const printShellStyle: React.CSSProperties = {
+  minHeight: '100vh',
+  margin: 0,
+  padding: '24px',
+  background: '#e8ebef',
+  color: '#111827',
+  fontFamily: 'Georgia, "Times New Roman", serif'
+};
+
+const documentPageStyle: React.CSSProperties = {
+  width: '794px',
+  minHeight: '1123px',
+  boxSizing: 'border-box',
+  margin: '0 auto 24px',
+  padding: '72px 64px',
+  display: 'grid',
+  gridTemplateRows: 'auto 1fr auto',
+  background: '#ffffff',
+  border: '1px solid #d1d5db',
+  boxShadow: '0 12px 40px rgba(15, 23, 42, 0.16)'
+};
+
+function PrintFixtureRoute() {
+  const sections = [
+    'Cover',
+    'Management report',
+    'Income statement',
+    'Balance sheet',
+    'Notes',
+    'Signatures',
+    'Electronic signatures'
+  ];
+
+  return (
+    <main style={printShellStyle}>
+      <style>
+        {`
+          @page { size: A4; margin: 0; }
+          @media print {
+            body { margin: 0; background: white; }
+            [data-page] { box-shadow: none !important; border: 0 !important; margin: 0 !important; break-after: page; page-break-after: always; }
+          }
+        `}
+      </style>
+      {sections.map((section, index) => {
+        const page = index + 1;
+        return (
+          <section key={section} className="page" data-page={page} style={documentPageStyle}>
+            <header>
+              <p style={{ fontSize: 12, letterSpacing: '0.16em', margin: '0 0 12px', textTransform: 'uppercase' }}>
+                Reflection print fixture
+              </p>
+              <h1 style={{ fontSize: 36, margin: 0 }}>{section}</h1>
+            </header>
+            <div>
+              <p>Annual Report Full Smoke AB</p>
+              {page === 6 && <p>Electronically signed</p>}
+              {page === 7 && (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <caption style={{ marginBottom: 12, textAlign: 'left' }}>Electronic signatures</caption>
+                  <tbody>
+                    <tr>
+                      <th style={{ border: '1px solid #d1d5db', padding: 8, textAlign: 'left' }}>Provider</th>
+                      <td style={{ border: '1px solid #d1d5db', padding: 8 }}>FixtureID</td>
+                    </tr>
+                    <tr>
+                      <th style={{ border: '1px solid #d1d5db', padding: 8, textAlign: 'left' }}>Signed at</th>
+                      <td style={{ border: '1px solid #d1d5db', padding: 8 }}>2026-01-15 10:30</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <footer>Sida {page} av 7</footer>
+          </section>
+        );
+      })}
+    </main>
+  );
+}
+
 function NotFoundRoute() {
   return (
     <main style={pageStyle}>
       <section style={panelStyle}>
         <h1>Fixture route not found</h1>
-        <p>Use /login, /auth, /overflow, or /console-error.</p>
+        <p>Use /login, /auth, /print-fixture, /overflow, or /console-error.</p>
       </section>
     </main>
   );
@@ -158,6 +239,8 @@ function App() {
       return <ConsoleErrorRoute />;
     case '/auth':
       return <AuthRoute />;
+    case '/print-fixture':
+      return <PrintFixtureRoute />;
     default:
       return <NotFoundRoute />;
   }

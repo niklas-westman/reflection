@@ -41,7 +41,7 @@ describe('route visual smoke', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'reflection-visual-smoke-'));
     const store = await createArtifactStore({ rootDir, runId: 'visual-smoke-pass' });
 
-    const checks = await runBrowserContract(
+    const result = await runBrowserContract(
       {
         baseUrl,
         blocking: true,
@@ -74,6 +74,7 @@ describe('route visual smoke', () => {
       },
       store
     );
+    const checks = result.checks;
 
     const browserCheck = checks.find((check) => check.id === 'browser.login.mobile');
     const visualCheck = checks.find((check) => check.id === 'visual.login-mobile');
@@ -108,7 +109,7 @@ describe('route visual smoke', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'reflection-visual-smoke-missing-'));
     const store = await createArtifactStore({ rootDir, runId: 'visual-smoke-missing' });
 
-    const checks = await runBrowserContract(
+    const result = await runBrowserContract(
       {
         baseUrl,
         blocking: true,
@@ -133,6 +134,7 @@ describe('route visual smoke', () => {
       },
       store
     );
+    const checks = result.checks;
 
     expect(checks.find((check) => check.id === 'visual.login-mobile-missing')).toMatchObject({
       status: 'warn',
@@ -145,5 +147,58 @@ describe('route visual smoke', () => {
     const missingBaselineCheck = checks.find((check) => check.id === 'visual.login-mobile-missing');
     expect(missingBaselineCheck?.artifacts.map((artifact) => [artifact.role, artifact.path])).toEqual([['actual', 'visual/login-mobile-missing/actual.png']]);
     await expect(readFile(store.resolveRunPath('visual/login-mobile-missing/actual.png'))).resolves.toBeInstanceOf(Buffer);
+  }, 20_000);
+
+  it('captures a selector-scoped route visual for long print-like documents', async () => {
+    const baseUrl = await startBasicReactFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-visual-smoke-selector-'));
+    const store = await createArtifactStore({ rootDir, runId: 'visual-smoke-selector' });
+
+    const result = await runBrowserContract(
+      {
+        baseUrl,
+        blocking: true,
+        routes: [
+          {
+            id: 'print-fixture',
+            path: '/print-fixture',
+            viewports: ['desktop'],
+            expects: [
+              { selectorCount: { selector: '.page', equals: 7 } },
+              { noSelector: '.signature-line' },
+              { text: 'Electronic signatures' },
+              { screenshot: 'final' }
+            ]
+          }
+        ],
+        visualSmoke: [
+          {
+            id: 'print-page-7',
+            route: 'print-fixture',
+            viewport: 'desktop',
+            capture: { selector: '.page[data-page="7"]' },
+            baselineRoot: rootDir,
+            baseline: 'browser/print/page-7.png',
+            scenario: 'annual-report-full-smoke'
+          }
+        ]
+      },
+      store
+    );
+
+    const visualCheck = result.checks.find((check) => check.id === 'visual.print-page-7');
+
+    expect(result.checks.find((check) => check.id === 'browser.print-fixture.desktop')?.status).toBe('pass');
+    expect(visualCheck).toMatchObject({
+      status: 'warn',
+      severity: 'review',
+      metadata: {
+        classification: 'missing-baseline',
+        capture: { selector: '.page[data-page="7"]' },
+        scenario: 'annual-report-full-smoke'
+      }
+    });
+    expect(visualCheck?.artifacts.map((artifact) => [artifact.role, artifact.path])).toEqual([['actual', 'visual/print-page-7/actual.png']]);
+    await expect(readFile(store.resolveRunPath('visual/print-page-7/actual.png'))).resolves.toBeInstanceOf(Buffer);
   }, 20_000);
 });

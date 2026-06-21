@@ -11,6 +11,8 @@ export type BrowserExpectation =
   | { selector: string }
   | { elementVisible: string }
   | { elementNotVisible: string }
+  | { selectorCount: { selector: string; equals: number } }
+  | { noSelector: string }
   | { noHorizontalOverflow: true }
   | { noConsoleErrors: true }
   | { screenshot: string };
@@ -90,6 +92,28 @@ export async function evaluateExpectation(
   if ('elementNotVisible' in expectation) {
     if (await page.locator(expectation.elementNotVisible).first().isVisible().catch(() => false)) {
       return { classification: 'dom-contract-failure', summary: `Expected hidden or absent element ${expectation.elementNotVisible}.` };
+    }
+    return undefined;
+  }
+
+  if ('selectorCount' in expectation) {
+    const actual = await page.locator(expectation.selectorCount.selector).count();
+    if (actual !== expectation.selectorCount.equals) {
+      return {
+        classification: 'dom-contract-failure',
+        summary: `Expected selector ${expectation.selectorCount.selector} to match ${expectation.selectorCount.equals} element${expectation.selectorCount.equals === 1 ? '' : 's'}, found ${actual}.`
+      };
+    }
+    return undefined;
+  }
+
+  if ('noSelector' in expectation) {
+    const actual = await page.locator(expectation.noSelector).count();
+    if (actual > 0) {
+      return {
+        classification: 'dom-contract-failure',
+        summary: `Unexpected selector ${expectation.noSelector} matched ${actual} element${actual === 1 ? '' : 's'}.`
+      };
     }
     return undefined;
   }

@@ -34,6 +34,8 @@ import { defineReflection } from '../../src/core/define-reflection';
 | `contracts.browser` | no | Browser route and route-level visual smoke checks. |
 | `contracts.design` | no | Project-owned command checks. |
 | `contracts.component` | no | Storybook-backed component visual checks. |
+| `contracts.print` | no | Browser route print-to-PDF checks and optional rendered PDF page baselines. |
+| `lifecycle.beforeRun` | no | Project-owned setup commands that run before servers/contracts. |
 
 Run mode is currently selected by the CLI with `reflection run --mode <mode>` and defaults to `smoke` when omitted. The `--ci` flag changes CI/report-root behavior but does not select a separate config-defined run mode yet.
 
@@ -41,10 +43,39 @@ Run mode is currently selected by the CLI with `reflection run --mode <mode>` an
 
 | Mode | Runs |
 | --- | --- |
-| `smoke` | Browser route checks and route-level visual smoke cases. |
+| `smoke` | Browser route checks, route-level visual smoke cases, and print contracts when configured. |
 | `design` | Design command checks. |
 | `visual` | Storybook component visual checks. |
-| `full` | Browser, design, and component contracts. |
+| `print` | Print/PDF contracts. |
+| `full` | Browser, design, component, and print contracts. |
+
+## Lifecycle hooks
+
+Use `lifecycle.beforeRun` for deterministic fixture generation before Reflection starts the browser server:
+
+```ts
+lifecycle: {
+  beforeRun: [
+    {
+      id: 'annual-report-fixture',
+      command: 'pnpm annual-report:reflection:prepare',
+      cwd: '.',
+      timeoutMs: 120_000,
+      blocking: true,
+      scenario: 'annual-report-full-smoke',
+      artifacts: [
+        {
+          path: 'outputs/reflection/annual-report-full-smoke/annual-report-print.html',
+          type: 'html',
+          role: 'evidence'
+        }
+      ]
+    }
+  ]
+}
+```
+
+Hook logs are written under `setup/<id>.log` with sensitive values redacted. Declared artifacts are copied into the run directory so `review` can expose safe relative artifact paths.
 
 ## Browser contract
 
@@ -138,6 +169,8 @@ Supported browser expectations:
 { selector: '[data-ready="true"]' }
 { elementVisible: '[data-toast]' }
 { elementNotVisible: '[data-loading]' }
+{ selectorCount: { selector: '.page', equals: 7 } }
+{ noSelector: '.signature-line' }
 { noHorizontalOverflow: true }
 { noConsoleErrors: true }
 { screenshot: 'final' }
@@ -155,6 +188,7 @@ visualSmoke: [
     viewport: 'mobile',
     baselineRoot: 'tests/fixtures/baselines',
     baseline: 'browser/login/mobile.chromium-linux.light.png',
+    capture: { selector: '.page[data-page="7"]' },
     threshold: {
       maxDiffPixels: 25,
       maxDiffPixelRatio: 0.01
@@ -164,6 +198,8 @@ visualSmoke: [
   }
 ]
 ```
+
+Omit `capture` to compare the full route screenshot. Add `capture.selector` to compare a page or sub-region from long documents.
 
 `blocking: true` or `strict: true` promotes a visual diff to a blocking failure. By default, visual diffs and missing baselines are review-only. The current `reflection update` command promotes route-level `visualSmoke` baselines only; component visual baselines should be copied or reviewed manually until component update support lands.
 
@@ -331,6 +367,42 @@ Pseudo-state policy:
 - Prefer runtime-controlled variants for hover, focus, active, selected, open, and disabled states.
 - If a browser-forced state is necessary, configure `browserState` with `kind: 'hover' | 'focus'`, a selector, and effective animation stabilization.
 - Reflection records `statePolicy` metadata in reports so reviewers can tell whether the state came from the story or was forced in the browser.
+
+## Print contract
+
+Print cases use a configured browser route, generate `document.pdf` with Playwright, and optionally use Poppler (`pdfinfo` and `pdftoppm`) to validate page metadata and render page PNG evidence.
+
+```ts
+print: {
+  enabled: true,
+  cases: [
+    {
+      id: 'annual-report-full-smoke',
+      route: 'annual-report-print',
+      viewport: 'desktop',
+      pdf: {
+        format: 'A4',
+        printBackground: true,
+        expectedPageCount: 7,
+        expectedPageSize: 'A4',
+        poppler: { mode: 'optional', dpi: 144 },
+        renderedPages: [
+          {
+            id: 'annual-report-page-7',
+            page: 7,
+            baselineRoot: 'tests/fixtures/baselines',
+            baseline: 'print/annual-report/page-7.chromium-linux.light.png',
+            threshold: { maxDiffPixelRatio: 0.01 }
+          }
+        ]
+      },
+      scenario: 'annual-report-full-smoke'
+    }
+  ]
+}
+```
+
+With `poppler.mode: 'optional'`, Reflection still creates the PDF when Poppler is missing and reports a review warning for skipped page PNG evidence. With `mode: 'required'`, missing Poppler is a blocking failure.
 
 ## Artifact roots
 

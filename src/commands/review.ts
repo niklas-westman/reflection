@@ -19,11 +19,18 @@ type ReviewSummary = {
   blockingFailures: ReviewCheck[];
   reviewItems: ReviewCheck[];
   artifactPaths: string[];
+  evidenceGroups: ReviewEvidenceGroup[];
   suggestedNextSteps: string[];
 };
 
 type ReviewCheck = Pick<CheckResult, 'id' | 'summary' | 'target' | 'status'> & {
   details?: string | undefined;
+};
+
+type ReviewEvidenceGroup = {
+  id: string;
+  checks: string[];
+  artifactPaths: string[];
 };
 
 export async function reviewCommand(options: ReviewCommandOptions = {}): Promise<void> {
@@ -89,6 +96,14 @@ function createReviewSummary(report: ReflectionReport, reportPath: string, runDi
     blockingFailures,
     reviewItems,
     artifactPaths: collectArtifactPaths(report, runDir),
+    evidenceGroups: report.evidenceGroups.map((group) => ({
+      id: group.id,
+      checks: group.checks,
+      artifactPaths: group.artifacts.map((artifact) => {
+        assertSafeArtifactPath(artifact.path, runDir);
+        return artifact.path;
+      })
+    })),
     suggestedNextSteps: report.suggestedNextSteps.map((step) => step.summary)
   };
 }
@@ -129,6 +144,14 @@ function renderReview(summary: ReviewSummary): string {
     lines.push('Artifacts:');
     for (const artifactPath of summary.artifactPaths) {
       lines.push(`- ${artifactPath}`);
+    }
+  }
+
+  if (summary.evidenceGroups.length > 0) {
+    lines.push('');
+    lines.push('Evidence groups:');
+    for (const group of summary.evidenceGroups) {
+      lines.push(`- ${group.id}: ${group.checks.join(', ')}`);
     }
   }
 

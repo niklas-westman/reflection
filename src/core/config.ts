@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { createJiti } from 'jiti';
 import { z } from 'zod';
 
-export const runModes = ['smoke', 'design', 'visual', 'full'] as const;
+export const runModes = ['smoke', 'design', 'visual', 'print', 'full'] as const;
 export type RunMode = (typeof runModes)[number];
 
 const BrowserExpectationSchema = z.union([
@@ -17,6 +17,8 @@ const BrowserExpectationSchema = z.union([
   z.object({ selector: z.string() }),
   z.object({ elementVisible: z.string() }),
   z.object({ elementNotVisible: z.string() }),
+  z.object({ selectorCount: z.object({ selector: z.string().min(1), equals: z.number().int().nonnegative() }) }),
+  z.object({ noSelector: z.string().min(1) }),
   z.object({ noHorizontalOverflow: z.literal(true) }),
   z.object({ noConsoleErrors: z.literal(true) }),
   z.object({ screenshot: z.string() })
@@ -55,11 +57,13 @@ const RouteVisualSmokeCaseSchema = z.object({
   id: z.string().min(1),
   route: z.string().min(1),
   viewport: z.string().min(1),
+  capture: z.object({ selector: z.string().min(1) }).optional(),
   baseline: z.string().min(1),
   baselineRoot: z.string().optional(),
   threshold: VisualThresholdSchema.optional(),
   blocking: z.boolean().optional(),
-  strict: z.boolean().optional()
+  strict: z.boolean().optional(),
+  scenario: z.string().min(1).optional()
 });
 
 const BrowserStorageSetupSchema = z.record(z.string().min(1), z.string()).optional().default({});
@@ -108,6 +112,22 @@ const DesignCommandSchema = z.object({
 const DesignContractSchema = z.object({
   enabled: z.boolean().default(true),
   commands: z.array(DesignCommandSchema).default([])
+});
+
+const LifecycleArtifactSchema = z.object({
+  path: z.string().min(1),
+  type: z.enum(['html', 'metadata', 'log', 'report', 'screenshot', 'image', 'visual-diff', 'trace', 'video', 'pdf', 'document-page', 'contact-sheet']),
+  role: z.enum(['evidence', 'expected', 'actual', 'diff', 'trace', 'debug']).optional()
+});
+
+const LifecycleHookSchema = z.object({
+  id: z.string().min(1),
+  command: z.string().min(1),
+  cwd: z.string().min(1).optional(),
+  timeoutMs: z.number().int().positive().default(60_000),
+  blocking: z.boolean().default(true),
+  scenario: z.string().min(1).optional(),
+  artifacts: z.array(LifecycleArtifactSchema).default([])
 });
 
 const ComponentBrowserStateSchema = z
@@ -214,6 +234,42 @@ const ComponentContractSchema = z
     }
   });
 
+const PopplerConfigSchema = z.object({
+  mode: z.enum(['optional', 'required']).default('optional'),
+  dpi: z.number().int().positive().default(144)
+});
+
+const PrintRenderedPageSchema = z.object({
+  id: z.string().min(1),
+  page: z.number().int().positive(),
+  baseline: z.string().min(1),
+  baselineRoot: z.string().optional(),
+  threshold: VisualThresholdSchema.optional(),
+  blocking: z.boolean().optional(),
+  strict: z.boolean().optional()
+});
+
+const PrintCaseSchema = z.object({
+  id: z.string().min(1),
+  route: z.string().min(1),
+  viewport: z.string().min(1).default('desktop'),
+  pdf: z.object({
+    format: z.string().min(1).default('A4'),
+    printBackground: z.boolean().default(true),
+    expectedPageCount: z.number().int().positive().optional(),
+    expectedPageSize: z.enum(['A4']).optional(),
+    poppler: PopplerConfigSchema.default({ mode: 'optional', dpi: 144 }),
+    renderedPages: z.array(PrintRenderedPageSchema).default([])
+  }),
+  scenario: z.string().min(1).optional(),
+  blocking: z.boolean().default(true)
+});
+
+const PrintContractSchema = z.object({
+  enabled: z.boolean().default(true),
+  cases: z.array(PrintCaseSchema).default([])
+});
+
 const ReflectionConfigSchema = z.object({
   project: z.string().min(1),
   run: z
@@ -223,11 +279,17 @@ const ReflectionConfigSchema = z.object({
     })
     .default({ defaultMode: 'smoke', ciMode: 'smoke' }),
   contracts: z.object({
-    browser: BrowserContractSchema.optional(),
-    design: DesignContractSchema.optional(),
-    component: ComponentContractSchema.optional(),
-    visual: z.unknown().optional()
-  })
+      browser: BrowserContractSchema.optional(),
+      design: DesignContractSchema.optional(),
+      component: ComponentContractSchema.optional(),
+      print: PrintContractSchema.optional(),
+      visual: z.unknown().optional()
+  }),
+  lifecycle: z
+    .object({
+      beforeRun: z.array(LifecycleHookSchema).default([])
+    })
+    .default({ beforeRun: [] })
 });
 
 export type ReflectionConfigInput = z.input<typeof ReflectionConfigSchema>;

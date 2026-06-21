@@ -47,6 +47,42 @@ async function writeFixtureConfig(root: string, baselineRoot: string): Promise<s
   return configPath;
 }
 
+async function writePrintFixtureConfig(root: string, baselineRoot: string): Promise<string> {
+  const configPath = join(root, 'reflection.config.mjs');
+  await writeFile(
+    configPath,
+    `export default {
+      project: 'update-print-fixture',
+      contracts: {
+        browser: {
+          baseUrl: 'http://127.0.0.1:4173',
+          routes: [{ id: 'print-fixture', path: '/print-fixture' }]
+        },
+        print: {
+          cases: [
+            {
+              id: 'annual-report-full-smoke',
+              route: 'print-fixture',
+              pdf: {
+                renderedPages: [
+                  {
+                    id: 'annual-report-page-7',
+                    page: 7,
+                    baselineRoot: ${JSON.stringify(baselineRoot)},
+                    baseline: 'print/annual-report/page-7.png'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    };\n`,
+    'utf8'
+  );
+  return configPath;
+}
+
 async function writeRun(reportRoot: string, runId: string): Promise<void> {
   const runDir = join(reportRoot, 'runs', runId);
   await mkdir(join(runDir, 'visual/login-mobile'), { recursive: true });
@@ -54,6 +90,14 @@ async function writeRun(reportRoot: string, runId: string): Promise<void> {
   await writeFile(join(runDir, 'visual/login-mobile/actual.png'), 'LOGIN-ACTUAL', 'utf8');
   await writeFile(join(runDir, 'visual/admin-mobile/actual.png'), 'ADMIN-ACTUAL', 'utf8');
   await writeFile(join(runDir, 'report.json'), `${JSON.stringify(createUpdateReport(runId), null, 2)}\n`, 'utf8');
+  await writeFile(join(reportRoot, 'runs', 'latest'), `${runId}\n`, 'utf8');
+}
+
+async function writePrintRun(reportRoot: string, runId: string): Promise<void> {
+  const runDir = join(reportRoot, 'runs', runId);
+  await mkdir(join(runDir, 'print/annual-report-full-smoke/pages'), { recursive: true });
+  await writeFile(join(runDir, 'print/annual-report-full-smoke/pages/page-7.png'), 'PRINT-ACTUAL', 'utf8');
+  await writeFile(join(runDir, 'report.json'), `${JSON.stringify(createPrintUpdateReport(runId), null, 2)}\n`, 'utf8');
   await writeFile(join(reportRoot, 'runs', 'latest'), `${runId}\n`, 'utf8');
 }
 
@@ -68,6 +112,34 @@ function createUpdateReport(runId: string) {
     checks: [
       visualCheck('login-mobile', 'login', 'visual/login-mobile/actual.png'),
       visualCheck('admin-mobile', 'admin', 'visual/admin-mobile/actual.png')
+    ]
+  });
+}
+
+function createPrintUpdateReport(runId: string) {
+  return createReport({
+    runId,
+    project: 'update-print-fixture',
+    startedAt: new Date('2026-05-31T12:00:00.000Z'),
+    finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+    mode: 'print',
+    ci: false,
+    checks: [
+      {
+        id: 'print.annual-report-page-7',
+        suite: 'print',
+        target: 'annual-report-full-smoke page 7',
+        status: 'warn',
+        severity: 'review',
+        summary: 'Missing approved print baseline.',
+        artifacts: [{ type: 'document-page', role: 'actual', path: 'print/annual-report-full-smoke/pages/page-7.png' }],
+        metadata: {
+          classification: 'missing-baseline',
+          printCaseId: 'annual-report-full-smoke',
+          renderedPageId: 'annual-report-page-7',
+          baselinePath: 'print/annual-report/page-7.png'
+        }
+      } satisfies CheckResult
     ]
   });
 }
@@ -163,6 +235,25 @@ describe('updateCommand', () => {
     await captureUpdate({ config: configPath, reportDir: reportRoot, fromRun: 'update-run', case: 'login-mobile' });
 
     await expect(readFile(join(baselineRoot, 'browser/login/mobile.png'), 'utf8')).resolves.toBe('LOGIN-ACTUAL');
+  });
+
+  it('dry-runs and promotes print rendered page baselines by case id', async () => {
+    const root = await makeTempDir('reflection-update-print');
+    const reportRoot = join(root, 'artifacts');
+    const baselineRoot = join(root, 'baselines');
+    await mkdir(join(reportRoot, 'runs'), { recursive: true });
+    await writePrintRun(reportRoot, 'update-run');
+    const configPath = await writePrintFixtureConfig(root, baselineRoot);
+
+    const dryRunStdout = await captureUpdate({ config: configPath, reportDir: reportRoot, fromRun: 'latest', case: 'annual-report-page-7', dryRun: true });
+
+    expect(dryRunStdout).toContain('print.annual-report-page-7');
+    expect(dryRunStdout).toContain('print/annual-report/page-7.png');
+    await expect(stat(join(baselineRoot, 'print/annual-report/page-7.png'))).rejects.toMatchObject({ code: 'ENOENT' });
+
+    await captureUpdate({ config: configPath, reportDir: reportRoot, fromRun: 'latest', case: 'annual-report-page-7' });
+
+    await expect(readFile(join(baselineRoot, 'print/annual-report/page-7.png'), 'utf8')).resolves.toBe('PRINT-ACTUAL');
   });
 
   it('refuses baseline updates in CI mode', async () => {

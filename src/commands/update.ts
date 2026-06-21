@@ -20,7 +20,7 @@ export type UpdateCommandOptions = {
 type UpdatePlanItem = {
   checkId: string;
   caseId: string;
-  routeId: string;
+  routeId?: string;
   sourcePath: string;
   baselineRoot: string;
   baselinePath: string;
@@ -129,6 +129,35 @@ async function createUpdatePlan(input: {
     });
   }
 
+  if (!input.route) {
+    const printPageCases = (input.config.contracts.print?.cases ?? []).flatMap((printCase) =>
+      printCase.pdf.renderedPages.map((pageCase) => ({ printCase, pageCase }))
+    );
+    const selectedPrintCases = printPageCases.filter(({ pageCase }) => input.all || pageCase.id === input.caseId);
+
+    for (const { printCase, pageCase } of selectedPrintCases) {
+      const check = findPrintCheck(input.report, pageCase.id);
+      const actualArtifact = check.artifacts.find((artifact) => artifact.role === 'actual' && artifact.path.endsWith('.png'));
+      if (!actualArtifact) {
+        throw new Error(`Print check ${check.id} has no actual PNG artifact to promote.`);
+      }
+
+      const sourcePath = resolve(input.runDir, actualArtifact.path);
+      ensureInside(input.runDir, sourcePath);
+      await ensureRealPathInside(input.runDir, sourcePath);
+      const baselineStore = createBaselineStore(pageCase.baselineRoot ? { rootDir: pageCase.baselineRoot } : {});
+
+      plan.push({
+        checkId: check.id,
+        caseId: pageCase.id,
+        routeId: printCase.route,
+        sourcePath,
+        baselineRoot: baselineStore.rootDir,
+        baselinePath: baselineStore.resolveBaselinePath(pageCase.baseline)
+      });
+    }
+  }
+
   return plan;
 }
 
@@ -136,6 +165,15 @@ function findVisualCheck(report: ReflectionReport, caseId: string): CheckResult 
   const check = report.checks.find((candidate) => candidate.id === `visual.${caseId}` && candidate.suite === 'visual');
   if (!check) {
     throw new Error(`No visual check found in report for case ${caseId}.`);
+  }
+
+  return check;
+}
+
+function findPrintCheck(report: ReflectionReport, caseId: string): CheckResult {
+  const check = report.checks.find((candidate) => candidate.id === `print.${caseId}` && candidate.suite === 'print');
+  if (!check) {
+    throw new Error(`No print check found in report for case ${caseId}.`);
   }
 
   return check;

@@ -1,5 +1,6 @@
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
+import type { RouteVisualCaptureResult } from '../browser/route-runner.js';
 import { compareRouteVisualBaseline, type RouteVisualBaselineCase } from './baseline-compare.js';
 
 export type VisualContractConfig = {
@@ -9,6 +10,7 @@ export type VisualContractConfig = {
 export async function runRouteVisualSmoke(input: {
   visualSmoke?: RouteVisualBaselineCase[] | undefined;
   browserChecks: CheckResult[];
+  visualCaptures?: RouteVisualCaptureResult[] | undefined;
   store: ArtifactStore;
 }): Promise<CheckResult[]> {
   if (!input.visualSmoke || input.visualSmoke.length === 0) {
@@ -20,6 +22,7 @@ export async function runRouteVisualSmoke(input: {
     const routeCheck = input.browserChecks.find(
       (check) => check.metadata.routeId === visualCase.route && check.metadata.viewport === visualCase.viewport
     );
+    const visualCapture = input.visualCaptures?.find((capture) => capture.caseId === visualCase.id);
 
     if (!routeCheck) {
       checks.push({
@@ -41,7 +44,14 @@ export async function runRouteVisualSmoke(input: {
       continue;
     }
 
-    checks.push(await compareRouteVisualBaseline({ visualCase, routeCheck, store: input.store }));
+    checks.push(
+      await compareRouteVisualBaseline({
+        visualCase,
+        routeCheck,
+        store: input.store,
+        ...(visualCapture ? { actualArtifact: visualCapture.artifact } : {})
+      })
+    );
   }
 
   return checks;

@@ -1,6 +1,6 @@
 import type { Browser, Page } from 'playwright';
 import type { ArtifactStore } from '../../core/artifact-store.js';
-import type { CheckResult } from '../../core/report-schema.js';
+import type { ArtifactRef, CheckResult } from '../../core/report-schema.js';
 import { createBrowserContext } from '../../integrations/playwright/context-factory.js';
 import { evaluateExpectation, shouldCaptureScreenshot, type AssertionFailure, type BrowserExpectation } from './assertions.js';
 import { observeConsoleErrors } from './console-observer.js';
@@ -28,9 +28,30 @@ export type RouteRunInput = {
   blocking: boolean;
   maskSelectors?: string[];
   setup?: BrowserSetup | undefined;
+  visualCaptures?: RouteVisualCaptureRequest[] | undefined;
 };
 
-export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult> {
+export type RouteVisualCaptureRequest = {
+  id: string;
+  selector: string;
+  scenario?: string | undefined;
+};
+
+export type RouteVisualCaptureResult = {
+  caseId: string;
+  routeId: string;
+  viewport: string;
+  target: string;
+  artifact: ArtifactRef;
+  scenario?: string | undefined;
+};
+
+export type BrowserRouteRunResult = {
+  check: CheckResult;
+  visualCaptures: RouteVisualCaptureResult[];
+};
+
+export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRouteRunResult> {
   const context = await createBrowserContext(input.browser, input.viewport);
   const page = await context.newPage();
   const consoleObserver = observeConsoleErrors(page);
@@ -38,6 +59,8 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
   const artifacts = [];
   const maskSelectors = input.maskSelectors ?? [];
   let maskedSelectors: string[] = [];
+  const visualCaptures: RouteVisualCaptureResult[] = [];
+  const visualCaptureRequests = input.visualCaptures ?? [];
   const setup = mergeBrowserSetup(input.setup, input.route.setup);
   const setupMetadata = createSetupMetadata(setup);
 
@@ -53,8 +76,30 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
       }
     }
 
-    if (shouldCaptureScreenshot(input.route.expects)) {
+    if (shouldCaptureScreenshot(input.route.expects) || visualCaptureRequests.length > 0) {
       maskedSelectors = await applyMaskSelectors(page, maskSelectors);
+    }
+
+    for (const capture of visualCaptureRequests) {
+      const locator = page.locator(capture.selector).first();
+      if (!(await locator.isVisible().catch(() => false))) {
+        continue;
+      }
+      const artifact = await input.store.writeBuffer(
+        `visual/${capture.id}/actual.png`,
+        await locator.screenshot()
+      );
+      visualCaptures.push({
+        caseId: capture.id,
+        routeId: input.route.id,
+        viewport: input.viewport,
+        target: `${input.route.path} ${input.viewport}`,
+        artifact,
+        ...(capture.scenario ? { scenario: capture.scenario } : {})
+      });
+    }
+
+    if (shouldCaptureScreenshot(input.route.expects)) {
       const screenshotPath = `browser/${input.route.id}/${input.viewport}/actual.png`;
       const screenshot = await page.screenshot({ fullPage: true });
       artifacts.push(await input.store.writeBuffer(screenshotPath, screenshot));
@@ -89,6 +134,7 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
   const target = `${input.route.path} ${input.viewport}`;
 
   return {
+    check: {
     id: `browser.${input.route.id}.${input.viewport}`,
     suite: 'browser',
     target,
@@ -116,6 +162,8 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<CheckResult
         : {})
     },
     ...(failures.length > 0 ? { suggestedNextStep: 'Inspect screenshot and browser metadata, then fix the rendered UI contract failure.' } : {})
+    },
+    visualCaptures
   };
 }
 

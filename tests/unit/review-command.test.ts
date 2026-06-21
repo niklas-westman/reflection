@@ -48,6 +48,15 @@ async function writeRun(root: string, runId: string) {
         details: 'Visual diagnostics: localized change near middle/center.',
         artifacts: [{ type: 'visual-diff', role: 'diff', path: 'visual/login-mobile/diff.png' }]
       }),
+      check({
+        id: 'print.annual-report-page-7',
+        suite: 'print',
+        status: 'warn',
+        severity: 'review',
+        summary: 'Missing approved print baseline.',
+        artifacts: [{ type: 'document-page', role: 'actual', path: 'print/annual-report/pages/page-7.png' }],
+        metadata: { scenario: 'annual-report-full-smoke', classification: 'missing-baseline' }
+      }),
       check({ id: 'browser.admin.mobile', status: 'fail', severity: 'blocking', summary: 'Admin route leaked private UI.' })
     ],
     suggestedNextSteps: [{ kind: 'fix', summary: 'Fix the admin auth gate before updating baselines.' }]
@@ -91,6 +100,8 @@ describe('reviewCommand', () => {
     expect(stdout).toContain('Visual diagnostics: localized change near middle/center.');
     expect(stdout).toContain('Artifacts:');
     expect(stdout).toContain('visual/login-mobile/diff.png');
+    expect(stdout).toContain('Evidence groups:');
+    expect(stdout).toContain('annual-report-full-smoke: print.annual-report-page-7');
     expect(stdout).toContain('Next:');
     expect(stdout).toContain('Fix the admin auth gate before updating baselines.');
   });
@@ -105,14 +116,22 @@ describe('reviewCommand', () => {
       blockingFailures: Array<{ id: string }>;
       reviewItems: Array<{ id: string; details?: string }>;
       artifactPaths: string[];
+      evidenceGroups: Array<{ id: string; checks: string[]; artifactPaths: string[] }>;
       reportPath: string;
     };
 
     expect(parsed.status).toBe('fail');
     expect(parsed.blockingFailures.map((item) => item.id)).toEqual(['browser.admin.mobile']);
-    expect(parsed.reviewItems.map((item) => item.id)).toEqual(['visual.login-mobile']);
+    expect(parsed.reviewItems.map((item) => item.id)).toEqual(['visual.login-mobile', 'print.annual-report-page-7']);
     expect(parsed.reviewItems[0]?.details).toContain('Visual diagnostics: localized change');
     expect(parsed.artifactPaths).toContain('visual/login-mobile/diff.png');
+    expect(parsed.evidenceGroups).toEqual([
+      {
+        id: 'annual-report-full-smoke',
+        checks: ['print.annual-report-page-7'],
+        artifactPaths: ['print/annual-report/pages/page-7.png']
+      }
+    ]);
     expect(parsed.reportPath).toMatch(/agent-run\/report\.json$/);
   });
 

@@ -104,7 +104,11 @@ function inferArtifactType(relativePath: string): ArtifactRef['type'] {
   }
 
   if (relativePath.endsWith('.md') || relativePath.endsWith('.html')) {
-    return 'report';
+    return relativePath.startsWith('report.') ? 'report' : 'html';
+  }
+
+  if (relativePath.endsWith('.pdf')) {
+    return 'pdf';
   }
 
   if (relativePath.endsWith('.log')) {
@@ -113,6 +117,10 @@ function inferArtifactType(relativePath: string): ArtifactRef['type'] {
 
   if (relativePath.endsWith('/diff.png')) {
     return 'visual-diff';
+  }
+
+  if (relativePath.startsWith('print/') && relativePath.endsWith('.png')) {
+    return relativePath.endsWith('/contact-sheet.png') ? 'contact-sheet' : 'document-page';
   }
 
   if (relativePath.endsWith('.png')) {

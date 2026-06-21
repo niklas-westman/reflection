@@ -16,6 +16,7 @@ export type MissingBaselineCheckOptions = {
   target: string;
   baselinePath: string;
   blocking: boolean;
+  suite?: CheckResult['suite'] | undefined;
   artifacts?: ArtifactRef[] | undefined;
   metadata?: Record<string, unknown> | undefined;
 };
@@ -65,11 +66,11 @@ export function createMissingBaselineCheck(options: MissingBaselineCheckOptions)
 
   return {
     id: options.id,
-    suite: 'visual',
+    suite: options.suite ?? 'visual',
     target: options.target,
     status,
     severity,
-    summary: `Missing approved visual baseline: ${options.baselinePath}.`,
+    summary: `Missing approved ${options.suite === 'print' ? 'print' : 'visual'} baseline: ${options.baselinePath}.`,
     artifacts: options.artifacts ?? [],
     metadata: {
       ...(options.metadata ?? {}),

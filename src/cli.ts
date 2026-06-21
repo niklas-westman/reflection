@@ -16,7 +16,7 @@ export function createCli(): Command {
   program
     .name('reflection')
     .description('Evidence-backed rendered UI validation.')
-    .version('0.0.8')
+    .version('0.1.1')
     .configureOutput({
       outputError: (message, write) => write(message)
     });
@@ -34,7 +34,7 @@ export function createCli(): Command {
     .command('run')
     .description('Check the UI contract for this project.')
     .option('--config <path>', 'Path to reflection.config.ts')
-    .option('--mode <mode>', 'Run mode: smoke, design, visual, full', 'smoke')
+    .option('--mode <mode>', 'Run mode: smoke, design, visual, print, full', 'smoke')
     .option('--ci', 'Run with CI defaults')
     .option('--report-dir <path>', 'Artifact/report root directory')
     .option('--workers [count]', 'Worker count for browser/visual checks')

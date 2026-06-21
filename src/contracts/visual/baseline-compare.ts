@@ -2,7 +2,7 @@ import { access, mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
-import type { CheckResult } from '../../core/report-schema.js';
+import type { ArtifactRef, CheckResult } from '../../core/report-schema.js';
 import { comparePngImages, formatVisualDiagnosticsDetails } from './image-diff.js';
 import type { VisualThreshold } from './thresholds.js';
 
@@ -10,21 +10,25 @@ export type RouteVisualBaselineCase = {
   id: string;
   route: string;
   viewport: string;
+  capture?: { selector: string } | undefined;
   baseline: string;
   baselineRoot?: string | undefined;
   threshold?: VisualThreshold | undefined;
   blocking?: boolean | undefined;
   strict?: boolean | undefined;
+  scenario?: string | undefined;
 };
 
 export type CompareRouteVisualBaselineInput = {
   visualCase: RouteVisualBaselineCase;
   routeCheck: CheckResult;
   store: ArtifactStore;
+  actualArtifact?: ArtifactRef | undefined;
 };
 
 export async function compareRouteVisualBaseline(input: CompareRouteVisualBaselineInput): Promise<CheckResult> {
-  const actualArtifact = input.routeCheck.artifacts.find((artifact) => artifact.role === 'actual' && artifact.path.endsWith('.png'));
+  const actualArtifact =
+    input.actualArtifact ?? input.routeCheck.artifacts.find((artifact) => artifact.role === 'actual' && artifact.path.endsWith('.png'));
   const target = `${String(input.routeCheck.metadata.route ?? input.visualCase.route)} ${input.visualCase.viewport}`;
   const baselinePath = resolveCaseBaselinePath(input.visualCase);
   const blocking = input.visualCase.blocking === true || input.visualCase.strict === true;
@@ -51,8 +55,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
 
   if (!(await pathExists(baselinePath))) {
     const artifactBase = `visual/${input.visualCase.id}`;
-    const actualRunPath = input.store.resolveRunPath(actualArtifact.path);
-    const actualVisualArtifact = await input.store.writeBuffer(`${artifactBase}/actual.png`, await readFile(actualRunPath));
+    const actualVisualArtifact = await ensureVisualActualArtifact(input.store, actualArtifact, artifactBase);
 
     return createMissingBaselineCheck({
       id: `visual.${input.visualCase.id}`,
@@ -62,15 +65,16 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
       artifacts: [actualVisualArtifact],
       metadata: {
         routeId: input.visualCase.route,
-        viewport: input.visualCase.viewport
+        viewport: input.visualCase.viewport,
+        ...(input.visualCase.capture ? { capture: input.visualCase.capture } : {}),
+        ...(input.visualCase.scenario ? { scenario: input.visualCase.scenario } : {})
       }
     });
   }
 
   const artifactBase = `visual/${input.visualCase.id}`;
   const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, await readFile(baselinePath));
-  const actualRunPath = input.store.resolveRunPath(actualArtifact.path);
-  const actualVisualArtifact = await input.store.writeBuffer(`${artifactBase}/actual.png`, await readFile(actualRunPath));
+  const actualVisualArtifact = await ensureVisualActualArtifact(input.store, actualArtifact, artifactBase);
   const diffRelativePath = `${artifactBase}/diff.png`;
   const diffPath = input.store.resolveRunPath(diffRelativePath);
   await mkdir(dirname(diffPath), { recursive: true });
@@ -100,12 +104,23 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
       ...result,
       routeId: input.visualCase.route,
       viewport: input.visualCase.viewport,
-      baselinePath: input.visualCase.baseline
+      baselinePath: input.visualCase.baseline,
+      ...(input.visualCase.capture ? { capture: input.visualCase.capture } : {}),
+      ...(input.visualCase.scenario ? { scenario: input.visualCase.scenario } : {})
     },
     ...(result.status === 'pass'
       ? {}
       : { suggestedNextStep: 'Inspect expected, actual, and diff artifacts. If intentional, update only this visual baseline.' })
   };
+}
+
+async function ensureVisualActualArtifact(store: ArtifactStore, actualArtifact: ArtifactRef, artifactBase: string): Promise<ArtifactRef> {
+  if (actualArtifact.path === `${artifactBase}/actual.png`) {
+    return actualArtifact;
+  }
+
+  const actualRunPath = store.resolveRunPath(actualArtifact.path);
+  return store.writeBuffer(`${artifactBase}/actual.png`, await readFile(actualRunPath));
 }
 
 function resolveCaseBaselinePath(visualCase: RouteVisualBaselineCase): string {

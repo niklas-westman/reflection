@@ -143,7 +143,7 @@ describe('deriveSuggestedNextSteps', () => {
 describe('validateReport', () => {
   it('accepts a canonical Reflection report', () => {
     const report: ReflectionReport = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       runId: '2026-05-31T18-00-00Z-local',
       project: 'reflection-test',
       startedAt: '2026-05-31T18:00:00.000Z',
@@ -162,10 +162,74 @@ describe('validateReport', () => {
       },
       checks: [check({ status: 'pass' }), check({ status: 'warn', severity: 'review' })],
       artifacts: [{ type: 'report', role: 'evidence', path: 'report.json' }],
-      suggestedNextSteps: [{ kind: 'review', summary: 'Inspect review items.' }]
+      suggestedNextSteps: [{ kind: 'review', summary: 'Inspect review items.' }],
+      evidenceGroups: []
     };
 
     expect(validateReport(report).status).toBe('pass-with-review');
+  });
+
+  it('normalizes schema v1 reports when reading older artifacts', () => {
+    const report = validateReport({
+      schemaVersion: 1,
+      runId: '2026-05-31T18-00-00Z-local',
+      project: 'reflection-test',
+      startedAt: '2026-05-31T18:00:00.000Z',
+      finishedAt: '2026-05-31T18:00:01.000Z',
+      status: 'pass',
+      mode: 'smoke',
+      ci: false,
+      environment: { profile: 'local' },
+      summary: {
+        passed: 1,
+        failed: 0,
+        warnings: 0,
+        skipped: 0,
+        blockingFailures: 0,
+        reviewItems: 0
+      },
+      checks: [check({ status: 'pass', metadata: { scenario: 'annual-report-full-smoke' } })],
+      artifacts: [{ type: 'report', role: 'evidence', path: 'report.json' }],
+      suggestedNextSteps: [{ kind: 'pass', summary: 'No action required.' }]
+    });
+
+    expect(report.schemaVersion).toBe(2);
+    expect(report.evidenceGroups).toEqual([
+      {
+        id: 'annual-report-full-smoke',
+        checks: ['browser.login.mobile'],
+        artifacts: []
+      }
+    ]);
+  });
+
+  it('groups scenario evidence in schema v2 reports', () => {
+    const report = createReport({
+      runId: 'scenario-report',
+      project: 'report-fixture',
+      startedAt: new Date('2026-05-31T12:00:00.000Z'),
+      finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+      mode: 'print',
+      ci: false,
+      checks: [
+        check({
+          id: 'print.annual-report-page-7',
+          suite: 'print',
+          status: 'warn',
+          severity: 'review',
+          summary: 'Missing print baseline.',
+          artifacts: [{ type: 'document-page', role: 'actual', path: 'print/annual/page-7.png' }],
+          metadata: { scenario: 'annual-report-full-smoke', classification: 'missing-baseline' }
+        })
+      ]
+    });
+
+    expect(report.schemaVersion).toBe(2);
+    expect(report.evidenceGroups[0]).toMatchObject({
+      id: 'annual-report-full-smoke',
+      checks: ['print.annual-report-page-7'],
+      artifacts: [{ path: 'print/annual/page-7.png' }]
+    });
   });
 
   it('accepts classified diagnostics and structured evidence on checks', () => {

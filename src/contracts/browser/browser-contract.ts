@@ -3,7 +3,7 @@ import type { CheckResult } from '../../core/report-schema.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { runRouteVisualSmoke } from '../visual/visual-contract.js';
 import type { RouteVisualBaselineCase } from '../visual/baseline-compare.js';
-import { runBrowserRoute, type BrowserRoute, type BrowserSetup } from './route-runner.js';
+import { runBrowserRoute, type BrowserRoute, type BrowserSetup, type RouteVisualCaptureResult } from './route-runner.js';
 
 export type BrowserContractConfig = {
   enabled?: boolean;
@@ -15,29 +15,42 @@ export type BrowserContractConfig = {
   setup?: BrowserSetup | undefined;
 };
 
-export async function runBrowserContract(config: BrowserContractConfig, store: ArtifactStore): Promise<CheckResult[]> {
+export type BrowserContractRunResult = {
+  checks: CheckResult[];
+  visualCaptures: RouteVisualCaptureResult[];
+};
+
+export async function runBrowserContract(config: BrowserContractConfig, store: ArtifactStore): Promise<BrowserContractRunResult> {
   if (config.enabled === false) {
-    return [];
+    return { checks: [], visualCaptures: [] };
   }
 
   const browser = await launchBrowser();
   const checks: CheckResult[] = [];
+  const visualCaptures: RouteVisualCaptureResult[] = [];
 
   try {
     for (const route of config.routes) {
       for (const viewport of route.viewports) {
-        checks.push(
-          await runBrowserRoute({
-            browser,
-            store,
-            baseUrl: config.baseUrl,
-            route,
-            viewport,
-            blocking: config.blocking ?? true,
-            maskSelectors: config.maskSelectors ?? [],
-            setup: config.setup
-          })
-        );
+        const result = await runBrowserRoute({
+          browser,
+          store,
+          baseUrl: config.baseUrl,
+          route,
+          viewport,
+          blocking: config.blocking ?? true,
+          maskSelectors: config.maskSelectors ?? [],
+          setup: config.setup,
+          visualCaptures: (config.visualSmoke ?? [])
+            .filter((visualCase) => visualCase.route === route.id && visualCase.viewport === viewport && visualCase.capture?.selector)
+            .map((visualCase) => ({
+              id: visualCase.id,
+              selector: visualCase.capture?.selector ?? '',
+              ...(visualCase.scenario ? { scenario: visualCase.scenario } : {})
+            }))
+        });
+        checks.push(result.check);
+        visualCaptures.push(...result.visualCaptures);
       }
     }
   } finally {
@@ -48,9 +61,10 @@ export async function runBrowserContract(config: BrowserContractConfig, store: A
     ...(await runRouteVisualSmoke({
       visualSmoke: config.visualSmoke,
       browserChecks: checks,
+      visualCaptures,
       store
     }))
   );
 
-  return checks;
+  return { checks, visualCaptures };
 }

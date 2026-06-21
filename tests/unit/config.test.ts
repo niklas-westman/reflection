@@ -161,6 +161,109 @@ describe('validateReflectionConfig', () => {
     ).toThrow(/Invalid Reflection config/);
   });
 
+  it('accepts lifecycle hooks, selector visual captures, print contracts, and document assertions', () => {
+    const config = validateReflectionConfig({
+      project: 'print-fixture',
+      lifecycle: {
+        beforeRun: [
+          {
+            id: 'build-fixture',
+            command: 'node build-fixture.mjs',
+            timeoutMs: 120_000,
+            scenario: 'annual-report-full-smoke',
+            artifacts: [{ path: 'outputs/annual-report-print.html', type: 'html', role: 'evidence' }]
+          }
+        ]
+      },
+      contracts: {
+        browser: {
+          baseUrl: 'http://127.0.0.1:5173',
+          routes: [
+            {
+              id: 'print',
+              path: '/print-fixture',
+              expects: [
+                { selectorCount: { selector: '.page', equals: 7 } },
+                { noSelector: '.signature-line' },
+                { screenshot: 'final' }
+              ]
+            }
+          ],
+          visualSmoke: [
+            {
+              id: 'print-page-7',
+              route: 'print',
+              viewport: 'desktop',
+              capture: { selector: '.page[data-page="7"]' },
+              baseline: 'browser/print/page-7.png',
+              scenario: 'annual-report-full-smoke'
+            }
+          ]
+        },
+        print: {
+          cases: [
+            {
+              id: 'annual-report-full-smoke',
+              route: 'print',
+              viewport: 'desktop',
+              pdf: {
+                expectedPageCount: 7,
+                expectedPageSize: 'A4',
+                poppler: { mode: 'optional', dpi: 144 },
+                renderedPages: [
+                  {
+                    id: 'annual-report-page-7',
+                    page: 7,
+                    baseline: 'print/annual-report/page-7.png'
+                  }
+                ]
+              },
+              scenario: 'annual-report-full-smoke'
+            }
+          ]
+        }
+      }
+    });
+
+    expect(config.lifecycle.beforeRun[0]).toMatchObject({
+      id: 'build-fixture',
+      timeoutMs: 120_000,
+      blocking: true
+    });
+    expect(config.contracts.browser.visualSmoke[0]).toMatchObject({
+      capture: { selector: '.page[data-page="7"]' },
+      scenario: 'annual-report-full-smoke'
+    });
+    expect(config.contracts.print?.cases[0]).toMatchObject({
+      pdf: {
+        format: 'A4',
+        printBackground: true,
+        poppler: { mode: 'optional', dpi: 144 }
+      }
+    });
+  });
+
+  it('rejects invalid print contracts clearly', () => {
+    expect(() =>
+      validateReflectionConfig({
+        project: 'print-fixture',
+        contracts: {
+          print: {
+            cases: [
+              {
+                id: 'broken-print',
+                route: 'print',
+                pdf: {
+                  expectedPageCount: 0
+                }
+              }
+            ]
+          }
+        }
+      })
+    ).toThrow(/Invalid Reflection config/);
+  });
+
   it('accepts a component visual state note for story-controlled states', () => {
     const config = validateReflectionConfig({
       project: 'basic-react',

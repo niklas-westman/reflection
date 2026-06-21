@@ -4,6 +4,8 @@ import { basename, join } from 'node:path';
 import { runBrowserContract } from '../contracts/browser/browser-contract.js';
 import { runComponentVisualContract } from '../contracts/component/component-visual-contract.js';
 import { runDesignContract } from '../contracts/design/design-contract.js';
+import { runPrintContract } from '../contracts/print/print-contract.js';
+import { runBeforeRunHooks } from '../contracts/setup/lifecycle.js';
 import { createArtifactStore } from '../core/artifact-store.js';
 import { isRunMode, loadReflectionConfig, type ReflectionConfig, type RunMode } from '../core/config.js';
 import { ExitCode } from '../core/exit-codes.js';
@@ -25,7 +27,7 @@ export function parseRunMode(value: string): RunMode {
     throw new CommanderError(
       ExitCode.InvalidUsage,
       'reflection.invalidMode',
-      `Invalid mode "${value}". Expected one of: smoke, design, visual, full.`
+      `Invalid mode "${value}". Expected one of: smoke, design, visual, print, full.`
     );
   }
 
@@ -73,31 +75,74 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     const browserConfig = config?.contracts.browser;
     const designConfig = config?.contracts.design;
     const componentConfig = config?.contracts.component;
+    const printConfig = config?.contracts.print;
     const shouldRunBrowser = (mode === 'smoke' || mode === 'full') && browserConfig?.enabled !== false && browserConfig !== undefined;
     const shouldRunDesign = (mode === 'design' || mode === 'full') && designConfig?.enabled !== false && designConfig !== undefined;
     const shouldRunComponent = (mode === 'visual' || mode === 'full') && componentConfig?.enabled !== false && componentConfig !== undefined;
+    const shouldRunPrint = (mode === 'smoke' || mode === 'print' || mode === 'full') && printConfig?.enabled !== false && printConfig !== undefined;
 
-    if (shouldRunBrowser) {
-      if (browserConfig.server) {
-        server = await startManagedServer(browserConfig.server, {
-          cwd: process.cwd(),
-          logPath: store.resolveRunPath('server/app.log')
-        });
-      }
-
-      checks.push(await createEnvironmentCheck(mode, server));
-      checks.push(...(await runBrowserContract(browserConfig, store)));
+    if (config?.lifecycle.beforeRun && config.lifecycle.beforeRun.length > 0) {
+      checks.push(...(await runBeforeRunHooks({ hooks: config.lifecycle.beforeRun, store, cwd: process.cwd() })));
     }
 
-    if (shouldRunDesign) {
+    const hasBlockingSetupFailure = checks.some(
+      (check) => check.suite === 'setup' && check.severity === 'blocking' && (check.status === 'fail' || check.status === 'error')
+    );
+
+    if (!hasBlockingSetupFailure && (shouldRunBrowser || shouldRunPrint)) {
+      if (!browserConfig) {
+        checks.push({
+          id: `environment.${mode}.browser-config`,
+          suite: 'environment',
+          target: mode,
+          status: 'fail',
+          severity: 'blocking',
+          summary: 'A browser contract is required when running print contracts.',
+          artifacts: [],
+          metadata: { classification: 'missing-browser-config' },
+          suggestedNextStep: 'Configure contracts.browser with baseUrl, routes, and server settings before enabling contracts.print.'
+        });
+      }
+    }
+
+    const canRunDownstream = !hasBlockingSetupFailure && !checks.some((check) => check.id === `environment.${mode}.browser-config`);
+
+    if (canRunDownstream && (shouldRunBrowser || shouldRunPrint) && browserConfig?.server) {
+      server = await startManagedServer(browserConfig.server, {
+        cwd: process.cwd(),
+        logPath: store.resolveRunPath('server/app.log')
+      });
+    }
+
+    if (canRunDownstream && shouldRunBrowser && browserConfig) {
+      checks.push(await createEnvironmentCheck(mode, server));
+
+      const browserResult = await runBrowserContract(browserConfig, store);
+      checks.push(...browserResult.checks);
+    }
+
+    if (canRunDownstream && shouldRunDesign) {
       checks.push(...(await runDesignContract(designConfig, store)));
     }
 
-    if (shouldRunComponent) {
+    if (canRunDownstream && shouldRunComponent) {
       checks.push(...(await runComponentVisualContract(componentConfig, store)));
     }
 
-    if (!shouldRunBrowser && !shouldRunDesign && !shouldRunComponent) {
+    if (canRunDownstream && shouldRunPrint && printConfig && browserConfig) {
+      if (!shouldRunBrowser && browserConfig.server) {
+        checks.push(await createEnvironmentCheck(mode, server));
+      }
+      checks.push(
+        ...(await runPrintContract({
+          config: printConfig,
+          browser: { baseUrl: browserConfig.baseUrl, routes: browserConfig.routes },
+          store
+        }))
+      );
+    }
+
+    if (!shouldRunBrowser && !shouldRunDesign && !shouldRunComponent && !shouldRunPrint && checks.length === 0) {
       checks.push(...createPhasePlaceholderChecks(mode));
     }
   } finally {

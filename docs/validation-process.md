@@ -68,14 +68,14 @@ reflection update --route <routeId> --from-run latest --dry-run
 reflection update --case <routeVisualCaseId> --from-run latest --dry-run
 ```
 
-`reflection update` currently promotes route-level `visualSmoke` baselines. Component visual baselines still require manual review/copy until component baseline promotion is implemented.
+`reflection update` currently promotes route-level `visualSmoke` baselines and print rendered-page baselines. Component visual baselines still require manual review/copy until component baseline promotion is implemented.
 
 Only after explicit human approval may an agent run the matching non-dry update:
 
 ```bash
 reflection update --route <routeId> --from-run latest
 # or
-reflection update --case <routeVisualCaseId> --from-run latest
+reflection update --case <routeVisualOrPrintPageCaseId> --from-run latest
 ```
 
 After any non-dry update, inspect the resulting git diff and report exactly which baseline files changed.
@@ -176,6 +176,7 @@ When reporting a completed Reflection validation run, include:
 - blocking failures, if any
 - review items, if any
 - artifact paths relevant to changed or failing UI
+- evidence groups/scenarios when present
 - whether any baseline update was dry-run only or human-approved non-dry
 
 A good final agent message should make the evidence easy to inspect without requiring the human to re-run commands immediately.

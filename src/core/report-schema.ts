@@ -4,9 +4,22 @@ import type { RunMode } from './config.js';
 
 export const CheckStatusSchema = z.enum(['pass', 'fail', 'warn', 'skipped', 'error']);
 export const CheckSeveritySchema = z.enum(['blocking', 'review', 'info']);
-export const CheckSuiteSchema = z.enum(['design', 'browser', 'visual', 'component', 'environment']);
+export const CheckSuiteSchema = z.enum(['design', 'browser', 'visual', 'component', 'environment', 'setup', 'print']);
 export const ReportStatusSchema = z.enum(['pass', 'fail', 'pass-with-review', 'error']);
-export const ArtifactTypeSchema = z.enum(['report', 'screenshot', 'image', 'visual-diff', 'trace', 'video', 'log', 'metadata']);
+export const ArtifactTypeSchema = z.enum([
+  'report',
+  'screenshot',
+  'image',
+  'visual-diff',
+  'trace',
+  'video',
+  'log',
+  'metadata',
+  'html',
+  'pdf',
+  'document-page',
+  'contact-sheet'
+]);
 export const ArtifactRoleSchema = z.enum(['evidence', 'expected', 'actual', 'diff', 'trace', 'debug']);
 export const FailureClassSchema = z.enum([
   'source-node-mismatch',
@@ -77,6 +90,13 @@ export const SuggestedNextStepSchema = z.object({
   summary: z.string().min(1)
 });
 
+export const EvidenceGroupSchema = z.object({
+  id: z.string().min(1),
+  checks: z.array(z.string().min(1)),
+  artifacts: z.array(ArtifactRefSchema),
+  metadata: z.record(z.string(), z.unknown()).optional()
+});
+
 export const ReportSummarySchema = z.object({
   passed: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
@@ -86,20 +106,37 @@ export const ReportSummarySchema = z.object({
   reviewItems: z.number().int().nonnegative()
 });
 
-export const ReflectionReportSchema = z.object({
+export const ReflectionReportV2Schema = z.object({
   schemaVersion: z.literal(1),
   runId: z.string().min(1),
   project: z.string().min(1),
   startedAt: z.string().datetime(),
   finishedAt: z.string().datetime(),
   status: ReportStatusSchema,
-  mode: z.enum(['smoke', 'design', 'visual', 'full']),
+  mode: z.enum(['smoke', 'design', 'visual', 'print', 'full']),
   ci: z.boolean(),
   environment: z.record(z.string(), z.unknown()),
   summary: ReportSummarySchema,
   checks: z.array(CheckResultSchema),
   artifacts: z.array(ArtifactRefSchema),
   suggestedNextSteps: z.array(SuggestedNextStepSchema)
+});
+
+export const ReflectionReportSchema = z.object({
+  schemaVersion: z.literal(2),
+  runId: z.string().min(1),
+  project: z.string().min(1),
+  startedAt: z.string().datetime(),
+  finishedAt: z.string().datetime(),
+  status: ReportStatusSchema,
+  mode: z.enum(['smoke', 'design', 'visual', 'print', 'full']),
+  ci: z.boolean(),
+  environment: z.record(z.string(), z.unknown()),
+  summary: ReportSummarySchema,
+  checks: z.array(CheckResultSchema),
+  artifacts: z.array(ArtifactRefSchema),
+  suggestedNextSteps: z.array(SuggestedNextStepSchema),
+  evidenceGroups: z.array(EvidenceGroupSchema)
 });
 
 export type CheckStatus = z.output<typeof CheckStatusSchema>;
@@ -114,6 +151,7 @@ export type CheckResult = z.output<typeof CheckResultSchema>;
 export type ReflectionReport = z.output<typeof ReflectionReportSchema>;
 export type ReportSummary = z.output<typeof ReportSummarySchema>;
 export type SuggestedNextStep = z.output<typeof SuggestedNextStepSchema>;
+export type EvidenceGroup = z.output<typeof EvidenceGroupSchema>;
 
 export function summarizeChecks(checks: CheckResult[]): ReportSummary {
   return {
@@ -170,7 +208,7 @@ export function deriveSuggestedNextSteps(checks: CheckResult[]): SuggestedNextSt
   }
 
   const missingBaselines = checks.filter(
-    (check) => check.suite === 'visual' && check.severity === 'review' && check.metadata.classification === 'missing-baseline'
+    (check) => (check.suite === 'visual' || check.suite === 'print') && check.severity === 'review' && check.metadata.classification === 'missing-baseline'
   );
   if (missingBaselines.length > 0) {
     return [
@@ -208,12 +246,21 @@ export function deriveSuggestedNextSteps(checks: CheckResult[]): SuggestedNextSt
 
 export function validateReport(report: unknown): ReflectionReport {
   const parsed = ReflectionReportSchema.safeParse(report);
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((issue) => `${issue.path.join('.') || 'report'}: ${issue.message}`).join('; ');
-    throw new Error(`Invalid Reflection report: ${details}`);
+  if (parsed.success) {
+    return parsed.data;
   }
 
-  return parsed.data;
+  const parsedV1 = ReflectionReportV2Schema.safeParse(report);
+  if (parsedV1.success) {
+    return {
+      ...parsedV1.data,
+      schemaVersion: 2,
+      evidenceGroups: deriveEvidenceGroups(parsedV1.data.checks, parsedV1.data.artifacts)
+    };
+  }
+
+  const details = parsed.error.issues.map((issue) => `${issue.path.join('.') || 'report'}: ${issue.message}`).join('; ');
+  throw new Error(`Invalid Reflection report: ${details}`);
 }
 
 export function createReport(input: {
@@ -230,7 +277,7 @@ export function createReport(input: {
 }): ReflectionReport {
   const status = deriveReportStatus(input.checks);
   return validateReport({
-    schemaVersion: 1,
+    schemaVersion: 2,
     runId: input.runId,
     project: input.project,
     startedAt: input.startedAt.toISOString(),
@@ -242,8 +289,44 @@ export function createReport(input: {
     summary: summarizeChecks(input.checks),
     checks: input.checks,
     artifacts: input.artifacts ?? [],
-    suggestedNextSteps: input.suggestedNextSteps ?? deriveSuggestedNextSteps(input.checks)
+    suggestedNextSteps: input.suggestedNextSteps ?? deriveSuggestedNextSteps(input.checks),
+    evidenceGroups: deriveEvidenceGroups(input.checks, input.artifacts ?? [])
   });
+}
+
+export function deriveEvidenceGroups(checks: CheckResult[], reportArtifacts: ArtifactRef[] = []): EvidenceGroup[] {
+  const groups = new Map<string, { checks: string[]; artifacts: ArtifactRef[] }>();
+
+  for (const check of checks) {
+    const scenario = typeof check.metadata.scenario === 'string' ? check.metadata.scenario : undefined;
+    if (!scenario) {
+      continue;
+    }
+
+    const group = groups.get(scenario) ?? { checks: [], artifacts: [] };
+    group.checks.push(check.id);
+    group.artifacts.push(...check.artifacts);
+    groups.set(scenario, group);
+  }
+
+  return [...groups.entries()].map(([id, group]) => ({
+    id,
+    checks: [...new Set(group.checks)],
+    artifacts: dedupeArtifacts([...group.artifacts, ...reportArtifacts.filter((artifact) => artifact.path.includes(id))])
+  }));
+}
+
+function dedupeArtifacts(artifacts: ArtifactRef[]): ArtifactRef[] {
+  const seen = new Set<string>();
+  const deduped: ArtifactRef[] = [];
+  for (const artifact of artifacts) {
+    if (seen.has(artifact.path)) {
+      continue;
+    }
+    seen.add(artifact.path);
+    deduped.push(artifact);
+  }
+  return deduped;
 }
 
 function formatCheckList(checks: CheckResult[]): string {

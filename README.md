@@ -10,12 +10,12 @@ Does it still match the design system contract?
 Did anything visible change unexpectedly?
 ```
 
-Current status: Reflection now has the core local validation loop: config → browser route check → screenshot/visual evidence → report → review → explicit baseline update.
+Current status: Reflection has the core local validation loop: config → optional setup hooks → browser route check → screenshot/visual/print evidence → report → review → explicit baseline update.
 
 ## Documentation
 
 - [`docs/getting-started.md`](docs/getting-started.md) — add Reflection to a new repo and run the local loop.
-- [`docs/configuration.md`](docs/configuration.md) — supported config shape, run modes, browser/design/component contracts.
+- [`docs/configuration.md`](docs/configuration.md) — supported config shape, run modes, browser/design/component/print contracts.
 - [`docs/browser-contract.md`](docs/browser-contract.md) — rendered route expectations and screenshot evidence.
 - [`docs/visual-contract.md`](docs/visual-contract.md) — route/component baselines, review-only diffs, and baseline update policy.
 - [`docs/artifacts-and-gc.md`](docs/artifacts-and-gc.md) — report bundle layout, artifact roots, and safe garbage collection.

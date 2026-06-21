@@ -61,7 +61,7 @@ describe('browser contract', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'reflection-browser-contract-pass-'));
     const store = await createArtifactStore({ rootDir, runId: 'browser-pass' });
 
-    const checks = await runBrowserContract(
+    const result = await runBrowserContract(
       {
         baseUrl,
         blocking: true,
@@ -77,6 +77,7 @@ describe('browser contract', () => {
       },
       store
     );
+    const checks = result.checks;
 
     expect(checks).toHaveLength(1);
     const check = checks[0];
@@ -96,7 +97,7 @@ describe('browser contract', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'reflection-browser-contract-fail-'));
     const store = await createArtifactStore({ rootDir, runId: 'browser-fail' });
 
-    const checks = await runBrowserContract(
+    const result = await runBrowserContract(
       {
         baseUrl,
         blocking: true,
@@ -117,6 +118,7 @@ describe('browser contract', () => {
       },
       store
     );
+    const checks = result.checks;
 
     expect(checks).toHaveLength(2);
     expect(checks.map((check) => check.status)).toEqual(['fail', 'fail']);
@@ -133,7 +135,7 @@ describe('browser contract', () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'reflection-browser-contract-setup-'));
     const store = await createArtifactStore({ rootDir, runId: 'browser-setup' });
 
-    const checks = await runBrowserContract(
+    const result = await runBrowserContract(
       {
         baseUrl,
         blocking: true,
@@ -158,6 +160,7 @@ describe('browser contract', () => {
       },
       store
     );
+    const checks = result.checks;
 
     expect(checks).toHaveLength(1);
     const check = checks[0];

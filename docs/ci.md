@@ -37,6 +37,7 @@ artifacts/reflection/runs/latest
 - `reflection run --ci` records the environment profile as `ci`.
 - Workers default to `1` for stable browser and visual evidence.
 - Videos and traces remain off by default unless a future explicit policy enables them.
+- Poppler is optional for print contracts unless a case config sets `poppler.mode: 'required'`.
 - CI never updates baselines. Baseline promotion must use `reflection update` outside CI with an explicit human review step; `reflection update --ci` is refused.
 
 ## Exit codes
