@@ -3,5 +3,7 @@ export enum ExitCode {
   BlockingFailure = 1,
   ToolOrConfigError = 2,
   InvalidUsage = 64,
+  // sysexits EX_NOINPUT: a --route/--state/--case filter selected nothing to run.
+  FilterMatchedNothing = 66,
   MissingDependency = 69
 }

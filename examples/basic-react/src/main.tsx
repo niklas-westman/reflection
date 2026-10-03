@@ -217,6 +217,64 @@ function PrintFixtureRoute() {
   );
 }
 
+interface WorkspaceCandidate {
+  id: string;
+  name: string;
+}
+
+type CandidateListState = WorkspaceCandidate[] | 'loading' | 'error';
+
+function WorkspaceRoute() {
+  const [candidates, setCandidates] = React.useState<CandidateListState>('loading');
+  const [selected, setSelected] = React.useState<WorkspaceCandidate | undefined>();
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const today = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'full', timeStyle: 'short' }).format(new Date());
+
+  React.useEffect(() => {
+    fetch('/api/candidates')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Unexpected status ${response.status}`);
+        }
+        return response.json() as Promise<{ items: WorkspaceCandidate[] }>;
+      })
+      .then((body) => setCandidates(body.items))
+      .catch(() => setCandidates('error'));
+  }, []);
+
+  return (
+    <main style={pageStyle}>
+      <section style={panelStyle}>
+        <h1>Workspace</h1>
+        <p>Today: {today}</p>
+        {candidates === 'loading' && <p>Loading candidates</p>}
+        {candidates === 'error' && <p role="alert">Could not load candidates</p>}
+        {Array.isArray(candidates) && candidates.length === 0 && <p>No candidates</p>}
+        {Array.isArray(candidates) &&
+          candidates.map((candidate) => (
+            <button key={candidate.id} onClick={() => setSelected(candidate)} type="button">
+              {candidate.name}
+            </button>
+          ))}
+        {selected && (
+          <article aria-label="Candidate details">
+            <h2>{selected.name}</h2>
+            <button onClick={() => setChatOpen(true)} type="button">
+              Chat
+            </button>
+            {chatOpen && (
+              <label>
+                Message
+                <input name="message" type="text" />
+              </label>
+            )}
+          </article>
+        )}
+      </section>
+    </main>
+  );
+}
+
 function NotFoundRoute() {
   return (
     <main style={pageStyle}>
@@ -241,6 +299,8 @@ function App() {
       return <AuthRoute />;
     case '/print-fixture':
       return <PrintFixtureRoute />;
+    case '/workspace':
+      return <WorkspaceRoute />;
     default:
       return <NotFoundRoute />;
   }

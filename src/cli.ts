@@ -8,7 +8,12 @@ import { initCommand } from './commands/init.js';
 import { reviewCommand } from './commands/review.js';
 import { runCommand } from './commands/run.js';
 import { updateCommand } from './commands/update.js';
+import { getReflectionVersion } from './core/environment.js';
 import { ExitCode } from './core/exit-codes.js';
+
+function collectOption(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
 
 export function createCli(): Command {
   const program = new Command();
@@ -16,7 +21,7 @@ export function createCli(): Command {
   program
     .name('reflection')
     .description('Evidence-backed rendered UI validation.')
-    .version('0.1.2')
+    .version(getReflectionVersion())
     .configureOutput({
       outputError: (message, write) => write(message)
     });
@@ -38,7 +43,10 @@ export function createCli(): Command {
     .option('--ci', 'Run with CI defaults')
     .option('--report-dir <path>', 'Artifact/report root directory')
     .option('--workers [count]', 'Worker count for browser/visual checks')
-    .action(async (options: { config?: string; mode: string; ci?: boolean; reportDir?: string; workers?: string | boolean }) => {
+    .option('--route <id>', 'Run only this route id (repeatable)', collectOption, [])
+    .option('--state <id>', 'Run only this route state id (repeatable)', collectOption, [])
+    .option('--case <id>', 'Run only this visual/component/print case id (repeatable)', collectOption, [])
+    .action(async (options: { config?: string; mode: string; ci?: boolean; reportDir?: string; workers?: string | boolean; route: string[]; state: string[]; case: string[] }) => {
       await runCommand(options);
     });
 

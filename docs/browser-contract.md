@@ -133,6 +133,130 @@ Preset viewports capture the full scrollable page by default. Custom-size viewpo
 
 `reflection doctor --config <path>` prints each route's viewports, including custom sizes.
 
+## Route states and steps
+
+A page with several modes can declare `states`. Each state runs from a **fresh navigation** (new browser context, so nothing leaks between states), executes its `steps`, then evaluates its own `expects` and captures its own screenshot:
+
+```ts
+routes: [
+  {
+    id: 'my-work',
+    path: '/my-work',
+    viewports: [{ name: 'design-1512', width: 1512, height: 982 }],
+    expects: [{ noConsoleErrors: true }],
+    states: [
+      { id: 'start', expects: [{ role: 'heading', name: 'My work' }, { screenshot: 'final' }] },
+      {
+        id: 'overview',
+        steps: [{ click: { role: 'button', name: 'Luna Larsson' } }],
+        expects: [{ role: 'heading', name: 'Luna Larsson' }, { screenshot: 'final' }]
+      },
+      {
+        id: 'chat',
+        // To reach a deeper state, repeat the earlier steps: every state starts from a fresh page.
+        steps: [{ click: { role: 'button', name: 'Luna Larsson' } }, { click: { role: 'button', name: 'Chat' } }],
+        expects: [{ label: 'What is the latest?' }, { screenshot: 'final' }]
+      }
+    ]
+  }
+]
+```
+
+- Route-level `expects` apply to every state, before the state's own `expects`.
+- A route without `states` behaves exactly as before. State ids may contain letters, digits, `.`, `_` and `-`, and must be unique per route.
+- Check ids and artifacts include the state: `browser.<route>.<viewport>.<state>` and `browser/<route>/<viewport>/<state>/actual.png`.
+- `visualSmoke` cases on a route with states must set `state`, and cases on a route without states must not.
+
+Steps are declarative data (no scripts) and run after `setup` and before expectations:
+
+| Step | Shape |
+| --- | --- |
+| `click` | `{ click: { role, name? } }`, or `{ label }`, `{ text }`, `{ selector }` as the target |
+| `fill` | `{ fill: { label, value } }`, or `{ role, name?, value }`, `{ selector, value }` |
+| `press` | `{ press: 'Enter' }` (any Playwright key name, sent to the focused element) |
+| `waitFor` | `{ waitFor: { text \| role+name \| label \| selector \| networkIdle: true, timeoutMs? } }` |
+
+Locators use Playwright's accessible queries and are strict: a locator matching several elements fails the step, so make the name specific. Actions time out after 5 seconds; `waitFor` takes `timeoutMs`.
+
+A failing step fails only that state. The check summary names the step number and locator (for example `State "chat" step 2 (click role="button" name="Chat") failed: ...`), the remaining steps and expectations of that state are skipped, and `browser/<route>/<viewport>/<state>/failure.png` captures the page at the failure point. Other states still run.
+
+## Network fixtures
+
+`setup.network` stubs API responses and can fail on requests nobody stubbed. It is installed before navigation, so first-load requests are caught. Like other setup it can be set browser-wide and per route (route stubs are added after browser stubs):
+
+```ts
+setup: {
+  network: {
+    stubs: [
+      { method: 'GET', url: '**/api/v2/candidates', status: 200, json: { items: [], total: 0 } },
+      { method: 'GET', url: '**/api/v2/candidates/*', file: 'fixtures/candidate-luna.json' },
+      { method: 'GET', url: '**/api/v2/candidates', status: 500, once: true }
+    ],
+    unmatched: 'fail'
+  }
+}
+```
+
+| Stub field | Notes |
+| --- | --- |
+| `url` | Glob matched with Playwright's URL matching. Required. |
+| `method` | Optional; matches any method when omitted. |
+| `status` | Defaults to `200`. |
+| `json` / `file` / `body` | At most one. `file` is read relative to the config file's directory and may not leave it. Omit all three for an empty body. |
+| `headers` | Extra response headers. `access-control-allow-origin: *` is added unless you set it. |
+| `delayMs` | Delay before responding, for loading states. |
+| `once` | Serve this stub for the first matching request only, then fall through to earlier stubs. |
+
+**Precedence:** later stubs win. In the example the `500` is served once, then requests fall back to the earlier `200`, which gives you an error state followed by a recovery.
+
+`unmatched` (default `allow`, which keeps today's behaviour) controls requests that no stub handled:
+
+- `fail` aborts the request, fails the state with classification `unexpected-network-request`, and lists each `METHOD URL`.
+- `warn` lets the request through and records a review warning (`pass-with-review`).
+- Same-origin page assets (documents, scripts, styles, images, fonts, media) are never counted. Same-origin `fetch`/XHR calls and anything on another origin are, unless the origin is listed in `allowOrigins` (for example `allowOrigins: ['https://fonts.gstatic.com']`).
+
+Check metadata records stub identities (method, url, status, source, `once`, hit count) and the unmatched requests, never response bodies.
+
+## Fixed clock, timezone, locale and colour scheme
+
+```ts
+setup: {
+  clock: { now: '2026-10-03T09:00:00+02:00' },
+  timezone: 'Europe/Stockholm',
+  locale: 'sv-SE',
+  colorScheme: 'light',
+  reducedMotion: 'reduce'
+}
+```
+
+These can be set browser-wide with route-level overrides. Defaults are unchanged: `en-US`, `Europe/Stockholm`, `light`, no reduced-motion preference, real time.
+
+`clock.now` fixes `Date`/`Date.now()` in the page (timers and animation frames keep running), so "Today", "Yesterday" and relative times render reproducibly. It does not change server time.
+
+## Screenshot stability
+
+Before a route screenshot Reflection masks `maskSelectors`, waits for readiness, then captures. Configure it at the browser level or per route (route overrides browser, key by key):
+
+```ts
+stability: {
+  disableAnimations: true, // default false
+  hideCaret: true,         // default true
+  waitFor: ['fonts', 'images'], // default both
+  settleMs: 0              // default 0, max 5000
+}
+```
+
+- `waitFor: ['fonts']` waits for `document.fonts.ready`. `'images'` waits for in-flow images to load and decode (lazy-loaded images are not waited for, and the wait gives up after 5 seconds).
+- `disableAnimations` uses Playwright's screenshot `animations: 'disabled'`: finite animations jump to their end state and infinite ones are cancelled.
+- `hideCaret` hides the text caret.
+- Viewport captures stay viewport captures unless `capture.fullPage` is set (see above).
+
+Default behaviour only adds the fonts/images wait, which can only make screenshots more stable.
+
+## Environment identity
+
+`report.json` records `reflectionVersion`, `playwrightVersion`, `browser` (name and version), `os`, and any active run `filter` in `environment`. Each browser check records its own `metadata.environment`: viewport size, device scale factor, locale, timezone, colour scheme, reduced motion and whether the clock was fixed. A consumer can use these to tell "same scenario, different environment" from "different scenario".
+
 ## Console and layout failures
 
 `noConsoleErrors` and `noHorizontalOverflow` are intentionally simple high-signal checks:

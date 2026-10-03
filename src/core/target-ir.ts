@@ -27,6 +27,7 @@ export type BrowserRouteTarget = TargetBase & {
     viewports: RouteViewport[];
     capture?: { fullPage?: boolean | undefined } | undefined;
     expects: unknown[];
+    states?: unknown[] | undefined;
   };
   browser: {
     baseUrl: string;
@@ -41,6 +42,7 @@ export type RouteVisualTarget = TargetBase & {
   };
   visual: {
     viewport: string;
+    state?: string | undefined;
     baseline: string;
     baselineRoot?: string | undefined;
     threshold?: unknown;
@@ -91,7 +93,8 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
           ...(route.name ? { name: route.name } : {}),
           viewports: route.viewports,
           ...(route.capture ? { capture: route.capture } : {}),
-          expects: route.expects
+          expects: route.expects,
+          ...(route.states ? { states: route.states } : {})
         },
         browser: {
           baseUrl: browser.baseUrl,
@@ -112,6 +115,7 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
         },
         visual: {
           viewport: visualCase.viewport,
+          ...(visualCase.state ? { state: visualCase.state } : {}),
           baseline: visualCase.baseline,
           ...(visualCase.baselineRoot ? { baselineRoot: visualCase.baselineRoot } : {}),
           ...(visualCase.threshold !== undefined ? { threshold: visualCase.threshold } : {})

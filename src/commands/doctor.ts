@@ -95,7 +95,7 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
       )}`
     );
     console.log(`Base URL: ${browser.baseUrl}`);
-    printRouteViewports(browser.routes);
+    printRouteDetails(browser);
 
     if (browser.server) {
       console.log(
@@ -137,12 +137,55 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
   console.log(`Lifecycle beforeRun: ${formatCount(config.lifecycle.beforeRun.length, 'hook')}`);
 }
 
-function printRouteViewports(routes: NonNullable<ReflectionConfig['contracts']['browser']>['routes']): void {
-  for (const route of routes) {
+type DoctorBrowserConfig = NonNullable<ReflectionConfig['contracts']['browser']>;
+
+function printRouteDetails(browser: DoctorBrowserConfig): void {
+  printNetworkSummary('Browser', browser.setup?.network);
+  printContextSetup('Browser', browser.setup);
+
+  for (const route of browser.routes) {
     const described = route.viewports.map((viewport) =>
       isCustomRouteViewport(viewport) ? `${getRouteViewportName(viewport)} (${viewport.width}x${viewport.height})` : viewport
     );
     console.log(`Route ${route.id} viewports: ${described.join(', ')}`);
+
+    if (route.states) {
+      const states = route.states.map((state) => `${state.id} (${formatCount(state.steps.length, 'step')})`);
+      console.log(`Route ${route.id} states: ${states.join(', ')}`);
+    }
+
+    printNetworkSummary(`Route ${route.id}`, route.setup?.network);
+    printContextSetup(`Route ${route.id}`, route.setup);
+  }
+}
+
+function printNetworkSummary(label: string, network: NonNullable<DoctorBrowserConfig['setup']>['network']): void {
+  if (!network) {
+    return;
+  }
+
+  console.log(`${label} network: ${formatCount(network.stubs.length, 'stub')}, unmatched ${network.unmatched}`);
+  for (const stub of network.stubs) {
+    const source = stub.json !== undefined ? 'json' : stub.file !== undefined ? `file ${stub.file}` : stub.body !== undefined ? 'body' : 'empty';
+    console.log(`  ${stub.method ?? 'ANY'} ${stub.url} -> ${stub.status} (${source}${stub.once ? ', once' : ''}${stub.delayMs ? `, ${stub.delayMs}ms delay` : ''})`);
+  }
+}
+
+function printContextSetup(label: string, setup: DoctorBrowserConfig['setup']): void {
+  if (!setup) {
+    return;
+  }
+
+  const parts = [
+    setup.clock ? `clock ${setup.clock.now}` : undefined,
+    setup.timezone ? `timezone ${setup.timezone}` : undefined,
+    setup.locale ? `locale ${setup.locale}` : undefined,
+    setup.colorScheme ? `colorScheme ${setup.colorScheme}` : undefined,
+    setup.reducedMotion ? `reducedMotion ${setup.reducedMotion}` : undefined
+  ].filter((part): part is string => part !== undefined);
+
+  if (parts.length > 0) {
+    console.log(`${label} environment: ${parts.join(', ')}`);
   }
 }
 

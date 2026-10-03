@@ -10,6 +10,7 @@ export type RouteVisualBaselineCase = {
   id: string;
   route: string;
   viewport: string;
+  state?: string | undefined;
   capture?: { selector: string } | undefined;
   baseline: string;
   baselineRoot?: string | undefined;
@@ -29,7 +30,7 @@ export type CompareRouteVisualBaselineInput = {
 export async function compareRouteVisualBaseline(input: CompareRouteVisualBaselineInput): Promise<CheckResult> {
   const actualArtifact =
     input.actualArtifact ?? input.routeCheck.artifacts.find((artifact) => artifact.role === 'actual' && artifact.path.endsWith('.png'));
-  const target = `${String(input.routeCheck.metadata.route ?? input.visualCase.route)} ${input.visualCase.viewport}`;
+  const target = `${String(input.routeCheck.metadata.route ?? input.visualCase.route)} ${input.visualCase.viewport}${input.visualCase.state ? ` ${input.visualCase.state}` : ''}`;
   const baselinePath = resolveCaseBaselinePath(input.visualCase);
   const blocking = input.visualCase.blocking === true || input.visualCase.strict === true;
   const strict = input.visualCase.strict === true || input.visualCase.blocking === true;
@@ -66,6 +67,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
       metadata: {
         routeId: input.visualCase.route,
         viewport: input.visualCase.viewport,
+        ...(input.visualCase.state ? { state: input.visualCase.state } : {}),
         ...(input.visualCase.capture ? { capture: input.visualCase.capture } : {}),
         ...(input.visualCase.scenario ? { scenario: input.visualCase.scenario } : {})
       }
@@ -104,6 +106,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
       ...result,
       routeId: input.visualCase.route,
       viewport: input.visualCase.viewport,
+      ...(input.visualCase.state ? { state: input.visualCase.state } : {}),
       baselinePath: input.visualCase.baseline,
       ...(input.visualCase.capture ? { capture: input.visualCase.capture } : {}),
       ...(input.visualCase.scenario ? { scenario: input.visualCase.scenario } : {})

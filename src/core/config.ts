@@ -3,6 +3,7 @@ import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createJiti } from 'jiti';
 import { z } from 'zod';
+import { BrowserStepSchema, ClockSetupSchema, NetworkSetupSchema, StabilitySchema, StateIdSchema } from './browser-scenario.js';
 import { RouteViewportsSchema, ViewportSizeSchema } from './viewport.js';
 
 export const runModes = ['smoke', 'design', 'visual', 'print', 'full'] as const;
@@ -53,6 +54,7 @@ const RouteVisualSmokeCaseSchema = z.object({
   id: z.string().min(1),
   route: z.string().min(1),
   viewport: z.string().min(1),
+  state: StateIdSchema.optional(),
   capture: z.object({ selector: z.string().min(1) }).optional(),
   baseline: z.string().min(1),
   baselineRoot: z.string().optional(),
@@ -67,19 +69,44 @@ const BrowserStorageSetupSchema = z.record(z.string().min(1), z.string()).option
 const BrowserSetupSchema = z
   .object({
     localStorage: BrowserStorageSetupSchema,
-    sessionStorage: BrowserStorageSetupSchema
+    sessionStorage: BrowserStorageSetupSchema,
+    network: NetworkSetupSchema.optional(),
+    clock: ClockSetupSchema.optional(),
+    timezone: z.string().min(1).optional(),
+    locale: z.string().min(1).optional(),
+    colorScheme: z.enum(['light', 'dark']).optional(),
+    reducedMotion: z.enum(['reduce', 'no-preference']).optional()
   })
   .default({ localStorage: {}, sessionStorage: {} });
 
-const BrowserRouteSchema = z.object({
-  id: z.string().min(1),
+const BrowserRouteStateSchema = z.object({
+  id: StateIdSchema,
   name: z.string().optional(),
-  path: z.string().min(1),
-  viewports: RouteViewportsSchema,
-  capture: z.object({ fullPage: z.boolean().optional() }).optional(),
-  expects: z.array(BrowserExpectationSchema).default([]),
-  setup: BrowserSetupSchema.optional()
+  steps: z.array(BrowserStepSchema).default([]),
+  expects: z.array(BrowserExpectationSchema).default([])
 });
+
+const BrowserRouteSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().optional(),
+    path: z.string().min(1),
+    viewports: RouteViewportsSchema,
+    capture: z.object({ fullPage: z.boolean().optional() }).optional(),
+    stability: StabilitySchema.optional(),
+    expects: z.array(BrowserExpectationSchema).default([]),
+    states: z.array(BrowserRouteStateSchema).min(1).optional(),
+    setup: BrowserSetupSchema.optional()
+  })
+  .superRefine((route, context) => {
+    const seen = new Set<string>();
+    for (const [index, state] of (route.states ?? []).entries()) {
+      if (seen.has(state.id)) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: ['states', index, 'id'], message: `duplicate state id "${state.id}"` });
+      }
+      seen.add(state.id);
+    }
+  });
 
 const BrowserContractSchema = z.object({
   enabled: z.boolean().default(true),
@@ -96,7 +123,40 @@ const BrowserContractSchema = z.object({
   routes: z.array(BrowserRouteSchema).default([]),
   maskSelectors: z.array(z.string().min(1)).default([]),
   visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([]),
+  stability: StabilitySchema.optional(),
   setup: BrowserSetupSchema.optional()
+}).superRefine((browser, context) => {
+  for (const [index, visualCase] of browser.visualSmoke.entries()) {
+    const route = browser.routes.find((candidate) => candidate.id === visualCase.route);
+    if (!route) {
+      continue;
+    }
+
+    const stateIds = (route.states ?? []).map((state) => state.id);
+    if (stateIds.length === 0 && visualCase.state !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['visualSmoke', index, 'state'],
+        message: `route "${route.id}" has no states, so visualSmoke case "${visualCase.id}" cannot set state "${visualCase.state}"`
+      });
+    }
+
+    if (stateIds.length > 0 && visualCase.state === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['visualSmoke', index, 'state'],
+        message: `route "${route.id}" has states (${stateIds.join(', ')}); set state on visualSmoke case "${visualCase.id}"`
+      });
+    }
+
+    if (visualCase.state !== undefined && stateIds.length > 0 && !stateIds.includes(visualCase.state)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['visualSmoke', index, 'state'],
+        message: `route "${route.id}" has no state "${visualCase.state}" (available: ${stateIds.join(', ')})`
+      });
+    }
+  }
 });
 
 const DesignCommandSchema = z.object({

@@ -30,6 +30,16 @@ node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode s
 node dist/cli.js review --json
 ```
 
+While building one page, scope the run to it. Filters are repeatable, combine with AND, and require `--config`:
+
+```bash
+reflection run --config reflection.config.ts --route my-work
+reflection run --config reflection.config.ts --route my-work --state overview --state chat
+reflection run --config reflection.config.ts --case my-work-chat
+```
+
+`--route` selects browser routes and the visual and print cases on them, `--state` narrows routes to those states, and `--case` selects visual smoke, component and print cases by id (running only the routes and states those cases need). Design commands are skipped while a filter is active. Filters that match nothing for the mode exit with code `66`; ids that exist nowhere in the config print a warning. Always run the full, unfiltered loop before claiming the work complete.
+
 Interpret the review result as the contract:
 
 - `status: "pass"` means the validation evidence passed.

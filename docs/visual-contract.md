@@ -95,6 +95,18 @@ For long documents, capture a single page or region with a selector:
 
 If the matching browser route result is missing, the visual check becomes a review item by default or a blocking failure when strict/blocking is enabled.
 
+### Visual cases for route states
+
+When a route declares `states`, each `visualSmoke` case names the state whose screenshot it compares:
+
+```ts
+visualSmoke: [
+  { id: 'my-work-overview', route: 'my-work', viewport: 'design-1512', state: 'overview', baselineRoot: 'docs/v2/reference-images', baseline: 'my-work/overview.png' }
+]
+```
+
+Artifacts stay under `visual/<case-id>/`, and the check metadata includes the `state`. See `docs/browser-contract.md` for states, steps, network fixtures and a fixed clock.
+
 ### Design-tool reference images for full routes
 
 Figma frames are fixed-size (for example 1512x982), which does not match the `desktop` preset (1440x900). Declare the frame size on the route as a custom viewport and point the visual case at it by name:

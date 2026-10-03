@@ -111,6 +111,36 @@ describe('doctorCommand', () => {
     expect(output).toContain('Route login viewports: mobile, design-1512 (1512x982)');
   });
 
+  it('prints route states, network fixtures and environment setup', async () => {
+    const configPath = await writeConfig(`
+      export default {
+        project: 'states-fixture',
+        contracts: {
+          browser: {
+            baseUrl: 'http://127.0.0.1:4173',
+            setup: { network: { stubs: [{ method: 'GET', url: '**/api/candidates', file: 'fixtures/c.json' }, { url: '**/api/x', status: 500, once: true }], unmatched: 'fail' } },
+            routes: [
+              {
+                id: 'my-work',
+                path: '/my-work',
+                setup: { clock: { now: '2026-10-03T09:00:00+02:00' }, locale: 'sv-SE' },
+                states: [{ id: 'start' }, { id: 'overview', steps: [{ click: { role: 'button', name: 'Luna' } }] }]
+              }
+            ]
+          }
+        }
+      };
+    `);
+
+    const output = await captureDoctor({ config: configPath });
+
+    expect(output).toContain('Route my-work states: start (0 steps), overview (1 step)');
+    expect(output).toContain('Browser network: 2 stubs, unmatched fail');
+    expect(output).toContain('GET **/api/candidates -> 200 (file fixtures/c.json)');
+    expect(output).toContain('ANY **/api/x -> 500 (empty, once)');
+    expect(output).toContain('Route my-work environment: clock 2026-10-03T09:00:00+02:00, locale sv-SE');
+  });
+
   it('summarizes portal component runtime and ready URL', async () => {
     const configPath = await writeConfig(`
       export default {

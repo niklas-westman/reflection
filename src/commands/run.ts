@@ -1,6 +1,6 @@
 import { CommanderError } from 'commander';
 import { availableParallelism } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { runBrowserContract } from '../contracts/browser/browser-contract.js';
 import { runComponentVisualContract } from '../contracts/component/component-visual-contract.js';
 import { runDesignContract } from '../contracts/design/design-contract.js';
@@ -8,10 +8,12 @@ import { runPrintContract } from '../contracts/print/print-contract.js';
 import { runBeforeRunHooks } from '../contracts/setup/lifecycle.js';
 import { createArtifactStore } from '../core/artifact-store.js';
 import { isRunMode, loadReflectionConfig, type ReflectionConfig, type RunMode } from '../core/config.js';
+import { describeOperatingSystem, getPlaywrightVersion, getReflectionVersion } from '../core/environment.js';
 import { ExitCode } from '../core/exit-codes.js';
 import { createRunManifest } from '../core/manifest.js';
 import { createReport, deriveExitCode, type CheckResult } from '../core/report-schema.js';
 import { writeReports } from '../core/report-writer.js';
+import { applyRunFilter, countRunnableTargets, hasRunFilter } from '../core/run-filter.js';
 import { startManagedServer, type ManagedServer } from '../core/server-manager.js';
 
 export type RunCommandOptions = {
@@ -20,6 +22,9 @@ export type RunCommandOptions = {
   ci?: boolean;
   reportDir?: string;
   workers?: string | number | boolean;
+  route?: string[];
+  state?: string[];
+  case?: string[];
 };
 
 export function parseRunMode(value: string): RunMode {
@@ -55,6 +60,29 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     }
   }
 
+  const runFilter = { routes: options.route ?? [], states: options.state ?? [], cases: options.case ?? [] };
+  if (hasRunFilter(runFilter)) {
+    if (!config) {
+      const message = 'Run filters (--route, --state, --case) require --config.';
+      console.error(message);
+      throw new CommanderError(ExitCode.InvalidUsage, 'reflection.filter', message);
+    }
+
+    const filtered = applyRunFilter(config, runFilter);
+    for (const [kind, ids] of Object.entries(filtered.unmatched)) {
+      for (const id of ids) {
+        console.error(`Warning: no ${kind.slice(0, -1)} named "${id}" in the config.`);
+      }
+    }
+
+    if (countRunnableTargets(filtered.config, mode) === 0) {
+      const message = 'No targets matched the --route/--state/--case filters for this mode; nothing was run.';
+      console.error(message);
+      throw new CommanderError(ExitCode.FilterMatchedNothing, 'reflection.filter', message);
+    }
+    config = filtered.config;
+  }
+
   const startedAt = new Date();
   const runId = createRunId(startedAt);
   const ci = options.ci === true;
@@ -70,6 +98,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
   const store = await createArtifactStore({ rootDir, runId });
   const checks: CheckResult[] = [];
   let server: ManagedServer | undefined;
+  let browserIdentity: { name: string; version: string } | undefined;
 
   try {
     const browserConfig = config?.contracts.browser;
@@ -117,8 +146,9 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     if (canRunDownstream && shouldRunBrowser && browserConfig) {
       checks.push(await createEnvironmentCheck(mode, server));
 
-      const browserResult = await runBrowserContract(browserConfig, store);
+      const browserResult = await runBrowserContract({ ...browserConfig, configDir: options.config ? dirname(resolve(options.config)) : process.cwd() }, store);
       checks.push(...browserResult.checks);
+      browserIdentity = browserResult.browser;
     }
 
     if (canRunDownstream && shouldRunDesign) {
@@ -161,7 +191,12 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       profile: ci ? 'ci' : 'local',
       platform: process.platform,
       nodeVersion: process.version,
-      workers
+      workers,
+      reflectionVersion: getReflectionVersion(),
+      playwrightVersion: getPlaywrightVersion(),
+      os: describeOperatingSystem(),
+      ...(browserIdentity ? { browser: browserIdentity } : {}),
+      ...(hasRunFilter(runFilter) ? { filter: runFilter } : {})
     },
     checks
   });

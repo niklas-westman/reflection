@@ -168,6 +168,17 @@ visualSmoke: [
 
 `visualSmoke[].viewport` references the viewport by name. See `docs/visual-contract.md` for comparison behavior.
 
+Route state, stability and setup fields (details and examples in `docs/browser-contract.md`):
+
+| Field | Notes |
+| --- | --- |
+| `states[]` | `{ id, name?, steps?, expects? }`. Each state runs from a fresh navigation. Steps: `click`, `fill`, `press`, `waitFor`. |
+| `stability` | `{ disableAnimations?, hideCaret?, waitFor?: ('fonts' \| 'images')[], settleMs? }`, browser-level or per route. |
+| `setup.network` | `{ stubs[], unmatched: 'fail' \| 'warn' \| 'allow', allowOrigins[] }`. Stubs: `url`, `method?`, `status?`, one of `json`/`file`/`body`, `headers?`, `delayMs?`, `once?`. |
+| `setup.clock` | `{ now: '<ISO date-time>' }` fixes `Date` in the page. |
+| `setup.timezone`, `setup.locale`, `setup.colorScheme`, `setup.reducedMotion` | Context environment. Defaults: `Europe/Stockholm`, `en-US`, `light`, no preference. |
+| `visualSmoke[].state` | Required when the route has states, rejected when it has none. |
+
 Route setup fields:
 
 ```ts

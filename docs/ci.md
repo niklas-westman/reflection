@@ -48,6 +48,7 @@ artifacts/reflection/runs/latest
 | `1` | Blocking validation failure. A blocking check failed. |
 | `2` | Tool/configuration error. Reflection could not complete because setup, config, dependency, or runtime execution failed. |
 | `64` | Invalid CLI usage, such as an unsupported run mode or invalid option value. |
+| `66` | A `--route`, `--state` or `--case` filter matched nothing to run for the selected mode. Nothing was executed. |
 | `69` | Missing dependency. Reserved for dependency checks such as browser/runtime availability. |
 
 ## GitHub Actions example

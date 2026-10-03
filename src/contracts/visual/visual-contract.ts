@@ -20,7 +20,10 @@ export async function runRouteVisualSmoke(input: {
   const checks: CheckResult[] = [];
   for (const visualCase of input.visualSmoke) {
     const routeCheck = input.browserChecks.find(
-      (check) => check.metadata.routeId === visualCase.route && check.metadata.viewport === visualCase.viewport
+      (check) =>
+        check.metadata.routeId === visualCase.route &&
+        check.metadata.viewport === visualCase.viewport &&
+        check.metadata.state === visualCase.state
     );
     const visualCapture = input.visualCaptures?.find((capture) => capture.caseId === visualCase.id);
 
@@ -39,7 +42,7 @@ export async function runRouteVisualSmoke(input: {
           viewport: visualCase.viewport,
           baselinePath: visualCase.baseline
         },
-        suggestedNextStep: 'Add a matching browser route and viewport before enabling this visual case.'
+        suggestedNextStep: 'Add a matching browser route, viewport and (for routes with states) state before enabling this visual case.'
       });
       continue;
     }

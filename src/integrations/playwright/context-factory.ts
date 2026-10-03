@@ -34,12 +34,31 @@ export function resolveRouteViewport(viewport: RouteViewport): ResolvedRouteView
   return { name, size: resolveViewport(name), isCustomSize: false };
 }
 
-export async function createBrowserContext(browser: Browser, viewport: string, viewportSize?: ViewportSize | undefined): Promise<BrowserContext> {
+export interface BrowserContextOptions {
+  locale?: string | undefined;
+  timezone?: string | undefined;
+  colorScheme?: 'light' | 'dark' | undefined;
+  reducedMotion?: 'reduce' | 'no-preference' | undefined;
+}
+
+export const defaultBrowserContextOptions = {
+  locale: 'en-US',
+  timezone: 'Europe/Stockholm',
+  colorScheme: 'light'
+} as const;
+
+export async function createBrowserContext(
+  browser: Browser,
+  viewport: string,
+  viewportSize?: ViewportSize | undefined,
+  options: BrowserContextOptions = {}
+): Promise<BrowserContext> {
   return browser.newContext({
     viewport: resolveViewport(viewport, viewportSize),
     deviceScaleFactor: 1,
-    locale: 'en-US',
-    timezoneId: 'Europe/Stockholm',
-    colorScheme: 'light'
+    locale: options.locale ?? defaultBrowserContextOptions.locale,
+    timezoneId: options.timezone ?? defaultBrowserContextOptions.timezone,
+    colorScheme: options.colorScheme ?? defaultBrowserContextOptions.colorScheme,
+    ...(options.reducedMotion ? { reducedMotion: options.reducedMotion } : {})
   });
 }

@@ -719,3 +719,68 @@ describe('route viewports', () => {
     expect(() => validateReflectionConfig(configWithViewports([{ name: 'bad', width: 0, height: 982 }]))).toThrow(/Invalid Reflection config/);
   });
 });
+
+describe('route states, steps, network and environment setup', () => {
+  function browserConfig(browser: Record<string, unknown>) {
+    return { project: 'states-fixture', contracts: { browser: { baseUrl: 'http://127.0.0.1:5173', ...browser } } };
+  }
+
+  const states = [
+    { id: 'start', expects: [{ screenshot: 'final' }] },
+    { id: 'overview', steps: [{ click: { role: 'button', name: 'Luna' } }, { fill: { label: 'Email', value: 'a@b.se' } }, { press: 'Enter' }, { waitFor: { networkIdle: true } }] }
+  ];
+
+  it('accepts states with declarative steps and defaults empty steps/expects', () => {
+    const config = validateReflectionConfig(browserConfig({ routes: [{ id: 'my-work', path: '/my-work', states }] }));
+
+    expect(config.contracts.browser?.routes[0]?.states?.[0]).toMatchObject({ id: 'start', steps: [] });
+    expect(config.contracts.browser?.routes[0]?.states?.[1]?.expects).toEqual([]);
+  });
+
+  it('rejects duplicate state ids, unsafe state ids and unknown step shapes', () => {
+    expect(() => validateReflectionConfig(browserConfig({ routes: [{ id: 'r', path: '/', states: [{ id: 'a' }, { id: 'a' }] }] }))).toThrow(/duplicate state id "a"/);
+    expect(() => validateReflectionConfig(browserConfig({ routes: [{ id: 'r', path: '/', states: [{ id: '../a' }] }] }))).toThrow(/state ids may contain/);
+    expect(() => validateReflectionConfig(browserConfig({ routes: [{ id: 'r', path: '/', states: [{ id: 'a', steps: [{ evaluate: 'alert(1)' }] }] }] }))).toThrow(
+      /Invalid Reflection config/
+    );
+  });
+
+  it('requires visualSmoke cases to name a state exactly when the route has states', () => {
+    const routes = [{ id: 'my-work', path: '/my-work', states }];
+    const visual = { id: 'case', route: 'my-work', viewport: 'desktop', baseline: 'a.png' };
+
+    expect(() => validateReflectionConfig(browserConfig({ routes, visualSmoke: [visual] }))).toThrow(/has states \(start, overview\); set state/);
+    expect(() => validateReflectionConfig(browserConfig({ routes, visualSmoke: [{ ...visual, state: 'missing' }] }))).toThrow(/has no state "missing"/);
+    expect(() =>
+      validateReflectionConfig(browserConfig({ routes: [{ id: 'my-work', path: '/' }], visualSmoke: [{ ...visual, state: 'start' }] }))
+    ).toThrow(/has no states/);
+    expect(validateReflectionConfig(browserConfig({ routes, visualSmoke: [{ ...visual, state: 'start' }] })).contracts.browser?.visualSmoke[0]?.state).toBe('start');
+  });
+
+  it('accepts network stubs, a fixed clock and environment overrides at browser and route level', () => {
+    const setup = {
+      network: { stubs: [{ method: 'get', url: '**/api/*', json: { items: [] } }, { url: '**/api/x', status: 500, once: true }], unmatched: 'fail' },
+      clock: { now: '2026-10-03T09:00:00+02:00' },
+      timezone: 'Europe/Stockholm',
+      locale: 'sv-SE',
+      colorScheme: 'dark',
+      reducedMotion: 'reduce'
+    };
+    const config = validateReflectionConfig(browserConfig({ setup, stability: { disableAnimations: true, waitFor: ['fonts'] }, routes: [{ id: 'r', path: '/', setup: { locale: 'en-US' } }] }));
+
+    expect(config.contracts.browser?.setup?.network?.stubs[0]).toMatchObject({ method: 'GET', status: 200 });
+    expect(config.contracts.browser?.setup?.network?.allowOrigins).toEqual([]);
+    expect(config.contracts.browser?.routes[0]?.setup?.locale).toBe('en-US');
+  });
+
+  it('rejects invalid stubs and clocks', () => {
+    const withSetup = (setup: unknown) => browserConfig({ setup, routes: [] });
+
+    expect(() => validateReflectionConfig(withSetup({ network: { stubs: [{ url: '**/x', json: {}, body: 'x' }] } }))).toThrow(/at most one of json, file or body/);
+    expect(() => validateReflectionConfig(withSetup({ network: { stubs: [{ url: '**/x', file: '../secret.json' }] } }))).toThrow(/relative paths inside the config directory/);
+    expect(() => validateReflectionConfig(withSetup({ network: { stubs: [{ url: '**/x', file: '/etc/passwd' }] } }))).toThrow(/relative paths/);
+    expect(() => validateReflectionConfig(withSetup({ network: { unmatched: 'sometimes' } }))).toThrow(/Invalid Reflection config/);
+    expect(() => validateReflectionConfig(withSetup({ clock: { now: 'yesterday-ish' } }))).toThrow(/valid date-time/);
+  });
+});
+
