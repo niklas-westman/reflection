@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
+import { RouteViewportsSchema } from '../core/viewport.js';
 import type { BrowserRouteTarget, TargetIR } from '../core/target-ir.js';
 
 const RouteManifestExpectationSchema = z.union([
@@ -22,7 +23,7 @@ const RouteManifestRouteSchema = z
     id: z.string().min(1),
     name: z.string().min(1).optional(),
     path: z.string().min(1),
-    viewports: z.array(z.string().min(1)).default(['desktop']),
+    viewports: RouteViewportsSchema,
     expects: z.array(RouteManifestExpectationSchema).default([]),
     blocking: z.boolean().optional()
   })

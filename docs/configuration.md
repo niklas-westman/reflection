@@ -142,6 +142,32 @@ Browser fields:
 | `routes` | Route assertions executed in `smoke` and `full` modes. |
 | `visualSmoke` | Route screenshot baseline comparisons driven from successful browser screenshots. |
 
+Route viewport and capture fields:
+
+| Field | Notes |
+| --- | --- |
+| `viewports` | Defaults to `['desktop']`. Each entry is a preset string (`desktop` 1440x900, `tablet` 820x1180, `mobile` 390x844) or `{ name, width, height }` for an exact size. Strings and objects can be mixed. Custom names must be unique per route and must not reuse a preset name. |
+| `capture.fullPage` | Optional. Defaults to `true` for preset viewports and `false` for custom-size viewports, so a `1512x982` viewport yields a `1512x982` PNG. |
+
+All route screenshots use `deviceScaleFactor: 1`. Example for design-tool reference images (Figma frames):
+
+```ts
+routes: [{ id: 'login', path: '/login', viewports: [{ name: 'design-1512', width: 1512, height: 982 }], expects: [{ screenshot: 'final' }] }],
+visualSmoke: [
+  {
+    id: 'login-design',
+    route: 'login',
+    viewport: 'design-1512',
+    baselineRoot: 'docs/v2/reference-images',
+    baseline: 'login-page/6-login-page.png',
+    threshold: { maxDiffPixelRatio: 0.05 },
+    strict: false
+  }
+]
+```
+
+`visualSmoke[].viewport` references the viewport by name. See `docs/visual-contract.md` for comparison behavior.
+
 Route setup fields:
 
 ```ts

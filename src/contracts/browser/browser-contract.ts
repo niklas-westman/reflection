@@ -1,5 +1,6 @@
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
+import { getRouteViewportName } from '../../core/viewport.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { runRouteVisualSmoke } from '../visual/visual-contract.js';
 import type { RouteVisualBaselineCase } from '../visual/baseline-compare.js';
@@ -42,7 +43,7 @@ export async function runBrowserContract(config: BrowserContractConfig, store: A
           maskSelectors: config.maskSelectors ?? [],
           setup: config.setup,
           visualCaptures: (config.visualSmoke ?? [])
-            .filter((visualCase) => visualCase.route === route.id && visualCase.viewport === viewport && visualCase.capture?.selector)
+            .filter((visualCase) => visualCase.route === route.id && visualCase.viewport === getRouteViewportName(viewport) && visualCase.capture?.selector)
             .map((visualCase) => ({
               id: visualCase.id,
               selector: visualCase.capture?.selector ?? '',

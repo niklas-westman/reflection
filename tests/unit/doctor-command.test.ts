@@ -91,6 +91,26 @@ describe('doctorCommand', () => {
     expect(output).not.toContain('placeholder');
   });
 
+  it('prints custom route viewports with their sizes', async () => {
+    const configPath = await writeConfig(`
+      export default {
+        project: 'viewport-fixture',
+        contracts: {
+          browser: {
+            baseUrl: 'http://127.0.0.1:4173',
+            routes: [
+              { id: 'login', path: '/login', viewports: ['mobile', { name: 'design-1512', width: 1512, height: 982 }] }
+            ]
+          }
+        }
+      };
+    `);
+
+    const output = await captureDoctor({ config: configPath });
+
+    expect(output).toContain('Route login viewports: mobile, design-1512 (1512x982)');
+  });
+
   it('summarizes portal component runtime and ready URL', async () => {
     const configPath = await writeConfig(`
       export default {

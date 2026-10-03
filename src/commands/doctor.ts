@@ -2,6 +2,7 @@ import { access } from 'node:fs/promises';
 import { CommanderError } from 'commander';
 import { loadReflectionConfig, type ReflectionConfig } from '../core/config.js';
 import { ExitCode } from '../core/exit-codes.js';
+import { getRouteViewportName, isCustomRouteViewport } from '../core/viewport.js';
 
 export type DoctorCommandOptions = {
   config?: string;
@@ -94,6 +95,7 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
       )}`
     );
     console.log(`Base URL: ${browser.baseUrl}`);
+    printRouteViewports(browser.routes);
 
     if (browser.server) {
       console.log(
@@ -133,6 +135,15 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
   );
 
   console.log(`Lifecycle beforeRun: ${formatCount(config.lifecycle.beforeRun.length, 'hook')}`);
+}
+
+function printRouteViewports(routes: NonNullable<ReflectionConfig['contracts']['browser']>['routes']): void {
+  for (const route of routes) {
+    const described = route.viewports.map((viewport) =>
+      isCustomRouteViewport(viewport) ? `${getRouteViewportName(viewport)} (${viewport.width}x${viewport.height})` : viewport
+    );
+    console.log(`Route ${route.id} viewports: ${described.join(', ')}`);
+  }
 }
 
 function describeComponentRuntime(component: NonNullable<ReflectionConfig['contracts']['component']>): 'storybook' | 'portal' | 'mixed' | 'none' {

@@ -95,6 +95,40 @@ For long documents, capture a single page or region with a selector:
 
 If the matching browser route result is missing, the visual check becomes a review item by default or a blocking failure when strict/blocking is enabled.
 
+### Design-tool reference images for full routes
+
+Figma frames are fixed-size (for example 1512x982), which does not match the `desktop` preset (1440x900). Declare the frame size on the route as a custom viewport and point the visual case at it by name:
+
+```ts
+browser: {
+  routes: [
+    {
+      id: 'login',
+      path: '/login',
+      viewports: [{ name: 'design-1512', width: 1512, height: 982 }],
+      expects: [{ screenshot: 'final' }]
+    }
+  ],
+  visualSmoke: [
+    {
+      id: 'login-design',
+      route: 'login',
+      viewport: 'design-1512',
+      baselineRoot: 'docs/v2/reference-images',
+      baseline: 'login-page/6-login-page.png',
+      threshold: { maxDiffPixelRatio: 0.05 },
+      strict: false
+    }
+  ]
+}
+```
+
+The run writes `expected.png`, `actual.png` and `diff.png` under `visual/login-design/`. With `strict: false` a mismatch is `pass-with-review`; nothing is updated automatically.
+
+- The baseline PNG and the screenshot must have identical dimensions. If the reference is taller than the viewport (for example 1512x975 vs a 982px frame), size the viewport to the reference, or set `capture: { fullPage: true }` on the route and size the viewport width to match.
+- A dimension mismatch reports both sizes (`expected 1512x982, actual 1440x900`).
+- Baseline paths are free-form relative paths. They do not need a browser/theme suffix such as `chromium-linux.light`; name design references by page.
+
 ## Component visual baselines
 
 Component visual cases can use Storybook or a Reflection-generated portal. Storybook cases resolve `storyId` through Storybook `/index.json`; portal cases open a configured `path` in a generated Vite runtime.

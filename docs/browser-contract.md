@@ -111,6 +111,28 @@ viewports: ['desktop', 'mobile']
 
 Reflection stores viewport metadata in each route check. Route-level visual smoke cases match against this metadata, so the `route` and `viewport` fields in a `visualSmoke` case must correspond to an actual browser route result.
 
+### Custom viewport sizes
+
+A `viewports` entry can also be an object with an explicit size. Strings and objects can be mixed:
+
+```ts
+viewports: ['mobile', { name: 'design-1512', width: 1512, height: 982 }]
+```
+
+- `name` is the label used in check ids, metadata and artifact paths (`browser/<route-id>/design-1512/actual.png`). It must be unique on the route and must not reuse a preset name (`desktop`, `mobile`, `tablet`, `component`).
+- The browser context uses exactly `width` x `height` with `deviceScaleFactor: 1`, so a 1512x982 viewport produces a 1512x982 PNG.
+- Preset strings behave exactly as before.
+
+### Full-page capture
+
+Preset viewports capture the full scrollable page by default. Custom-size viewports capture exactly the viewport frame by default, because design references are fixed-size frames. Override either default per route:
+
+```ts
+{ id: 'board', path: '/board', viewports: [{ name: 'design-1512', width: 1512, height: 975 }], capture: { fullPage: true }, expects: [{ screenshot: 'final' }] }
+```
+
+`reflection doctor --config <path>` prints each route's viewports, including custom sizes.
+
 ## Console and layout failures
 
 `noConsoleErrors` and `noHorizontalOverflow` are intentionally simple high-signal checks:

@@ -1,6 +1,7 @@
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { PNG } from 'pngjs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createArtifactStore } from '../../src/core/artifact-store.js';
 import { startManagedServer, type ManagedServer } from '../../src/core/server-manager.js';
@@ -201,4 +202,68 @@ describe('route visual smoke', () => {
     expect(visualCheck?.artifacts.map((artifact) => [artifact.role, artifact.path])).toEqual([['actual', 'visual/print-page-7/actual.png']]);
     await expect(readFile(store.resolveRunPath('visual/print-page-7/actual.png'))).resolves.toBeInstanceOf(Buffer);
   }, 20_000);
+
+  it('renders a custom-sized route at exactly that size and diffs it against a same-size baseline', async () => {
+    const baseUrl = await startBasicReactFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-visual-smoke-custom-viewport-'));
+    const designViewport = { name: 'design-1512', width: 1512, height: 982 };
+    const routes = [
+      { id: 'login', path: '/login', viewports: [designViewport], expects: [{ role: 'heading' as const, name: 'Login' }, { screenshot: 'final' }] }
+    ];
+
+    const firstStore = await createArtifactStore({ rootDir, runId: 'custom-viewport-seed' });
+    await runBrowserContract({ baseUrl, blocking: true, routes }, firstStore);
+    const actualPath = firstStore.resolveRunPath('browser/login/design-1512/actual.png');
+    const seededPng = PNG.sync.read(await readFile(actualPath));
+    expect([seededPng.width, seededPng.height]).toEqual([1512, 982]);
+
+    const baselineRoot = join(rootDir, 'references');
+    await mkdir(dirname(join(baselineRoot, 'login-page/design.png')), { recursive: true });
+    await copyFile(actualPath, join(baselineRoot, 'login-page/design.png'));
+
+    const store = await createArtifactStore({ rootDir, runId: 'custom-viewport-compare' });
+    const result = await runBrowserContract(
+      {
+        baseUrl,
+        blocking: true,
+        routes,
+        visualSmoke: [
+          { id: 'login-design', route: 'login', viewport: 'design-1512', baselineRoot, baseline: 'login-page/design.png', strict: false }
+        ]
+      },
+      store
+    );
+
+    expect(result.checks.find((check) => check.id === 'browser.login.design-1512')?.status).toBe('pass');
+    expect(result.checks.find((check) => check.id === 'visual.login-design')).toMatchObject({
+      status: 'pass',
+      metadata: { classification: 'visual-match', viewport: 'design-1512', width: 1512, height: 982 }
+    });
+  }, 30_000);
+
+  it('names both sizes when a preset-sized screenshot cannot match a design baseline', async () => {
+    const baseUrl = await startBasicReactFixture();
+    const rootDir = await mkdtemp(join(tmpdir(), 'reflection-visual-smoke-mismatch-'));
+    const seedStore = await createArtifactStore({ rootDir, runId: 'mismatch-seed' });
+    const designRoutes = [
+      { id: 'login', path: '/login', viewports: [{ name: 'design-1512', width: 1512, height: 982 }], expects: [{ screenshot: 'final' }] }
+    ];
+    await runBrowserContract({ baseUrl, blocking: true, routes: designRoutes }, seedStore);
+    const baselineRoot = join(rootDir, 'references');
+    await mkdir(baselineRoot, { recursive: true });
+    await copyFile(seedStore.resolveRunPath('browser/login/design-1512/actual.png'), join(baselineRoot, 'design.png'));
+
+    const store = await createArtifactStore({ rootDir, runId: 'mismatch-compare' });
+    const result = await runBrowserContract(
+      {
+        baseUrl,
+        blocking: true,
+        routes: [{ id: 'login', path: '/login', viewports: ['desktop'], expects: [{ screenshot: 'final' }] }],
+        visualSmoke: [{ id: 'login-desktop', route: 'login', viewport: 'desktop', baselineRoot, baseline: 'design.png' }]
+      },
+      store
+    );
+
+    expect(result.checks.find((check) => check.id === 'visual.login-desktop')?.summary).toMatch(/expected 1512x982, actual 1440x\d+/);
+  }, 30_000);
 });

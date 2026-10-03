@@ -3,6 +3,7 @@ import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createJiti } from 'jiti';
 import { z } from 'zod';
+import { RouteViewportsSchema, ViewportSizeSchema } from './viewport.js';
 
 export const runModes = ['smoke', 'design', 'visual', 'print', 'full'] as const;
 export type RunMode = (typeof runModes)[number];
@@ -27,11 +28,6 @@ const BrowserExpectationSchema = z.union([
 const VisualThresholdSchema = z.object({
   maxDiffPixels: z.number().int().nonnegative().optional(),
   maxDiffPixelRatio: z.number().min(0).max(1).optional()
-});
-
-const ViewportSizeSchema = z.object({
-  width: z.number().int().positive(),
-  height: z.number().int().positive()
 });
 
 const ComponentFramingSchema = z.object({
@@ -79,7 +75,8 @@ const BrowserRouteSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
   path: z.string().min(1),
-  viewports: z.array(z.string().min(1)).default(['desktop']),
+  viewports: RouteViewportsSchema,
+  capture: z.object({ fullPage: z.boolean().optional() }).optional(),
   expects: z.array(BrowserExpectationSchema).default([]),
   setup: BrowserSetupSchema.optional()
 });

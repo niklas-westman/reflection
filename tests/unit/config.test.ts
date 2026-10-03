@@ -672,3 +672,50 @@ describe('loadReflectionConfig', () => {
     );
   });
 });
+
+describe('route viewports', () => {
+  function configWithViewports(viewports: unknown, extra: Record<string, unknown> = {}) {
+    return {
+      project: 'viewport-fixture',
+      contracts: {
+        browser: {
+          baseUrl: 'http://127.0.0.1:5173',
+          routes: [{ id: 'login', path: '/login', viewports, ...extra }]
+        }
+      }
+    };
+  }
+
+  it('accepts string presets and custom sized viewports side by side', () => {
+    const config = validateReflectionConfig(
+      configWithViewports(['mobile', { name: 'design-1512', width: 1512, height: 982 }], { capture: { fullPage: true } })
+    );
+
+    expect(config.contracts.browser?.routes[0]).toMatchObject({
+      viewports: ['mobile', { name: 'design-1512', width: 1512, height: 982 }],
+      capture: { fullPage: true }
+    });
+  });
+
+  it('keeps defaulting to the desktop preset', () => {
+    const config = validateReflectionConfig(configWithViewports(undefined));
+
+    expect(config.contracts.browser?.routes[0]?.viewports).toEqual(['desktop']);
+  });
+
+  it('rejects duplicate viewport names on one route', () => {
+    expect(() => validateReflectionConfig(configWithViewports(['mobile', { name: 'mobile', width: 400, height: 800 }]))).toThrow(
+      /duplicate viewport name "mobile"/
+    );
+  });
+
+  it('rejects custom viewport names that collide with a preset', () => {
+    expect(() => validateReflectionConfig(configWithViewports([{ name: 'desktop', width: 1512, height: 982 }]))).toThrow(
+      /collides with a built-in preset/
+    );
+  });
+
+  it('rejects non-positive custom viewport sizes', () => {
+    expect(() => validateReflectionConfig(configWithViewports([{ name: 'bad', width: 0, height: 982 }]))).toThrow(/Invalid Reflection config/);
+  });
+});

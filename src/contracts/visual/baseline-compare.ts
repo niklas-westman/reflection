@@ -137,13 +137,27 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-function createVisualSummary(id: string, result: { classification: string; diffRatio: number; diffPixels: number; thresholdReason?: string }): string {
+function formatDimensions(dimensions: { width: number; height: number }): string {
+  return `${dimensions.width}x${dimensions.height}`;
+}
+
+function createVisualSummary(
+  id: string,
+  result: {
+    classification: string;
+    diffRatio: number;
+    diffPixels: number;
+    thresholdReason?: string;
+    expected: { width: number; height: number };
+    actual: { width: number; height: number };
+  }
+): string {
   if (result.classification === 'visual-match') {
     return `${id} matches approved visual baseline.`;
   }
 
   if (result.classification === 'visual-dimension-mismatch') {
-    return `${id} screenshot dimensions differ from approved baseline.`;
+    return `${id} screenshot dimensions differ from approved baseline (expected ${formatDimensions(result.expected)}, actual ${formatDimensions(result.actual)}). Set a route viewport with matching width and height, or re-export the baseline at the rendered size.`;
   }
 
   return `${id} differs from approved visual baseline by ${(result.diffRatio * 100).toFixed(2)}% (${result.diffPixels} pixels)${

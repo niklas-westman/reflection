@@ -1,4 +1,5 @@
 import type { ReflectionConfig, RunMode } from './config.js';
+import type { RouteViewport } from './viewport.js';
 
 export type TargetSource = 'reflection-config' | 'adapter';
 export type TargetFamily = 'browser-route' | 'route-visual' | 'component-visual' | 'design-command';
@@ -23,7 +24,8 @@ export type BrowserRouteTarget = TargetBase & {
   route: {
     path: string;
     name?: string | undefined;
-    viewports: string[];
+    viewports: RouteViewport[];
+    capture?: { fullPage?: boolean | undefined } | undefined;
     expects: unknown[];
   };
   browser: {
@@ -88,6 +90,7 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
           path: route.path,
           ...(route.name ? { name: route.name } : {}),
           viewports: route.viewports,
+          ...(route.capture ? { capture: route.capture } : {}),
           expects: route.expects
         },
         browser: {

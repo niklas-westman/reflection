@@ -1,7 +1,8 @@
 import type { Browser, Page } from 'playwright';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import type { ArtifactRef, CheckResult } from '../../core/report-schema.js';
-import { createBrowserContext } from '../../integrations/playwright/context-factory.js';
+import type { RouteViewport } from '../../core/viewport.js';
+import { createBrowserContext, resolveRouteViewport } from '../../integrations/playwright/context-factory.js';
 import { evaluateExpectation, shouldCaptureScreenshot, type AssertionFailure, type BrowserExpectation } from './assertions.js';
 import { observeConsoleErrors } from './console-observer.js';
 
@@ -9,7 +10,8 @@ export type BrowserRoute = {
   id: string;
   name?: string | undefined;
   path: string;
-  viewports: string[];
+  viewports: RouteViewport[];
+  capture?: { fullPage?: boolean | undefined } | undefined;
   expects: BrowserExpectation[];
   setup?: BrowserSetup | undefined;
 };
@@ -24,7 +26,7 @@ export type RouteRunInput = {
   store: ArtifactStore;
   baseUrl: string;
   route: BrowserRoute;
-  viewport: string;
+  viewport: RouteViewport;
   blocking: boolean;
   maskSelectors?: string[];
   setup?: BrowserSetup | undefined;
@@ -52,7 +54,11 @@ export type BrowserRouteRunResult = {
 };
 
 export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRouteRunResult> {
-  const context = await createBrowserContext(input.browser, input.viewport);
+  const resolvedViewport = resolveRouteViewport(input.viewport);
+  const viewportName = resolvedViewport.name;
+  // Design frames are fixed-size; full-page capture would make the PNG taller than the frame and break exact-dimension baselines.
+  const fullPage = input.route.capture?.fullPage ?? !resolvedViewport.isCustomSize;
+  const context = await createBrowserContext(input.browser, viewportName, resolvedViewport.size);
   const page = await context.newPage();
   const consoleObserver = observeConsoleErrors(page);
   const failures: AssertionFailure[] = [];
@@ -92,24 +98,26 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
       visualCaptures.push({
         caseId: capture.id,
         routeId: input.route.id,
-        viewport: input.viewport,
-        target: `${input.route.path} ${input.viewport}`,
+        viewport: viewportName,
+        target: `${input.route.path} ${viewportName}`,
         artifact,
         ...(capture.scenario ? { scenario: capture.scenario } : {})
       });
     }
 
     if (shouldCaptureScreenshot(input.route.expects)) {
-      const screenshotPath = `browser/${input.route.id}/${input.viewport}/actual.png`;
-      const screenshot = await page.screenshot({ fullPage: true });
+      const screenshotPath = `browser/${input.route.id}/${viewportName}/actual.png`;
+      const screenshot = await page.screenshot({ fullPage });
       artifacts.push(await input.store.writeBuffer(screenshotPath, screenshot));
     }
 
-    const metadataPath = `browser/${input.route.id}/${input.viewport}/metadata.json`;
+    const metadataPath = `browser/${input.route.id}/${viewportName}/metadata.json`;
     artifacts.push(
       await input.store.writeJson(metadataPath, {
         route: input.route.path,
-        viewport: input.viewport,
+        viewport: viewportName,
+        viewportSize: resolvedViewport.size,
+        fullPage,
         url: page.url(),
         consoleErrors: consoleObserver.errors,
         failures,
@@ -131,25 +139,25 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
 
   const firstFailure = failures[0];
   const status = failures.length > 0 ? 'fail' : 'pass';
-  const target = `${input.route.path} ${input.viewport}`;
+  const target = `${input.route.path} ${viewportName}`;
 
   return {
     check: {
-    id: `browser.${input.route.id}.${input.viewport}`,
+    id: `browser.${input.route.id}.${viewportName}`,
     suite: 'browser',
     target,
     status,
     severity: input.blocking ? 'blocking' : 'review',
     summary:
       status === 'pass'
-        ? `${input.route.name ?? input.route.id} rendered on ${input.viewport}.`
-        : firstFailure?.summary ?? `${input.route.name ?? input.route.id} failed on ${input.viewport}.`,
+        ? `${input.route.name ?? input.route.id} rendered on ${viewportName}.`
+        : firstFailure?.summary ?? `${input.route.name ?? input.route.id} failed on ${viewportName}.`,
     ...(failures.length > 0 ? { details: failures.map((failure) => failure.details ?? failure.summary).join('\n') } : {}),
     artifacts,
     metadata: {
       route: input.route.path,
       routeId: input.route.id,
-      viewport: input.viewport,
+      viewport: viewportName,
       classification: firstFailure?.classification,
       failures,
       setup: setupMetadata,
