@@ -22,6 +22,7 @@ Current status: Reflection has the core local validation loop: config → option
 - [`docs/agent-workflows.md`](docs/agent-workflows.md) — agent completion loop and baseline-update rules.
 - [`docs/validation-process.md`](docs/validation-process.md) — canonical operating guide for agents and CI.
 - [`docs/ci.md`](docs/ci.md) — CI defaults and exit codes.
+- [`docs/upgrading.md`](docs/upgrading.md) — breaking changes and migration notes between releases.
 - [`docs/target-ir-and-adapters.md`](docs/target-ir-and-adapters.md) — internal target inventory and adapter seam.
 
 ## Command surface

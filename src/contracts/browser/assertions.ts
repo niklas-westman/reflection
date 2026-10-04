@@ -1,12 +1,12 @@
-import type { Page } from 'playwright';
+import type { Locator, Page } from 'playwright';
 import { getHorizontalOverflow } from './overflow-check.js';
 
 export type BrowserExpectation =
   | { urlIncludes: string }
   | { urlEquals: string }
-  | { role: string; name?: string | undefined }
-  | { label: string }
-  | { text: string }
+  | { role: string; name?: string | undefined; exact?: boolean | undefined; visible?: boolean | undefined; enabled?: boolean | undefined }
+  | { label: string; exact?: boolean | undefined; visible?: boolean | undefined; enabled?: boolean | undefined }
+  | { text: string; exact?: boolean | undefined; visible?: boolean | undefined }
   | { noText: string }
   | { selector: string }
   | { elementVisible: string }
@@ -47,25 +47,21 @@ export async function evaluateExpectation(
   }
 
   if ('role' in expectation) {
-    const locator = page.getByRole(expectation.role as never, expectation.name ? { name: expectation.name } : undefined);
-    if ((await locator.count()) === 0) {
-      return { classification: 'dom-contract-failure', summary: `Expected role ${expectation.role}${expectation.name ? ` named ${expectation.name}` : ''}.` };
-    }
-    return undefined;
+    // Named roles match exactly unless exact: false, so "Sign in" does not accept "Sign in elsewhere".
+    // Playwright excludes hidden elements from role queries by default; visible: false has to opt back in.
+    const includeHidden = expectation.visible === false;
+    const locator = page.getByRole(expectation.role as never, expectation.name ? { name: expectation.name, exact: expectation.exact ?? true, includeHidden } : { includeHidden });
+    return evaluateMatches(locator, describeExpectation(expectation), { visible: expectation.visible ?? true, enabled: expectation.enabled ?? false });
   }
 
   if ('label' in expectation) {
-    if ((await page.getByLabel(expectation.label).count()) === 0) {
-      return { classification: 'dom-contract-failure', summary: `Expected label ${expectation.label}.` };
-    }
-    return undefined;
+    const locator = page.getByLabel(expectation.label, { exact: expectation.exact ?? true });
+    return evaluateMatches(locator, describeExpectation(expectation), { visible: expectation.visible ?? true, enabled: expectation.enabled ?? false });
   }
 
   if ('text' in expectation) {
-    if ((await page.getByText(expectation.text).count()) === 0) {
-      return { classification: 'dom-contract-failure', summary: `Expected text ${expectation.text}.` };
-    }
-    return undefined;
+    const locator = page.getByText(expectation.text, { exact: expectation.exact ?? false });
+    return evaluateMatches(locator, describeExpectation(expectation), { visible: expectation.visible ?? true, enabled: false });
   }
 
   if ('noText' in expectation) {
@@ -142,6 +138,61 @@ export async function evaluateExpectation(
   }
 
   return undefined;
+}
+
+async function evaluateMatches(
+  locator: Locator,
+  description: string,
+  requirements: { visible: boolean; enabled: boolean }
+): Promise<AssertionFailure | undefined> {
+  const total = await locator.count();
+  if (total === 0) {
+    return { classification: 'dom-contract-failure', summary: `Expected ${description}, but nothing matched.` };
+  }
+
+  let matched = 0;
+  for (let index = 0; index < total; index += 1) {
+    const candidate = locator.nth(index);
+    if (requirements.visible && !(await candidate.isVisible().catch(() => false))) {
+      continue;
+    }
+    if (requirements.enabled && !(await candidate.isEnabled().catch(() => false))) {
+      continue;
+    }
+    matched += 1;
+  }
+
+  if (matched > 0) {
+    return undefined;
+  }
+
+  const unmet = [requirements.visible ? 'visible' : undefined, requirements.enabled ? 'enabled' : undefined].filter(Boolean).join(' and ');
+  return {
+    classification: 'dom-contract-failure',
+    summary: `Expected ${description}, but none of the ${total} matching element${total === 1 ? ' was' : 's were'} ${unmet}.`
+  };
+}
+
+export function describeExpectation(expectation: BrowserExpectation): string {
+  if ('role' in expectation) {
+    return `${requirementPrefix(expectation, true)}role ${expectation.role}${expectation.name ? ` named ${JSON.stringify(expectation.name)}${(expectation.exact ?? true) ? ' (exact)' : ' (substring)'}` : ''}`;
+  }
+
+  if ('label' in expectation) {
+    return `${requirementPrefix(expectation, true)}label ${JSON.stringify(expectation.label)}${(expectation.exact ?? true) ? ' (exact)' : ' (substring)'}`;
+  }
+
+  if ('text' in expectation) {
+    return `${requirementPrefix(expectation, false)}text ${JSON.stringify(expectation.text)}${expectation.exact ? ' (exact)' : ' (substring)'}`;
+  }
+
+  const [kind, value] = Object.entries(expectation)[0] ?? ['expectation', ''];
+  return `${kind} ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`;
+}
+
+function requirementPrefix(expectation: { visible?: boolean | undefined; enabled?: boolean | undefined }, supportsEnabled: boolean): string {
+  const parts = [(expectation.visible ?? true) ? 'visible' : undefined, supportsEnabled && expectation.enabled ? 'enabled' : undefined].filter(Boolean);
+  return parts.length > 0 ? `${parts.join(' ')} ` : '';
 }
 
 export function shouldCaptureScreenshot(expectations: BrowserExpectation[]): boolean {

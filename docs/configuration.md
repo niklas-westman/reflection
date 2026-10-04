@@ -138,7 +138,7 @@ Browser fields:
 | `baseUrl` | Absolute URL used to visit route paths. |
 | `server` | Optional managed server. If omitted, Reflection assumes `baseUrl` is already reachable. |
 | `setup` | Optional browser-level storage setup applied before route navigation. Values are not written to report metadata. |
-| `maskSelectors` | Selectors masked in browser screenshots. |
+| `maskSelectors` | Selectors (or `{ selector, reason }`) masked in browser screenshots. Also allowed per route and per state; the layers add up. |
 | `routes` | Route assertions executed in `smoke` and `full` modes. |
 | `visualSmoke` | Route screenshot baseline comparisons driven from successful browser screenshots. |
 
@@ -168,11 +168,13 @@ visualSmoke: [
 
 `visualSmoke[].viewport` references the viewport by name. See `docs/visual-contract.md` for comparison behavior.
 
+Unknown keys anywhere in the config are rejected with their path, so typos fail validation instead of being ignored.
+
 Route state, stability and setup fields (details and examples in `docs/browser-contract.md`):
 
 | Field | Notes |
 | --- | --- |
-| `states[]` | `{ id, name?, steps?, expects? }`. Each state runs from a fresh navigation. Steps: `click`, `fill`, `press`, `waitFor`. |
+| `states[]` | `{ id, name?, path?, steps?, expects?, setup?, maskSelectors? }`. Each state runs from a fresh navigation, optionally at its own `path`, with `setup` layered browser, route, state. Steps: `click`, `fill`, `press`, `waitFor`. |
 | `stability` | `{ disableAnimations?, hideCaret?, waitFor?: ('fonts' \| 'images')[], settleMs? }`, browser-level or per route. |
 | `setup.network` | `{ stubs[], unmatched: 'fail' \| 'warn' \| 'allow', allowOrigins[] }`. Stubs: `url`, `method?`, `status?`, one of `json`/`file`/`body`, `headers?`, `delayMs?`, `once?`. |
 | `setup.clock` | `{ now: '<ISO date-time>' }` fixes `Date` in the page. |

@@ -124,7 +124,7 @@ describe('doctorCommand', () => {
                 id: 'my-work',
                 path: '/my-work',
                 setup: { clock: { now: '2026-10-03T09:00:00+02:00' }, locale: 'sv-SE' },
-                states: [{ id: 'start' }, { id: 'overview', steps: [{ click: { role: 'button', name: 'Luna' } }] }]
+                states: [{ id: 'start' }, { id: 'overview', path: '/my-work/luna', steps: [{ click: { role: 'button', name: 'Luna' } }], setup: { network: { stubs: [{ url: '**/api/y', status: 404 }] } } }]
               }
             ]
           }
@@ -134,7 +134,8 @@ describe('doctorCommand', () => {
 
     const output = await captureDoctor({ config: configPath });
 
-    expect(output).toContain('Route my-work states: start (0 steps), overview (1 step)');
+    expect(output).toContain('Route my-work states: start (0 steps), overview (1 step, path /my-work/luna)');
+    expect(output).toContain('State my-work.overview network: 1 stub, unmatched allow');
     expect(output).toContain('Browser network: 2 stubs, unmatched fail');
     expect(output).toContain('GET **/api/candidates -> 200 (file fixtures/c.json)');
     expect(output).toContain('ANY **/api/x -> 500 (empty, once)');

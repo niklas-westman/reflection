@@ -150,8 +150,12 @@ function printRouteDetails(browser: DoctorBrowserConfig): void {
     console.log(`Route ${route.id} viewports: ${described.join(', ')}`);
 
     if (route.states) {
-      const states = route.states.map((state) => `${state.id} (${formatCount(state.steps.length, 'step')})`);
+      const states = route.states.map((state) => `${state.id} (${formatCount(state.steps.length, 'step')}${state.path ? `, path ${state.path}` : ''})`);
       console.log(`Route ${route.id} states: ${states.join(', ')}`);
+      for (const state of route.states) {
+        printNetworkSummary(`State ${route.id}.${state.id}`, state.setup?.network);
+        printContextSetup(`State ${route.id}.${state.id}`, state.setup);
+      }
     }
 
     printNetworkSummary(`Route ${route.id}`, route.setup?.network);

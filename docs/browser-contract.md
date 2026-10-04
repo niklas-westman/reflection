@@ -88,9 +88,9 @@ Browser-level setup applies to every route, and route-level setup extends or ove
 | --- | --- |
 | `urlIncludes` | Route redirects or canonical URL fragments. |
 | `urlEquals` | Exact final URL checks. |
-| `role` + optional `name` | Accessible UI assertions; preferred for user-visible structure. |
-| `label` | Form field labels. |
-| `text` | Required visible text. |
+| `role` + optional `name` | Accessible UI assertions; preferred for user-visible structure. The name matches exactly by default. |
+| `label` | Form field labels. Matches exactly by default. |
+| `text` | Required visible text. Matches as a substring by default. |
 | `noText` | Text that must not appear, such as old copy or errors. |
 | `selector` | A CSS selector that must exist. |
 | `elementVisible` | A CSS selector that must be visible. |
@@ -98,6 +98,20 @@ Browser-level setup applies to every route, and route-level setup extends or ove
 | `noHorizontalOverflow` | Mobile/layout guard against body-level horizontal overflow. |
 | `noConsoleErrors` | Fails on browser console errors captured during the route visit. |
 | `screenshot` | Captures current route screenshot evidence. |
+
+### Exact, visible and enabled matching
+
+`role`, `label` and `text` expectations accept three options:
+
+| Option | `role` / `label` default | `text` default | Meaning |
+| --- | --- | --- | --- |
+| `exact` | `true` | `false` | `true` requires the whole accessible name, label or text to equal the value (case-sensitive). `false` accepts a case-insensitive substring. `exact` only affects `role` when a `name` is given. |
+| `visible` | `true` | `true` | At least one matching element must be visible. `false` also accepts hidden elements. |
+| `enabled` | `false` | n/a | `true` requires at least one matching element that is also enabled. |
+
+So `{ role: 'button', name: 'Sign in' }` passes for a visible, exactly named "Sign in" button, and not for "Sign in elsewhere" or a hidden "Sign in". A failure says which requirement was unmet (`nothing matched`, or `none of the 2 matching elements were visible and enabled`). `selector` still means "present in the DOM"; use `elementVisible` to require visibility.
+
+Presence alone is not proof of a usable control. Combine `visible` and `enabled` with scenario-level accessibility review rather than treating these checks as a full accessibility audit.
 
 Prefer accessible expectations (`role`, `label`, visible text) before selectors. Selectors are useful for stable app-specific contracts, but they should not become a substitute for testing what a user can perceive.
 
@@ -163,6 +177,8 @@ routes: [
 ```
 
 - Route-level `expects` apply to every state, before the state's own `expects`.
+- A state can start at its own URL with `path` (resolved against `baseUrl`), for example `{ id: 'direct-link', path: '/candidates/luna' }`. It then runs its steps and expectations from there. Without `path` it uses the route's.
+- A state can carry its own `setup` (network stubs, clock, locale, storage and so on). Setup layers merge browser, then route, then state, with the same rules as route over browser: scalars override, storage keys merge, network stubs are appended (later stubs win) and `unmatched` is overridden.
 - A route without `states` behaves exactly as before. State ids may contain letters, digits, `.`, `_` and `-`, and must be unique per route.
 - Check ids and artifacts include the state: `browser.<route>.<viewport>.<state>` and `browser/<route>/<viewport>/<state>/actual.png`.
 - `visualSmoke` cases on a route with states must set `state`, and cases on a route without states must not.
@@ -176,7 +192,7 @@ Steps are declarative data (no scripts) and run after `setup` and before expecta
 | `press` | `{ press: 'Enter' }` (any Playwright key name, sent to the focused element) |
 | `waitFor` | `{ waitFor: { text \| role+name \| label \| selector \| networkIdle: true, timeoutMs? } }` |
 
-Locators use Playwright's accessible queries and are strict: a locator matching several elements fails the step, so make the name specific. Actions time out after 5 seconds; `waitFor` takes `timeoutMs`.
+Locators use Playwright's accessible queries and are strict: a locator matching several elements fails the step. `role` and `label` targets match exactly by default (set `exact: false` for substring matching), so `{ fill: { label: 'Password', value } }` does not match a toggle labelled "Show password". `text` targets stay substring matches unless `exact: true`. Actions time out after 5 seconds; `waitFor` takes `timeoutMs`.
 
 A failing step fails only that state. The check summary names the step number and locator (for example `State "chat" step 2 (click role="button" name="Chat") failed: ...`), the remaining steps and expectations of that state are skipped, and `browser/<route>/<viewport>/<state>/failure.png` captures the page at the failure point. Other states still run.
 
@@ -233,6 +249,21 @@ These can be set browser-wide with route-level overrides. Defaults are unchanged
 
 `clock.now` fixes `Date`/`Date.now()` in the page (timers and animation frames keep running), so "Today", "Yesterday" and relative times render reproducibly. It does not change server time.
 
+## Masks
+
+`maskSelectors` hide regions (personal data, relative times) before screenshots. Entries are a selector string or `{ selector, reason }`. They can be set browser-wide, per route and per state, and **add up**: a state masks the browser list plus its route's plus its own. A later layer's `reason` replaces an earlier one for the same selector.
+
+```ts
+maskSelectors: [{ selector: '.avatar', reason: 'personal data' }],
+routes: [{
+  id: 'my-work',
+  maskSelectors: ['.relative-time'],
+  states: [{ id: 'chat', maskSelectors: [{ selector: '.chat-timestamp', reason: 'varies per run' }] }]
+}]
+```
+
+Each check's `metadata.masks` lists every effective mask with its reason and whether it was `applied` (a selector that matched nothing is reported as not applied).
+
 ## Screenshot stability
 
 Before a route screenshot Reflection masks `maskSelectors`, waits for readiness, then captures. Configure it at the browser level or per route (route overrides browser, key by key):
@@ -256,6 +287,16 @@ Default behaviour only adds the fonts/images wait, which can only make screensho
 ## Environment identity
 
 `report.json` records `reflectionVersion`, `playwrightVersion`, `browser` (name and version), `os`, and any active run `filter` in `environment`. Each browser check records its own `metadata.environment`: viewport size, device scale factor, locale, timezone, colour scheme, reduced motion and whether the clock was fixed. A consumer can use these to tell "same scenario, different environment" from "different scenario".
+
+## Evidence in the report
+
+Every browser check's `metadata` carries the facts a consumer needs without opening sidecar files:
+
+- `finalUrl`: the URL after navigation, steps and redirects. Query values whose names look like credentials (token, key, secret, password, auth, session, code, signature) are replaced by `[REDACTED]`.
+- `expectations`: one record per expectation in order, `{ expectation, status: 'pass' | 'fail', message? }`, for example `{ expectation: 'visible role button named "Sign in" (exact)', status: 'pass' }`. When a step fails, expectations were not evaluated and the list is empty.
+- `masks`: see above. `environment`: see above.
+
+The same data is written to the route's `metadata.json`.
 
 ## Console and layout failures
 

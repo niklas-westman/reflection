@@ -6,9 +6,9 @@ import type { BrowserRouteTarget, TargetIR } from '../core/target-ir.js';
 const RouteManifestExpectationSchema = z.union([
   z.object({ urlIncludes: z.string() }).strict(),
   z.object({ urlEquals: z.string() }).strict(),
-  z.object({ role: z.string(), name: z.string().optional() }).strict(),
-  z.object({ label: z.string() }).strict(),
-  z.object({ text: z.string() }).strict(),
+  z.object({ role: z.string(), name: z.string().optional(), exact: z.boolean().optional(), visible: z.boolean().optional(), enabled: z.boolean().optional() }).strict(),
+  z.object({ label: z.string(), exact: z.boolean().optional(), visible: z.boolean().optional(), enabled: z.boolean().optional() }).strict(),
+  z.object({ text: z.string(), exact: z.boolean().optional(), visible: z.boolean().optional() }).strict(),
   z.object({ noText: z.string() }).strict(),
   z.object({ selector: z.string() }).strict(),
   z.object({ elementVisible: z.string() }).strict(),

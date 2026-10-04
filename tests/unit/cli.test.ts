@@ -69,7 +69,7 @@ describe('reflection CLI', () => {
     const result = await runCli(['--version']);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe('0.2.0');
+    expect(result.stdout.trim()).toBe('0.3.0');
   });
 
   it('returns usage exit code for an invalid mode', async () => {

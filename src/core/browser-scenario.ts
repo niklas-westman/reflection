@@ -1,22 +1,23 @@
 import { z } from 'zod';
 
+// Role and label targets match exactly by default; set exact: false for substring matching. Text defaults to substring.
 const StepLocatorSchema = z.union([
-  z.object({ role: z.string().min(1), name: z.string().optional() }).strict(),
-  z.object({ label: z.string().min(1) }).strict(),
-  z.object({ text: z.string().min(1) }).strict(),
+  z.object({ role: z.string().min(1), name: z.string().optional(), exact: z.boolean().optional() }).strict(),
+  z.object({ label: z.string().min(1), exact: z.boolean().optional() }).strict(),
+  z.object({ text: z.string().min(1), exact: z.boolean().optional() }).strict(),
   z.object({ selector: z.string().min(1) }).strict()
 ]);
 
 const StepFillTargetSchema = z.union([
-  z.object({ role: z.string().min(1), name: z.string().optional(), value: z.string() }).strict(),
-  z.object({ label: z.string().min(1), value: z.string() }).strict(),
+  z.object({ role: z.string().min(1), name: z.string().optional(), exact: z.boolean().optional(), value: z.string() }).strict(),
+  z.object({ label: z.string().min(1), exact: z.boolean().optional(), value: z.string() }).strict(),
   z.object({ selector: z.string().min(1), value: z.string() }).strict()
 ]);
 
 const StepWaitForSchema = z.union([
-  z.object({ role: z.string().min(1), name: z.string().optional(), timeoutMs: z.number().int().positive().optional() }).strict(),
-  z.object({ label: z.string().min(1), timeoutMs: z.number().int().positive().optional() }).strict(),
-  z.object({ text: z.string().min(1), timeoutMs: z.number().int().positive().optional() }).strict(),
+  z.object({ role: z.string().min(1), name: z.string().optional(), exact: z.boolean().optional(), timeoutMs: z.number().int().positive().optional() }).strict(),
+  z.object({ label: z.string().min(1), exact: z.boolean().optional(), timeoutMs: z.number().int().positive().optional() }).strict(),
+  z.object({ text: z.string().min(1), exact: z.boolean().optional(), timeoutMs: z.number().int().positive().optional() }).strict(),
   z.object({ selector: z.string().min(1), timeoutMs: z.number().int().positive().optional() }).strict(),
   z.object({ networkIdle: z.literal(true), timeoutMs: z.number().int().positive().optional() }).strict()
 ]);
@@ -88,6 +89,13 @@ export const StabilitySchema = z
     settleMs: z.number().int().nonnegative().max(5_000).optional()
   })
   .strict();
+
+export const MaskSelectorSchema = z.union([
+  z.string().min(1),
+  z.object({ selector: z.string().min(1), reason: z.string().min(1).optional() }).strict()
+]);
+
+export type MaskSelector = z.output<typeof MaskSelectorSchema>;
 
 export type NetworkSetup = z.input<typeof NetworkSetupSchema>;
 export type NetworkStubConfig = NonNullable<NetworkSetup['stubs']>[number];

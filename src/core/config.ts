@@ -3,42 +3,48 @@ import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createJiti } from 'jiti';
 import { z } from 'zod';
-import { BrowserStepSchema, ClockSetupSchema, NetworkSetupSchema, StabilitySchema, StateIdSchema } from './browser-scenario.js';
+import { BrowserStepSchema, ClockSetupSchema, MaskSelectorSchema, NetworkSetupSchema, StabilitySchema, StateIdSchema } from './browser-scenario.js';
 import { RouteViewportsSchema, ViewportSizeSchema } from './viewport.js';
 
 export const runModes = ['smoke', 'design', 'visual', 'print', 'full'] as const;
 export type RunMode = (typeof runModes)[number];
 
+const MatchOptionsFields = {
+  exact: z.boolean().optional(),
+  visible: z.boolean().optional(),
+  enabled: z.boolean().optional()
+};
+
 const BrowserExpectationSchema = z.union([
-  z.object({ urlIncludes: z.string() }),
-  z.object({ urlEquals: z.string() }),
-  z.object({ role: z.string(), name: z.string().optional() }),
-  z.object({ label: z.string() }),
-  z.object({ text: z.string() }),
-  z.object({ noText: z.string() }),
-  z.object({ selector: z.string() }),
-  z.object({ elementVisible: z.string() }),
-  z.object({ elementNotVisible: z.string() }),
-  z.object({ selectorCount: z.object({ selector: z.string().min(1), equals: z.number().int().nonnegative() }) }),
-  z.object({ noSelector: z.string().min(1) }),
-  z.object({ noHorizontalOverflow: z.literal(true) }),
-  z.object({ noConsoleErrors: z.literal(true) }),
-  z.object({ screenshot: z.string() })
+  z.strictObject({ urlIncludes: z.string() }),
+  z.strictObject({ urlEquals: z.string() }),
+  z.strictObject({ role: z.string(), name: z.string().optional(), ...MatchOptionsFields }),
+  z.strictObject({ label: z.string(), ...MatchOptionsFields }),
+  z.strictObject({ text: z.string(), exact: z.boolean().optional(), visible: z.boolean().optional() }),
+  z.strictObject({ noText: z.string() }),
+  z.strictObject({ selector: z.string() }),
+  z.strictObject({ elementVisible: z.string() }),
+  z.strictObject({ elementNotVisible: z.string() }),
+  z.strictObject({ selectorCount: z.strictObject({ selector: z.string().min(1), equals: z.number().int().nonnegative() }) }),
+  z.strictObject({ noSelector: z.string().min(1) }),
+  z.strictObject({ noHorizontalOverflow: z.literal(true) }),
+  z.strictObject({ noConsoleErrors: z.literal(true) }),
+  z.strictObject({ screenshot: z.string() })
 ]);
 
-const VisualThresholdSchema = z.object({
+const VisualThresholdSchema = z.strictObject({
   maxDiffPixels: z.number().int().nonnegative().optional(),
   maxDiffPixelRatio: z.number().min(0).max(1).optional()
 });
 
-const ComponentFramingSchema = z.object({
+const ComponentFramingSchema = z.strictObject({
   rootSelector: z.string().min(1).optional(),
   background: z.string().min(1).optional(),
   align: z.enum(['center', 'start']).default('center'),
   padding: z.number().int().nonnegative().default(0)
 });
 
-const ComponentProbePartSchema = z.object({
+const ComponentProbePartSchema = z.strictObject({
   selector: z.string().min(1),
   bounds: z.boolean().default(true),
   styles: z.array(z.string().min(1)).default([]),
@@ -46,16 +52,16 @@ const ComponentProbePartSchema = z.object({
   text: z.boolean().default(false)
 });
 
-const ComponentProbesSchema = z.object({
+const ComponentProbesSchema = z.strictObject({
   parts: z.record(z.string().min(1), ComponentProbePartSchema).default({})
 });
 
-const RouteVisualSmokeCaseSchema = z.object({
+const RouteVisualSmokeCaseSchema = z.strictObject({
   id: z.string().min(1),
   route: z.string().min(1),
   viewport: z.string().min(1),
   state: StateIdSchema.optional(),
-  capture: z.object({ selector: z.string().min(1) }).optional(),
+  capture: z.strictObject({ selector: z.string().min(1) }).optional(),
   baseline: z.string().min(1),
   baselineRoot: z.string().optional(),
   threshold: VisualThresholdSchema.optional(),
@@ -67,7 +73,7 @@ const RouteVisualSmokeCaseSchema = z.object({
 const BrowserStorageSetupSchema = z.record(z.string().min(1), z.string()).optional().default({});
 
 const BrowserSetupSchema = z
-  .object({
+  .strictObject({
     localStorage: BrowserStorageSetupSchema,
     sessionStorage: BrowserStorageSetupSchema,
     network: NetworkSetupSchema.optional(),
@@ -79,21 +85,25 @@ const BrowserSetupSchema = z
   })
   .default({ localStorage: {}, sessionStorage: {} });
 
-const BrowserRouteStateSchema = z.object({
+const BrowserRouteStateSchema = z.strictObject({
   id: StateIdSchema,
   name: z.string().optional(),
+  path: z.string().min(1).optional(),
   steps: z.array(BrowserStepSchema).default([]),
-  expects: z.array(BrowserExpectationSchema).default([])
+  expects: z.array(BrowserExpectationSchema).default([]),
+  maskSelectors: z.array(MaskSelectorSchema).optional(),
+  setup: BrowserSetupSchema.optional()
 });
 
 const BrowserRouteSchema = z
-  .object({
+  .strictObject({
     id: z.string().min(1),
     name: z.string().optional(),
     path: z.string().min(1),
     viewports: RouteViewportsSchema,
-    capture: z.object({ fullPage: z.boolean().optional() }).optional(),
+    capture: z.strictObject({ fullPage: z.boolean().optional() }).optional(),
     stability: StabilitySchema.optional(),
+    maskSelectors: z.array(MaskSelectorSchema).optional(),
     expects: z.array(BrowserExpectationSchema).default([]),
     states: z.array(BrowserRouteStateSchema).min(1).optional(),
     setup: BrowserSetupSchema.optional()
@@ -108,12 +118,12 @@ const BrowserRouteSchema = z
     }
   });
 
-const BrowserContractSchema = z.object({
+const BrowserContractSchema = z.strictObject({
   enabled: z.boolean().default(true),
   blocking: z.boolean().default(true),
   baseUrl: z.string().url(),
   server: z
-    .object({
+  .strictObject({
       command: z.string(),
       readyUrl: z.string().url(),
       reuseExisting: z.boolean().default(true),
@@ -121,7 +131,7 @@ const BrowserContractSchema = z.object({
     })
     .optional(),
   routes: z.array(BrowserRouteSchema).default([]),
-  maskSelectors: z.array(z.string().min(1)).default([]),
+  maskSelectors: z.array(MaskSelectorSchema).default([]),
   visualSmoke: z.array(RouteVisualSmokeCaseSchema).default([]),
   stability: StabilitySchema.optional(),
   setup: BrowserSetupSchema.optional()
@@ -159,25 +169,25 @@ const BrowserContractSchema = z.object({
   }
 });
 
-const DesignCommandSchema = z.object({
+const DesignCommandSchema = z.strictObject({
   id: z.string().min(1),
   command: z.string().min(1),
   cwd: z.string().min(1).optional(),
   blocking: z.boolean().optional()
 });
 
-const DesignContractSchema = z.object({
+const DesignContractSchema = z.strictObject({
   enabled: z.boolean().default(true),
   commands: z.array(DesignCommandSchema).default([])
 });
 
-const LifecycleArtifactSchema = z.object({
+const LifecycleArtifactSchema = z.strictObject({
   path: z.string().min(1),
   type: z.enum(['html', 'metadata', 'log', 'report', 'screenshot', 'image', 'visual-diff', 'trace', 'video', 'pdf', 'document-page', 'contact-sheet']),
   role: z.enum(['evidence', 'expected', 'actual', 'diff', 'trace', 'debug']).optional()
 });
 
-const LifecycleHookSchema = z.object({
+const LifecycleHookSchema = z.strictObject({
   id: z.string().min(1),
   command: z.string().min(1),
   cwd: z.string().min(1).optional(),
@@ -188,10 +198,10 @@ const LifecycleHookSchema = z.object({
 });
 
 const ComponentBrowserStateSchema = z
-  .object({
+  .strictObject({
     kind: z.enum(['hover', 'focus']),
     selector: z.string().min(1),
-    animationStabilization: z.object({
+    animationStabilization: z.strictObject({
       disableAnimations: z.boolean().optional(),
       waitMs: z.number().int().nonnegative().max(5_000).optional()
     })
@@ -207,7 +217,7 @@ const ComponentBrowserStateSchema = z
   });
 
 const ComponentVisualCaseSchema = z
-  .object({
+  .strictObject({
     id: z.string().min(1),
     storyId: z.string().min(1).optional(),
     path: z.string().min(1).optional(),
@@ -250,10 +260,10 @@ const ComponentVisualCaseSchema = z
   });
 
 const ComponentContractSchema = z
-  .object({
+  .strictObject({
     enabled: z.boolean().default(true),
     storybook: z
-      .object({
+  .strictObject({
         command: z.string(),
         readyUrl: z.string().url(),
         reuseExisting: z.boolean().default(true),
@@ -261,7 +271,7 @@ const ComponentContractSchema = z
       })
       .optional(),
     portal: z
-      .object({
+  .strictObject({
         entry: z.string().min(1),
         readyUrl: z.string().url(),
         reuseExisting: z.boolean().default(true),
@@ -291,12 +301,12 @@ const ComponentContractSchema = z
     }
   });
 
-const PopplerConfigSchema = z.object({
+const PopplerConfigSchema = z.strictObject({
   mode: z.enum(['optional', 'required']).default('optional'),
   dpi: z.number().int().positive().default(144)
 });
 
-const PrintRenderedPageSchema = z.object({
+const PrintRenderedPageSchema = z.strictObject({
   id: z.string().min(1),
   page: z.number().int().positive(),
   baseline: z.string().min(1),
@@ -306,11 +316,11 @@ const PrintRenderedPageSchema = z.object({
   strict: z.boolean().optional()
 });
 
-const PrintCaseSchema = z.object({
+const PrintCaseSchema = z.strictObject({
   id: z.string().min(1),
   route: z.string().min(1),
   viewport: z.string().min(1).default('desktop'),
-  pdf: z.object({
+  pdf: z.strictObject({
     format: z.string().min(1).default('A4'),
     printBackground: z.boolean().default(true),
     expectedPageCount: z.number().int().positive().optional(),
@@ -322,20 +332,20 @@ const PrintCaseSchema = z.object({
   blocking: z.boolean().default(true)
 });
 
-const PrintContractSchema = z.object({
+const PrintContractSchema = z.strictObject({
   enabled: z.boolean().default(true),
   cases: z.array(PrintCaseSchema).default([])
 });
 
-const ReflectionConfigSchema = z.object({
+const ReflectionConfigSchema = z.strictObject({
   project: z.string().min(1),
   run: z
-    .object({
+  .strictObject({
       defaultMode: z.enum(runModes).default('smoke'),
       ciMode: z.enum(runModes).default('smoke')
     })
     .default({ defaultMode: 'smoke', ciMode: 'smoke' }),
-  contracts: z.object({
+  contracts: z.strictObject({
       browser: BrowserContractSchema.optional(),
       design: DesignContractSchema.optional(),
       component: ComponentContractSchema.optional(),
@@ -343,7 +353,7 @@ const ReflectionConfigSchema = z.object({
       visual: z.unknown().optional()
   }),
   lifecycle: z
-    .object({
+  .strictObject({
       beforeRun: z.array(LifecycleHookSchema).default([])
     })
     .default({ beforeRun: [] })

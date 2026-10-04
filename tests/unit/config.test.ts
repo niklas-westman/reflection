@@ -784,3 +784,52 @@ describe('route states, steps, network and environment setup', () => {
   });
 });
 
+describe('strict config validation and 0.3.0 route options', () => {
+  function browserConfig(browser: Record<string, unknown>) {
+    return { project: 'strict-fixture', contracts: { browser: { baseUrl: 'http://127.0.0.1:5173', routes: [], ...browser } } };
+  }
+
+  it('rejects unknown keys at every level with their path', () => {
+    expect(() => validateReflectionConfig({ ...browserConfig({}), extra: true })).toThrow(/Unrecognized key/);
+    expect(() => validateReflectionConfig(browserConfig({ routes: [{ id: 'r', path: '/', viewprts: ['mobile'] }] }))).toThrow(/routes\.0.*viewprts/);
+    expect(() => validateReflectionConfig(browserConfig({ routes: [{ id: 'r', path: '/', states: [{ id: 's', setpu: {} }] }] }))).toThrow(/states\.0.*setpu/);
+    expect(() => validateReflectionConfig(browserConfig({ setup: { network: { unmatchd: 'fail' } } }))).toThrow(/unmatchd/);
+    expect(() => validateReflectionConfig(browserConfig({ routes: [{ id: 'r', path: '/', expects: [{ role: 'button', exactt: true }] }] }))).toThrow(
+      /Invalid Reflection config/
+    );
+  });
+
+  it('accepts state setup, state path, exact/visible/enabled and masks with reasons at every level', () => {
+    const config = validateReflectionConfig(
+      browserConfig({
+        maskSelectors: ['.clock', { selector: '.avatar', reason: 'personal data' }],
+        routes: [
+          {
+            id: 'r',
+            path: '/candidates',
+            maskSelectors: [{ selector: '.date', reason: 'relative time' }],
+            expects: [{ role: 'button', name: 'Sign in', exact: true, visible: true, enabled: true }, { label: 'Email', exact: false }, { text: 'Hi', exact: true, visible: false }],
+            states: [
+              {
+                id: 'direct',
+                path: '/candidates/luna',
+                setup: { network: { stubs: [{ url: '**/api/x', status: 404 }] }, locale: 'sv-SE' },
+                maskSelectors: ['.chat-timestamp'],
+                steps: [{ fill: { label: 'Password', exact: true, value: 'x' } }, { click: { role: 'button', name: 'Go', exact: false } }]
+              }
+            ]
+          }
+        ]
+      })
+    );
+
+    const route = config.contracts.browser?.routes[0];
+    expect(route?.states?.[0]).toMatchObject({ path: '/candidates/luna', setup: { locale: 'sv-SE' }, maskSelectors: ['.chat-timestamp'] });
+    expect(config.contracts.browser?.maskSelectors).toEqual(['.clock', { selector: '.avatar', reason: 'personal data' }]);
+  });
+
+  it('rejects empty mask reasons and unsafe step options', () => {
+    expect(() => validateReflectionConfig(browserConfig({ maskSelectors: [{ selector: '.a', reason: '' }] }))).toThrow(/Invalid Reflection config/);
+  });
+});
+

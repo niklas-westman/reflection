@@ -1,6 +1,6 @@
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import type { CheckResult } from '../../core/report-schema.js';
-import type { BrowserStability } from '../../core/browser-scenario.js';
+import type { BrowserStability, MaskSelector } from '../../core/browser-scenario.js';
 import { getRouteViewportName } from '../../core/viewport.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { runRouteVisualSmoke } from '../visual/visual-contract.js';
@@ -13,7 +13,7 @@ export type BrowserContractConfig = {
   baseUrl: string;
   routes: BrowserRoute[];
   visualSmoke?: RouteVisualBaselineCase[];
-  maskSelectors?: string[];
+  maskSelectors?: MaskSelector[];
   setup?: BrowserSetup | undefined;
   stability?: BrowserStability | undefined;
   // Base directory for relative network stub files; the run command passes the config's directory.

@@ -256,6 +256,22 @@ function WorkspaceRoute() {
               {candidate.name}
             </button>
           ))}
+        <div aria-label="Account actions">
+          <button type="button">Sign in elsewhere</button>
+          <button hidden type="button">Hidden action</button>
+          <button disabled type="button">Archive</button>
+          <label hidden>
+            Hidden field
+            <input name="hidden-field" type="text" />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" />
+          </label>
+          <button aria-label="Show password" type="button">
+            Show
+          </button>
+        </div>
         {selected && (
           <article aria-label="Candidate details">
             <h2>{selected.name}</h2>

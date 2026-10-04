@@ -13,7 +13,7 @@ export interface CustomRouteViewport extends ViewportSize {
 
 export type RouteViewport = string | CustomRouteViewport;
 
-export const ViewportSizeSchema = z.object({
+export const ViewportSizeSchema = z.strictObject({
   width: z.number().int().positive(),
   height: z.number().int().positive()
 });

@@ -1,4 +1,5 @@
 import type { ReflectionConfig, RunMode } from './config.js';
+import type { MaskSelector } from './browser-scenario.js';
 import type { RouteViewport } from './viewport.js';
 
 export type TargetSource = 'reflection-config' | 'adapter';
@@ -31,7 +32,7 @@ export type BrowserRouteTarget = TargetBase & {
   };
   browser: {
     baseUrl: string;
-    maskSelectors: string[];
+    maskSelectors: MaskSelector[];
   };
 };
 

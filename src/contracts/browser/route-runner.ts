@@ -1,10 +1,11 @@
 import type { Browser, Page } from 'playwright';
 import type { ArtifactStore } from '../../core/artifact-store.js';
 import type { ArtifactRef, CheckResult } from '../../core/report-schema.js';
-import type { BrowserStability, BrowserStep, ClockSetup, NetworkSetup } from '../../core/browser-scenario.js';
+import type { BrowserStability, BrowserStep, ClockSetup, MaskSelector, NetworkSetup } from '../../core/browser-scenario.js';
+import { redactUrl } from '../../core/redact-url.js';
 import type { RouteViewport } from '../../core/viewport.js';
 import { createBrowserContext, defaultBrowserContextOptions, resolveRouteViewport } from '../../integrations/playwright/context-factory.js';
-import { evaluateExpectation, shouldCaptureScreenshot, type AssertionFailure, type BrowserExpectation } from './assertions.js';
+import { describeExpectation, evaluateExpectation, shouldCaptureScreenshot, type AssertionFailure, type BrowserExpectation } from './assertions.js';
 import { observeConsoleErrors } from './console-observer.js';
 import { installNetworkFixtures } from './network-fixtures.js';
 import { resolveStability, screenshotStabilityOptions, waitForPageStability } from './stability.js';
@@ -17,6 +18,7 @@ export type BrowserRoute = {
   viewports: RouteViewport[];
   capture?: { fullPage?: boolean | undefined } | undefined;
   stability?: BrowserStability | undefined;
+  maskSelectors?: MaskSelector[] | undefined;
   expects: BrowserExpectation[];
   states?: BrowserRouteState[] | undefined;
   setup?: BrowserSetup | undefined;
@@ -25,9 +27,20 @@ export type BrowserRoute = {
 export type BrowserRouteState = {
   id: string;
   name?: string | undefined;
+  path?: string | undefined;
   steps?: BrowserStep[] | undefined;
   expects?: BrowserExpectation[] | undefined;
+  maskSelectors?: MaskSelector[] | undefined;
+  setup?: BrowserSetup | undefined;
 };
+
+export type ExpectationResult = {
+  expectation: string;
+  status: 'pass' | 'fail';
+  message?: string;
+};
+
+type ResolvedMask = { selector: string; reason?: string | undefined };
 
 export type BrowserSetup = {
   localStorage?: Record<string, string>;
@@ -48,7 +61,7 @@ export type RouteRunInput = {
   viewport: RouteViewport;
   state?: BrowserRouteState | undefined;
   blocking: boolean;
-  maskSelectors?: string[];
+  maskSelectors?: MaskSelector[];
   setup?: BrowserSetup | undefined;
   stability?: BrowserStability | undefined;
   configDir?: string | undefined;
@@ -81,11 +94,14 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
   const state = input.state;
   const stateSuffix = state ? `.${state.id}` : '';
   const artifactDir = `browser/${input.route.id}/${viewportName}${state ? `/${state.id}` : ''}`;
-  const targetLabel = `${input.route.path} ${viewportName}${state ? ` ${state.id}` : ''}`;
+  const visitedPath = state?.path ?? input.route.path;
+  const targetLabel = `${visitedPath} ${viewportName}${state ? ` ${state.id}` : ''}`;
   const expects = [...input.route.expects, ...(state?.expects ?? [])];
   // Design frames are fixed-size; full-page capture would make the PNG taller than the frame and break exact-dimension baselines.
   const fullPage = input.route.capture?.fullPage ?? !resolvedViewport.isCustomSize;
-  const setup = mergeBrowserSetup(input.setup, input.route.setup);
+  const setup = mergeBrowserSetup(mergeBrowserSetup(input.setup, input.route.setup), state?.setup);
+  const masks = resolveMasks(input.maskSelectors, input.route.maskSelectors, state?.maskSelectors);
+  const expectationResults: ExpectationResult[] = [];
   const stability = resolveStability(input.stability, input.route.stability);
   const screenshotOptions = { ...screenshotStabilityOptions(stability), fullPage };
   const context = await createBrowserContext(input.browser, viewportName, resolvedViewport.size, {
@@ -99,11 +115,12 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
   const failures: AssertionFailure[] = [];
   const warnings: string[] = [];
   const artifacts = [];
-  const maskSelectors = input.maskSelectors ?? [];
+  const maskSelectors = masks.map((mask) => mask.selector);
   let maskedSelectors: string[] = [];
   const visualCaptures: RouteVisualCaptureResult[] = [];
   const visualCaptureRequests = input.visualCaptures ?? [];
   let networkFixtures: Awaited<ReturnType<typeof installNetworkFixtures>> | undefined;
+  let finalUrl: string | undefined;
 
   try {
     if (setup.clock) {
@@ -116,7 +133,7 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
       configDir: input.configDir ?? process.cwd()
     });
     await applyBrowserSetup(page, setup);
-    await page.goto(new URL(input.route.path, input.baseUrl).toString(), { waitUntil: 'domcontentloaded' });
+    await page.goto(new URL(visitedPath, input.baseUrl).toString(), { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
 
     const stepFailure = state?.steps?.length ? await runSteps(page, state.steps) : undefined;
@@ -129,6 +146,11 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
     } else {
       for (const expectation of expects) {
         const failure = await evaluateExpectation(page, expectation, consoleObserver.errors);
+        expectationResults.push({
+          expectation: describeExpectation(expectation),
+          status: failure ? 'fail' : 'pass',
+          ...(failure ? { message: failure.summary } : {})
+        });
         if (failure) {
           failures.push(failure);
         }
@@ -166,17 +188,20 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
       }
     }
 
+    finalUrl = redactUrl(page.url());
     collectUnmatchedRequests(networkFixtures, setup, failures, warnings);
 
     const setupMetadata = createSetupMetadata(setup, networkFixtures);
     artifacts.push(
       await input.store.writeJson(`${artifactDir}/metadata.json`, {
-        route: input.route.path,
+        route: visitedPath,
         viewport: viewportName,
         ...(state ? { state: state.id } : {}),
         viewportSize: resolvedViewport.size,
         fullPage,
-        url: page.url(),
+        url: redactUrl(page.url()),
+        expectations: expectationResults,
+        masks: describeMasks(masks, maskedSelectors),
         consoleErrors: consoleObserver.errors,
         failures,
         privacyWarning: shouldCaptureScreenshot(expects) ? 'Screenshots may contain private UI data. Use maskSelectors for sensitive regions.' : undefined,
@@ -219,10 +244,12 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
         : {}),
       artifacts,
       metadata: {
-        route: input.route.path,
+        route: visitedPath,
         routeId: input.route.id,
         viewport: viewportName,
         ...(state ? { state: state.id } : {}),
+        ...(finalUrl ? { finalUrl } : {}),
+        expectations: expectationResults,
         classification: firstFailure?.classification,
         failures,
         setup: setupMetadata,
@@ -232,7 +259,8 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
           ? {
               privacyWarning: 'Screenshots may contain private UI data. Use maskSelectors for sensitive regions.',
               maskSelectors,
-              maskedSelectors
+              maskedSelectors,
+              masks: describeMasks(masks, maskedSelectors)
             }
           : {})
       },
@@ -240,6 +268,22 @@ export async function runBrowserRoute(input: RouteRunInput): Promise<BrowserRout
     },
     visualCaptures
   };
+}
+
+function resolveMasks(...layers: Array<MaskSelector[] | undefined>): ResolvedMask[] {
+  const bySelector = new Map<string, ResolvedMask>();
+  for (const layer of layers) {
+    for (const entry of layer ?? []) {
+      const mask = typeof entry === 'string' ? { selector: entry } : entry;
+      const existing = bySelector.get(mask.selector);
+      bySelector.set(mask.selector, { selector: mask.selector, reason: mask.reason ?? existing?.reason });
+    }
+  }
+  return [...bySelector.values()];
+}
+
+function describeMasks(masks: ResolvedMask[], applied: string[]): Array<{ selector: string; reason?: string; applied: boolean }> {
+  return masks.map((mask) => ({ selector: mask.selector, ...(mask.reason ? { reason: mask.reason } : {}), applied: applied.includes(mask.selector) }));
 }
 
 function collectUnmatchedRequests(

@@ -234,3 +234,167 @@ describe('fixed clock, locale and environment identity', () => {
     expect(new Set(hashes).size).toBe(1);
   }, 40_000);
 });
+
+describe('exact and visible matching', () => {
+  const route = (expects: unknown[], states?: unknown[]) => ({
+    id: 'workspace',
+    path: '/workspace',
+    viewports: ['desktop'],
+    expects: states ? [] : expects,
+    ...(states ? { states } : {})
+  });
+  const stubbed = { network: { stubs: [candidatesStub] } };
+
+  async function firstCheck(runId: string, expects: unknown[]) {
+    const result = await run(runId, { setup: stubbed, routes: [route(expects) as never] });
+    return result.checks[0];
+  }
+
+  it('does not let a partial name satisfy a role expectation, unless exact is false', async () => {
+    const exact = await firstCheck('exact-default', [{ role: 'button', name: 'Sign in' }]);
+    expect(exact).toMatchObject({ status: 'fail' });
+    expect(exact?.summary).toContain('Expected visible role button named "Sign in" (exact), but nothing matched.');
+
+    const partial = await firstCheck('exact-false', [{ role: 'button', name: 'Sign in', exact: false }]);
+    expect(partial?.status).toBe('pass');
+    expect(await firstCheck('exact-full', [{ role: 'button', name: 'Sign in elsewhere' }])).toMatchObject({ status: 'pass' });
+  }, 40_000);
+
+  it('requires matches to be visible by default and enabled on request', async () => {
+    expect((await firstCheck('hidden-role-default', [{ role: 'button', name: 'Hidden action' }]))?.status).toBe('fail');
+    const hidden = await firstCheck('hidden-label-default', [{ label: 'Hidden field' }]);
+    expect(hidden).toMatchObject({ status: 'fail' });
+    expect(hidden?.summary).toContain('none of the 1 matching element was visible');
+    expect((await firstCheck('hidden-label-opt-out', [{ label: 'Hidden field', visible: false }]))?.status).toBe('pass');
+
+    expect((await firstCheck('hidden-opt-out', [{ role: 'button', name: 'Hidden action', visible: false }]))?.status).toBe('pass');
+    expect((await firstCheck('disabled-default', [{ role: 'button', name: 'Archive' }]))?.status).toBe('pass');
+    const disabled = await firstCheck('disabled-enabled', [{ role: 'button', name: 'Archive', enabled: true }]);
+    expect(disabled).toMatchObject({ status: 'fail' });
+    expect(disabled?.summary).toContain('visible and enabled');
+  }, 40_000);
+
+  it('keeps text a visible substring match by default', async () => {
+    expect((await firstCheck('text-substring', [{ text: 'Sign in else' }]))?.status).toBe('pass');
+    expect((await firstCheck('text-exact', [{ text: 'Sign in else', exact: true }]))?.status).toBe('fail');
+  }, 30_000);
+
+  it('matches step labels exactly so a toggle named "Show password" is not the Password field', async () => {
+    const states = (exact?: boolean) => [
+      { id: 'type', steps: [{ fill: { label: 'Password', value: 'secret', ...(exact === undefined ? {} : { exact }) } }], expects: [] }
+    ];
+    const strictResult = await run('step-exact', { setup: stubbed, routes: [route([], states()) as never] });
+    expect(strictResult.checks[0]?.status).toBe('pass');
+
+    const looseResult = await run('step-substring', { setup: stubbed, routes: [route([], states(false)) as never] });
+    expect(looseResult.checks[0]).toMatchObject({ status: 'fail', metadata: { classification: 'step-failure' } });
+  }, 40_000);
+});
+
+describe('report evidence, state setup, state paths and masks', () => {
+  it('records the final URL and a result per expectation in the check metadata', async () => {
+    const result = await run('evidence', {
+      setup: { network: { stubs: [candidatesStub] } },
+      routes: [
+        {
+          id: 'workspace',
+          path: '/workspace?access_token=abc123&tab=1',
+          viewports: ['desktop'],
+          expects: [{ role: 'heading', name: 'Workspace' }, { role: 'button', name: 'Nope' }, { noConsoleErrors: true }]
+        }
+      ]
+    });
+
+    const check = result.checks[0];
+    expect(check?.metadata.finalUrl).toBe(`${baseUrl}/workspace?access_token=%5BREDACTED%5D&tab=1`);
+    expect(check?.metadata.expectations).toEqual([
+      { expectation: 'visible role heading named "Workspace" (exact)', status: 'pass' },
+      { expectation: expect.stringContaining('role button named "Nope"'), status: 'fail', message: expect.stringContaining('nothing matched') },
+      { expectation: 'noConsoleErrors true', status: 'pass' }
+    ]);
+  }, 20_000);
+
+  it('applies state setup on top of browser and route setup', async () => {
+    const result = await run('state-setup', {
+      setup: { network: { stubs: [candidatesStub], unmatched: 'fail' } },
+      routes: [
+        {
+          id: 'workspace',
+          path: '/workspace',
+          viewports: ['desktop'],
+          expects: [],
+          states: [
+            { id: 'loaded', expects: [{ role: 'button', name: 'Luna Larsson' }] },
+            {
+              id: 'failed-load',
+              setup: { network: { stubs: [{ method: 'GET', url: '**/api/candidates', status: 500 }] } },
+              expects: [{ text: 'Could not load candidates' }]
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(result.checks.map((check) => [check.id, check.status])).toEqual([
+      ['browser.workspace.desktop.loaded', 'pass'],
+      ['browser.workspace.desktop.failed-load', 'pass']
+    ]);
+  }, 30_000);
+
+  it('lets a state start at its own path', async () => {
+    const result = await run('state-path', {
+      setup: { network: { stubs: [candidatesStub] } },
+      routes: [
+        {
+          id: 'workspace',
+          path: '/workspace',
+          viewports: ['desktop'],
+          expects: [],
+          states: [
+            { id: 'list', expects: [{ role: 'heading', name: 'Workspace' }] },
+            { id: 'direct', path: '/login', expects: [{ role: 'heading', name: 'Login' }, { urlIncludes: '/login' }] }
+          ]
+        }
+      ]
+    });
+
+    expect(result.checks.map((check) => [check.id, check.status, check.metadata.finalUrl])).toEqual([
+      ['browser.workspace.desktop.list', 'pass', `${baseUrl}/workspace`],
+      ['browser.workspace.desktop.direct', 'pass', `${baseUrl}/login`]
+    ]);
+    expect(result.checks[1]?.target).toBe('/login desktop direct');
+  }, 30_000);
+
+  it('adds route and state masks to browser masks and reports reasons and what was applied', async () => {
+    const result = await run('masks', {
+      maskSelectors: [{ selector: 'p', reason: 'date text' }],
+      setup: { network: { stubs: [candidatesStub] } },
+      routes: [
+        {
+          id: 'workspace',
+          path: '/workspace',
+          viewports: ['desktop'],
+          maskSelectors: ['h1'],
+          expects: [],
+          states: [
+            { id: 'plain', expects: [{ screenshot: 'final' }] },
+            { id: 'masked', maskSelectors: [{ selector: '[aria-label="Account actions"]', reason: 'fixture noise' }, '.missing'], expects: [{ screenshot: 'final' }] }
+          ]
+        }
+      ]
+    });
+
+    const [plain, masked] = result.checks;
+    expect(plain?.metadata.masks).toEqual([
+      { selector: 'p', reason: 'date text', applied: true },
+      { selector: 'h1', applied: true }
+    ]);
+    expect(masked?.metadata.masks).toEqual([
+      { selector: 'p', reason: 'date text', applied: true },
+      { selector: 'h1', applied: true },
+      { selector: '[aria-label="Account actions"]', reason: 'fixture noise', applied: true },
+      { selector: '.missing', applied: false }
+    ]);
+  }, 30_000);
+});
+
