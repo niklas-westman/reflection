@@ -1,5 +1,14 @@
 # Upgrading
 
+## 0.3.x to 0.4.0
+
+No breaking changes. Existing PNG baselines and configs work as before.
+
+- Baselines can be lossless WebP (see `docs/visual-contract.md`, "Baseline image formats"). To convert existing PNG baselines without changing a pixel: `sharp(file).webp({ lossless: true })` or `cwebp -lossless in.png -o out.webp`, then point `baseline` at the `.webp` path.
+- `reflection update` now writes lossless WebP when the baseline path ends in `.webp`.
+- The package now depends on `sharp` for WebP decoding, which adds prebuilt native binaries to installs.
+- Visual check metadata gains `expectedFormat` (`png`, `webp-lossless` or `webp-lossy`).
+
 ## 0.2.x to 0.3.0
 
 0.3.0 tightens validation and matching so configs cannot pass for the wrong reason. Run `reflection doctor --config <path>` after upgrading; it reports every problem with its path.

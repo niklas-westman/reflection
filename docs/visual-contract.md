@@ -53,6 +53,22 @@ Promote a visual case to blocking only when the baseline is stable and the team 
 
 `strict: true` or `blocking: true` makes a failing visual comparison blocking. Otherwise it produces `pass-with-review` so the artifact can be inspected without hiding the change.
 
+## Baseline image formats
+
+Baselines can be PNG or WebP. Format is detected from the file header, not the extension, so a `.webp` path can hold either, and the config does not change:
+
+```ts
+visualSmoke: [{ id: 'login-design', route: 'login', viewport: 'design-1512', baselineRoot: 'docs/v2/reference-images', baseline: 'login-page/6-login-page.webp' }]
+```
+
+- **Lossless WebP is the recommended compact format.** It decodes to exactly the same pixels as the PNG it came from, so comparisons behave identically while the file is smaller (a real 390x860 login screenshot went from 59 KB to 34 KB, 42% smaller). Export with `cwebp -lossless` or `sharp(...).webp({ lossless: true })`, not with a quality setting.
+- **Lossy WebP is accepted but flagged.** Compression noise shows up as small pixel differences that are not UI changes. The check records `expectedFormat: 'webp-lossy'` and its details say so. Prefer lossless WebP or PNG for baselines, or use a threshold with that in mind.
+- Screenshots Reflection captures stay PNG. Report artifacts stay PNG too: `expected.png` is the baseline decoded and re-encoded losslessly, `actual.png` is the run's screenshot, `diff.png` is the diff. `report.html` and `review` need no changes.
+- `reflection update` promotes the run's `actual.png` into the baseline path. For a `.webp` path it writes **lossless WebP**; any other extension keeps the previous behaviour (a PNG copy).
+- Animated WebP baselines compare their first frame.
+- WebP decoding uses `sharp`, which installs prebuilt binaries for common platforms (macOS, Linux glibc and musl, Windows).
+- The same formats work for route, component and print baselines.
+
 ## Route-level visual smoke
 
 Route visual smoke cases reuse browser route screenshots by default. A case must point at a configured route id and viewport:

@@ -1,6 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
+import { readImage, type BaselineImageFormat, type RgbaImage } from './image-io.js';
 import { evaluateVisualThreshold, type VisualThreshold } from './thresholds.js';
 
 export type ComparePngImagesInput = {
@@ -62,6 +63,7 @@ export type ImageDiffResult = {
   height?: number;
   expected: ImageDimensions;
   actual: ImageDimensions;
+  expectedFormat: BaselineImageFormat;
   diffPixels: number;
   diffRatio: number;
   dimensionMismatch: boolean;
@@ -72,7 +74,10 @@ export type ImageDiffResult = {
 };
 
 export async function comparePngImages(input: ComparePngImagesInput): Promise<ImageDiffResult> {
-  const [expected, actual] = await Promise.all([readPng(input.expectedPath), readPng(input.actualPath)]);
+  const [expectedRead, actualRead] = await Promise.all([readImage(input.expectedPath), readImage(input.actualPath)]);
+  const expected = expectedRead.image;
+  const actual = actualRead.image;
+  const expectedFormat = expectedRead.format;
   const expectedDimensions = { width: expected.width, height: expected.height };
   const actualDimensions = { width: actual.width, height: actual.height };
 
@@ -82,6 +87,7 @@ export async function comparePngImages(input: ComparePngImagesInput): Promise<Im
       classification: 'visual-dimension-mismatch',
       expected: expectedDimensions,
       actual: actualDimensions,
+      expectedFormat,
       diffPixels: 0,
       diffRatio: 1,
       dimensionMismatch: true,
@@ -119,6 +125,7 @@ export async function comparePngImages(input: ComparePngImagesInput): Promise<Im
     height: expected.height,
     expected: expectedDimensions,
     actual: actualDimensions,
+    expectedFormat,
     diffPixels,
     diffRatio: evaluation.diffRatio,
     dimensionMismatch: false,
@@ -129,7 +136,7 @@ export async function comparePngImages(input: ComparePngImagesInput): Promise<Im
   };
 }
 
-export function formatVisualDiagnosticsDetails(diagnostics: VisualDiffDiagnostics | undefined): string | undefined {
+export function formatVisualDiagnosticsDetails(diagnostics: VisualDiffDiagnostics | undefined, expectedFormat?: BaselineImageFormat): string | undefined {
   if (!diagnostics) {
     return undefined;
   }
@@ -143,12 +150,10 @@ export function formatVisualDiagnosticsDetails(diagnostics: VisualDiffDiagnostic
   if (diagnostics.likelyCauses.length > 0) {
     lines.push(`Likely next checks: ${diagnostics.likelyCauses.join(' ')}`);
   }
+  if (expectedFormat === 'webp-lossy') {
+    lines.push('Baseline is lossy WebP, so differences can come from compression rather than the UI. Export the baseline as lossless WebP or PNG.');
+  }
   return lines.join('\n');
-}
-
-async function readPng(path: string): Promise<PNG> {
-  const content = await readFile(path);
-  return PNG.sync.read(content);
 }
 
 function createDimensionMismatchDiagnostics(expected: ImageDimensions, actual: ImageDimensions): VisualDiffDiagnostics {
@@ -159,7 +164,7 @@ function createDimensionMismatchDiagnostics(expected: ImageDimensions, actual: I
   };
 }
 
-function analyzeVisualDiff(expected: PNG, actual: PNG, diff: PNG, diffPixels: number): VisualDiffDiagnostics | undefined {
+function analyzeVisualDiff(expected: RgbaImage, actual: RgbaImage, diff: PNG, diffPixels: number): VisualDiffDiagnostics | undefined {
   let minX = expected.width;
   let minY = expected.height;
   let maxX = -1;

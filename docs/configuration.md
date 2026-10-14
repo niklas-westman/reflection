@@ -373,7 +373,7 @@ Portal cases must define `viewportSize`. Reflection uses that exact size for the
 
 ### Shared case fields
 
-`viewport` accepts the built-in presets (`desktop`, `tablet`, `mobile`, `component`) and any custom string label. When `viewportSize` is provided, Reflection captures at that exact `{ width, height }` instead of resolving the string preset. Use this for exported Figma baselines: the PNG dimensions must match `viewportSize` exactly or the check fails with `visual-dimension-mismatch`.
+`viewport` accepts the built-in presets (`desktop`, `tablet`, `mobile`, `component`) and any custom string label. When `viewportSize` is provided, Reflection captures at that exact `{ width, height }` instead of resolving the string preset. Use this for exported Figma baselines: the image dimensions (PNG or WebP) must match `viewportSize` exactly or the check fails with `visual-dimension-mismatch`.
 
 `framing` lets a component visual case normalize the runtime frame before the screenshot:
 

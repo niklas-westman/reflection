@@ -1,6 +1,7 @@
-import { copyFile, lstat, mkdir, readFile, realpath } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { CommanderError } from 'commander';
+import { promoteBaselineImage } from '../contracts/visual/image-io.js';
 import { createBaselineStore } from '../core/baseline-store.js';
 import { loadReflectionConfig, type ReflectionConfig } from '../core/config.js';
 import { ExitCode } from '../core/exit-codes.js';
@@ -65,7 +66,7 @@ export async function updateCommand(options: UpdateCommandOptions = {}): Promise
       if (options.dryRun !== true) {
         await ensureBaselineDestinationInside(item.baselineRoot, item.baselinePath);
         await mkdir(dirname(item.baselinePath), { recursive: true });
-        await copyFile(item.sourcePath, item.baselinePath);
+        await promoteBaselineImage(item.sourcePath, item.baselinePath);
       }
     }
 

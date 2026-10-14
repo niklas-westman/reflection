@@ -4,6 +4,7 @@ import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
 import type { ArtifactRef, CheckResult } from '../../core/report-schema.js';
 import { comparePngImages, formatVisualDiagnosticsDetails } from './image-diff.js';
+import { readBaselineAsPngBuffer } from './image-io.js';
 import type { VisualThreshold } from './thresholds.js';
 
 export type RouteVisualBaselineCase = {
@@ -75,7 +76,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
   }
 
   const artifactBase = `visual/${input.visualCase.id}`;
-  const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, await readFile(baselinePath));
+  const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, (await readBaselineAsPngBuffer(baselinePath)).png);
   const actualVisualArtifact = await ensureVisualActualArtifact(input.store, actualArtifact, artifactBase);
   const diffRelativePath = `${artifactBase}/diff.png`;
   const diffPath = input.store.resolveRunPath(diffRelativePath);
@@ -91,7 +92,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
   const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
 
   const severity = result.status === 'fail' && blocking ? 'blocking' : 'review';
-  const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics);
+  const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics, result.expectedFormat);
 
   return {
     id: `visual.${input.visualCase.id}`,

@@ -11,6 +11,7 @@ import { startReflectionPortalServer, type PortalConfig } from '../../integratio
 import { startStorybookServer } from '../../integrations/storybook/server.js';
 import { resolveStoryUrl } from '../../integrations/storybook/story-url.js';
 import { comparePngImages, formatVisualDiagnosticsDetails } from '../visual/image-diff.js';
+import { readBaselineAsPngBuffer } from '../visual/image-io.js';
 import type { VisualThreshold } from '../visual/thresholds.js';
 
 export type ComponentSource = 'storybook' | 'portal';
@@ -200,7 +201,7 @@ async function runComponentVisualCase(input: {
   }
 
   const artifactBase = `visual/${input.visualCase.id}`;
-  const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, await readFile(baselinePath));
+  const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, (await readBaselineAsPngBuffer(baselinePath)).png);
 
   try {
     const capture = await captureComponentScreenshot({
@@ -229,7 +230,7 @@ async function runComponentVisualCase(input: {
     });
     const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
     const severity: CheckResult['severity'] = result.status === 'fail' && blocking ? 'blocking' : 'review';
-    const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics);
+    const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics, result.expectedFormat);
     const failureClass = result.status === 'pass' ? undefined : classifyComponentVisualFailure(result, capture.runtimeProbes);
     const evidence = createComponentVisualEvidence(result, capture.runtimeProbes);
     const diagnostics = createComponentVisualDiagnostics(result, capture.runtimeProbes);

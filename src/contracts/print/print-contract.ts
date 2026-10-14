@@ -8,6 +8,7 @@ import type { ArtifactRef, CheckResult } from '../../core/report-schema.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { createBrowserContext } from '../../integrations/playwright/context-factory.js';
 import { comparePngImages, formatVisualDiagnosticsDetails } from '../visual/image-diff.js';
+import { readBaselineAsPngBuffer } from '../visual/image-io.js';
 import type { VisualThreshold } from '../visual/thresholds.js';
 
 export type PrintRenderedPageCase = {
@@ -246,7 +247,7 @@ async function comparePrintPageBaseline(input: {
   }
 
   const artifactBase = `print/${input.printCase.id}/visual/${input.pageCase.id}`;
-  const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, await readFile(baselinePath));
+  const expectedArtifact = await input.store.writeBuffer(`${artifactBase}/expected.png`, (await readBaselineAsPngBuffer(baselinePath)).png);
   const diffRelativePath = `${artifactBase}/diff.png`;
   const diffPath = input.store.resolveRunPath(diffRelativePath);
   await mkdir(dirname(diffPath), { recursive: true });
@@ -258,7 +259,7 @@ async function comparePrintPageBaseline(input: {
     strict
   });
   const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
-  const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics);
+  const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics, result.expectedFormat);
   const severity = result.status === 'fail' && blocking ? 'blocking' : 'review';
 
   return {
