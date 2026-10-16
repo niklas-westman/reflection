@@ -1,4 +1,5 @@
 import type { TextSourcePart } from './bundle-schema.js';
+import { firstCssFamily, judgePaintedFont, summarizeIdentity } from './font-identity.js';
 import type { ExperimentRecord, FactBasis, Inference, NativeOutcome, Observation, PartRecord, PartRuntime } from './record.js';
 
 export const geometryToleranceCssPx = 0.05;
@@ -8,14 +9,18 @@ export const baselineToleranceCssPx = 0.5;
 // The rendering-path experiment must beat the native screenshot by at least half before it is called a suspected cause.
 export const renderingPathImprovementRatio = 0.5;
 
-export function buildPartRecord(part: TextSourcePart, runtime: PartRuntime | null): PartRecord {
-  const observations = runtime ? observePart(part, runtime) : [selectorObservation(part, 0)];
+export interface PageFacts {
+  fontFaces: Array<{ family: string; weight: string; style: string; stretch: string; status: string }>;
+}
+
+export function buildPartRecord(part: TextSourcePart, runtime: PartRuntime | null, page: PageFacts | null = null): PartRecord {
+  const observations = runtime ? observePart(part, runtime, page) : [selectorObservation(part, 0)];
   return {
     id: part.id,
     expectedText: part.expectedText,
     runtime,
     observations,
-    evidence: describeEvidence(part, runtime)
+    evidence: describeEvidence(part, runtime, observations)
   };
 }
 
@@ -34,7 +39,7 @@ function selectorObservation(part: TextSourcePart, matchCount: number): Observat
   };
 }
 
-function observePart(part: TextSourcePart, runtime: PartRuntime): Observation[] {
+function observePart(part: TextSourcePart, runtime: PartRuntime, page: PageFacts | null): Observation[] {
   const observations: Observation[] = [selectorObservation(part, runtime.matchCount)];
   if (runtime.matchCount !== 1 || !runtime.typography || !runtime.geometry) {
     return observations;
@@ -43,7 +48,7 @@ function observePart(part: TextSourcePart, runtime: PartRuntime): Observation[] 
   const typography = runtime.typography;
   const source = part.typography;
   observations.push(textObservation(part, runtime));
-  observations.push(fontIdentityObservation(part, runtime));
+  observations.push(fontIdentityObservation(part, runtime, page));
   observations.push(numericObservation('font.size', source.size, asNumber(typography.fontSize), 'css-px', typographyToleranceCssPx, 'provided', 'computed-style'));
 
   if (source.weight !== undefined) {
@@ -118,27 +123,32 @@ function textObservation(part: TextSourcePart, runtime: PartRuntime): Observatio
   };
 }
 
-function fontIdentityObservation(part: TextSourcePart, runtime: PartRuntime): Observation {
+function fontIdentityObservation(part: TextSourcePart, runtime: PartRuntime, page: PageFacts | null): Observation {
   const source = part.typography;
   const used = runtime.platformFonts;
-  const base = { field: 'font.identity', source: { family: source.family, postScriptName: source.postScriptName ?? null }, delta: null, unit: null, tolerance: null, sourceBasis: 'provided' as FactBasis };
+  const base = {
+    field: 'font.identity',
+    source: { family: source.family, style: source.style ?? null, postScriptName: source.postScriptName ?? null },
+    delta: null,
+    unit: null,
+    tolerance: null,
+    sourceBasis: 'provided' as FactBasis
+  };
   if (!used || used.length === 0) {
     return { ...base, runtime: null, comparison: 'unknown', runtimeBasis: 'unavailable', note: 'The browser did not report which font painted the text; a requested family string does not prove it.' };
   }
 
-  const matches = (font: { familyName: string; postScriptName: string | null }): boolean => {
-    if (source.postScriptName && font.postScriptName) {
-      return font.postScriptName.toLowerCase() === source.postScriptName.toLowerCase();
-    }
-    return font.familyName.toLowerCase() === source.family.toLowerCase();
-  };
-  const unmatched = used.filter((font) => !matches(font));
+  const context = { cssFirstFamily: firstCssFamily(runtime.typography?.fontFamily), loadedFaces: page?.fontFaces ?? [], sourceWeight: source.weight };
+  const judgements = used.map((font) => judgePaintedFont(font, { family: source.family, style: source.style, postScriptName: source.postScriptName }, context));
+  const summary = summarizeIdentity(judgements);
   return {
     ...base,
     runtime: used.map((font) => ({ familyName: font.familyName, postScriptName: font.postScriptName, isCustomFont: font.isCustomFont, glyphCount: font.glyphCount })),
-    comparison: unmatched.length === 0 ? 'match' : 'mismatch',
+    comparison: summary.comparison,
     runtimeBasis: 'cdp-platform-fonts',
-    note: unmatched.length === 0 ? 'Names agree; this does not establish font-binary identity.' : `Painted with a different font than the source names: ${unmatched.map((font) => font.familyName).join(', ')} (fallback or substitution suspected).`
+    note: summary.note,
+    classification: summary.classification,
+    detail: { cssFirstFamily: context.cssFirstFamily, painted: judgements }
   };
 }
 
@@ -200,13 +210,14 @@ function transformObservation(part: TextSourcePart, runtime: PartRuntime): Obser
   };
 }
 
-function describeEvidence(part: TextSourcePart, runtime: PartRuntime | null): { complete: boolean; missing: string[] } {
+function describeEvidence(part: TextSourcePart, runtime: PartRuntime | null, observations: Observation[]): { complete: boolean; missing: string[] } {
   const missing: string[] = [];
   if (part.fontAsset.sha256 === null) missing.push('source.font-asset-checksum');
   if (!part.typography.postScriptName) missing.push('source.postscript-name');
   if (part.baseline === null) missing.push('source.baseline');
   else if (part.baseline.basis === 'inferred') missing.push('source.baseline-direct');
   if (!runtime || !runtime.platformFonts) missing.push('runtime.platform-fonts');
+  else if (observations.find((observation) => observation.field === 'font.identity')?.comparison === 'unknown') missing.push('runtime.font-identity-unestablished');
   if (!runtime?.geometry?.baseline) missing.push('runtime.baseline');
   return { complete: missing.length === 0, missing };
 }
@@ -294,6 +305,7 @@ function missingDescription(code: string): string {
     'source.baseline': 'The source supplies no baseline.',
     'source.baseline-direct': 'The source baseline is inferred, not reported directly.',
     'runtime.platform-fonts': 'The browser did not report which font painted the text.',
+    'runtime.font-identity-unestablished': 'Font names alone did not establish whether the painted font is the one the source names; the raw names are reported.',
     'runtime.baseline': 'The runtime baseline could not be measured.'
   };
   return descriptions[code] ?? code;

@@ -237,6 +237,68 @@ describe('the Marwes-like fixture (Inter label, live unversioned source)', () =>
   }, 40_000);
 });
 
+describe('font identity with a CSS family alias (real web font)', () => {
+  // Inter registers under CSS family "Inter" while Chromium reports the font's internal name "Inter Medium",
+  // the same shape as the reported Instrument Sans case. Only the source facts change; the bundle hashes do not.
+  async function withSourceFacts(facts: Record<string, unknown>): Promise<string> {
+    const copy = await copyBundle('inter-label');
+    const bundle = await copy.read();
+    const { postScriptName: _removed, ...rest } = bundle.parts[0].typography;
+    bundle.parts[0].typography = { ...rest, ...facts };
+    await copy.write(bundle);
+    return copy.bundlePath;
+  }
+
+  it('is a name-level match, not a fallback claim, when the source names family and style but no PostScript name', async () => {
+    const run = await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, bundlePath: await withSourceFacts({ style: 'Medium' }) });
+    const record = recordOf(run);
+    const identity = observation(record, 'font.identity');
+
+    expect(identity).toMatchObject({ comparison: 'match', classification: 'style-qualified-family-alias', source: { family: 'Inter', style: 'Medium', postScriptName: null } });
+    expect(identity.runtime).toEqual([expect.objectContaining({ familyName: 'Inter Medium', isCustomFont: true })]);
+    expect(record.inference?.id).toBe('native-text-vector-rendering-discrepancy-suspected');
+    expect(record.inference?.confidence).toBe('low');
+    expect(record.parts[0]?.evidence.missing).toEqual(expect.arrayContaining(['source.postscript-name', 'source.font-asset-checksum']));
+    expect(run.check.status).toBe('fail');
+  }, 40_000);
+
+  it('reports uncertainty with raw names when the source gives no style to tie the qualifier to', async () => {
+    const record = recordOf(await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, bundlePath: await withSourceFacts({}) }));
+    const identity = observation(record, 'font.identity');
+
+    expect(identity).toMatchObject({ comparison: 'unknown', classification: 'name-extends-source-family' });
+    expect(identity.runtime).toEqual([expect.objectContaining({ familyName: 'Inter Medium', postScriptName: 'Inter-Medium' })]);
+    expect(record.inference?.id).not.toBe('font-identity-mismatch-observed');
+    expect(record.parts[0]?.evidence.missing).toContain('runtime.font-identity-unestablished');
+  }, 40_000);
+
+  it('keeps a conflicting source style visible', async () => {
+    const record = recordOf(await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, bundlePath: await withSourceFacts({ style: 'Bold' }) }));
+
+    expect(observation(record, 'font.identity')).toMatchObject({ comparison: 'mismatch', classification: 'style-qualifier-conflict' });
+    expect(record.inference?.id).toBe('font-identity-mismatch-observed');
+  }, 40_000);
+
+  it('still detects a true system fallback when the source names family and style', async () => {
+    server.setOverrides(interLabel.storyId, { fontFamily: 'NoSuchFontFamilyXyz', omitFontFace: true });
+
+    const record = recordOf(await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, bundlePath: await withSourceFacts({ style: 'Medium' }) }));
+
+    expect(observation(record, 'font.identity')).toMatchObject({ comparison: 'mismatch', classification: 'system-font-mismatch' });
+    expect(record.inference?.id).toBe('font-identity-mismatch-observed');
+  }, 40_000);
+
+  it('keeps native outcomes and artifacts unchanged', async () => {
+    const without = await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel });
+    const withDiagnostics = await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, bundlePath: await withSourceFacts({ style: 'Medium' }) });
+
+    expect(withDiagnostics.check.status).toBe(without.check.status);
+    expect(withDiagnostics.check.metadata.diffPixels).toBe(without.check.metadata.diffPixels);
+    expect(await fileSha(withDiagnostics, 'visual/inter-label/actual.png')).toBe(await fileSha(without, 'visual/inter-label/actual.png'));
+    expect(recordOf(withDiagnostics).schema).toBe('reflection.text-diagnostics/v1');
+  }, 60_000);
+});
+
 describe('a second, non-Marwes fixture (Lora caption, pinned versioned source)', () => {
   it('works offline with different font, string, theme and identity', async () => {
     const run = await runFixtureCase({ baseUrl: server.baseUrl, spec: loraCaption, withDiagnostics: true });

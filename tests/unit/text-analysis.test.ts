@@ -54,6 +54,8 @@ function observation(part: ReturnType<typeof buildPartRecord>, field: string) {
   return found as NonNullable<typeof found>;
 }
 
+const liveSourceFacts = { scope: 'live-diagnostic' as const, sourceVersion: null };
+
 const failedNative: NativeOutcome = { status: 'fail', classification: 'visual-diff', diffPixels: 76, diffRatio: 0.0074, threshold: { maxDiffPixels: 0 }, unchanged: true };
 
 function experiment(totalDiffPixels: number): ExperimentRecord {
@@ -136,7 +138,8 @@ describe('buildPartRecord', () => {
       const mismatch = observation(buildPartRecord(withoutPostScript, fallback), 'font.identity');
 
       expect(mismatch.comparison).toBe('mismatch');
-      expect(mismatch.note).toContain('fallback or substitution suspected');
+      expect(mismatch).toMatchObject({ classification: 'system-font-mismatch' });
+      expect(mismatch.note).toContain('fallback or substitution is established by the browser');
     });
 
     it('flags a partial fallback when only some glyphs use another font', () => {
@@ -251,3 +254,125 @@ describe('inferCause', () => {
     expect(inferCause({ native: failedNative, parts: [buildPartRecord(sourcePart(), runtime())], experiments: [errored], source: liveSource }).id).toBe('insufficient-evidence');
   });
 });
+
+describe('font identity with CSS family aliases', () => {
+  const instrumentSource = sourcePart({
+    typography: { family: 'Instrument Sans', style: 'Medium', size: 14, weight: 500, axes: { wdth: 100, wght: 500 }, tracking: { unit: 'percent', value: -3 }, lineHeight: { unit: 'px', value: 16 } }
+  });
+  const instrumentFace = { family: 'Instrument Sans', weight: '500', style: 'normal', stretch: 'normal', status: 'loaded' };
+  const page = { fontFaces: [instrumentFace] };
+  const instrumentRuntime = (painted: PartRuntime['platformFonts'], extra: Partial<PartRuntime> = {}) =>
+    runtime({ typography: typography({ fontFamily: '"Instrument Sans", sans-serif' }), platformFonts: painted, ...extra });
+  const instrumentMedium = { familyName: 'Instrument Sans Medium', postScriptName: 'InstrumentSans-Medium', isCustomFont: true, glyphCount: 7 };
+
+  function identity(part: TextSourcePart, painted: PartRuntime['platformFonts'], facts = page) {
+    return buildPartRecord(part, instrumentRuntime(painted), facts);
+  }
+
+  it('does not call a registered web font a fallback because its internal name carries the style (the reported Marwes case)', () => {
+    const record = identity(instrumentSource, [instrumentMedium]);
+    const found = observation(record, 'font.identity');
+
+    expect(found).toMatchObject({ comparison: 'match', classification: 'style-qualified-family-alias' });
+    expect(found.note).toContain('does not establish font-binary identity');
+    expect(found.source).toEqual({ family: 'Instrument Sans', style: 'Medium', postScriptName: null });
+    expect(record.observations.filter((entry) => entry.comparison === 'mismatch').map((entry) => entry.field)).not.toContain('font.identity');
+  });
+
+  it('exposes the evidence behind the classification, including facts that were unavailable', () => {
+    const detail = observation(identity(instrumentSource, [instrumentMedium]), 'font.identity').detail as { cssFirstFamily: string; painted: Array<{ evidence: Array<{ check: string; passed: boolean | null }> }> };
+
+    expect(detail.cssFirstFamily).toBe('Instrument Sans');
+    expect(detail.painted[0]?.evidence).toEqual(
+      expect.arrayContaining([
+        { check: 'painted-font-is-web-font', passed: true },
+        expect.objectContaining({ check: 'css-first-family-equals-source-family', passed: true }),
+        expect.objectContaining({ check: 'loaded-face-registered-under-source-family', passed: true }),
+        { check: 'registered-face-covers-source-weight', passed: true }
+      ])
+    );
+  });
+
+  it('never invents a PostScript name or checksum: both stay unknown and keep the claim weak', () => {
+    const record = identity(instrumentSource, [instrumentMedium]);
+    const inference = inferCause({ native: failedNative, parts: [record], experiments: [experiment(15)], source: { scope: 'pinned', sourceVersion: 'v1' } });
+
+    expect(record.evidence.missing).toContain('source.font-asset-checksum');
+    expect(record.evidence.missing).toContain('source.postscript-name');
+    expect(inference).toMatchObject({ id: 'native-text-vector-rendering-discrepancy-suspected', confidence: 'low' });
+  });
+
+  it('reports uncertainty, not a different-font verdict, when the source has no style to tie the qualifier to', () => {
+    const noStyle = sourcePart({ typography: { ...instrumentSource.typography, style: undefined } });
+    const record = identity(noStyle, [instrumentMedium]);
+    const found = observation(record, 'font.identity');
+
+    expect(found).toMatchObject({ comparison: 'unknown', classification: 'name-extends-source-family' });
+    expect(found.runtime).toEqual([instrumentMedium]);
+    expect(record.evidence.missing).toContain('runtime.font-identity-unestablished');
+    const inference = inferCause({ native: failedNative, parts: [record], experiments: [experiment(15)], source: liveSourceFacts });
+    expect(inference.id).toBe('native-text-vector-rendering-discrepancy-suspected');
+    expect(inference.limitations.join(' ')).toContain('Font names alone did not establish');
+  });
+
+  it('reports uncertainty for a web font whose internal name is unrelated to the source family', () => {
+    const found = observation(identity(instrumentSource, [{ familyName: 'Some Other Face', postScriptName: 'Other-Regular', isCustomFont: true, glyphCount: 7 }]), 'font.identity');
+
+    expect(found).toMatchObject({ comparison: 'unknown', classification: 'name-differs-custom-font' });
+    expect(found.note).toContain('An @font-face rule can register any file under any family');
+  });
+
+  it.each([
+    ['Arial', 'Arial'],
+    ['Helvetica', 'Helvetica'],
+    ['a system serif', 'Times New Roman']
+  ])('still detects a true fallback to %s when the browser reports a non-web font', (_label, familyName) => {
+    const record = identity(instrumentSource, [{ familyName, postScriptName: familyName.replace(/\s/g, ''), isCustomFont: false, glyphCount: 7 }]);
+
+    expect(observation(record, 'font.identity')).toMatchObject({ comparison: 'mismatch', classification: 'system-font-mismatch' });
+    expect(inferCause({ native: failedNative, parts: [record], experiments: [experiment(0)], source: liveSourceFacts }).id).toBe('font-identity-mismatch-observed');
+  });
+
+  it('keeps a wrong style visible', () => {
+    const bold = identity(instrumentSource, [{ familyName: 'Instrument Sans Bold', postScriptName: 'InstrumentSans-Bold', isCustomFont: true, glyphCount: 7 }]);
+
+    expect(observation(bold, 'font.identity')).toMatchObject({ comparison: 'mismatch', classification: 'style-qualifier-conflict' });
+  });
+
+  it('keeps a wrong weight visible even when the name mapping is fine', () => {
+    const record = buildPartRecord(instrumentSource, instrumentRuntime([instrumentMedium], { typography: typography({ fontFamily: '"Instrument Sans"', fontWeight: 700 }) }), page);
+
+    expect(observation(record, 'font.identity').comparison).toBe('match');
+    expect(observation(record, 'font.weight').comparison).toBe('mismatch');
+  });
+
+  it('keeps a conflicting explicit PostScript name visible, and lets an equal one decide', () => {
+    const withPostScript = sourcePart({ typography: { ...instrumentSource.typography, postScriptName: 'InstrumentSans-Medium' } });
+
+    expect(observation(identity(withPostScript, [{ ...instrumentMedium, postScriptName: 'InstrumentSans-Bold' }]), 'font.identity')).toMatchObject({ comparison: 'mismatch', classification: 'postscript-conflict' });
+    expect(observation(identity(withPostScript, [instrumentMedium]), 'font.identity')).toMatchObject({ comparison: 'match', classification: 'postscript-equal' });
+  });
+
+  it('keeps mixed-script fallback visible when several fonts painted the string', () => {
+    const mixed = identity(instrumentSource, [instrumentMedium, { familyName: 'Noto Sans JP', postScriptName: 'NotoSansJP-Regular', isCustomFont: false, glyphCount: 2 }]);
+    const found = observation(mixed, 'font.identity');
+
+    expect(found).toMatchObject({ comparison: 'mismatch', classification: 'system-font-mismatch' });
+    expect(found.note).toContain('2 fonts painted this text');
+    expect((found.detail as { painted: unknown[] }).painted).toHaveLength(2);
+  });
+
+  it('says a web font is unknown, never equivalent, when it extends the family and the source style conflicts with the registered face weight', () => {
+    const lightFace = { family: 'Instrument Sans', weight: '300', style: 'normal', stretch: 'normal', status: 'loaded' };
+    const detail = observation(identity(instrumentSource, [instrumentMedium], { fontFaces: [lightFace] }), 'font.identity').detail as { painted: Array<{ evidence: Array<{ check: string; passed: boolean | null }> }> };
+
+    expect(detail.painted[0]?.evidence).toContainEqual({ check: 'registered-face-covers-source-weight', passed: false });
+  });
+
+  it('treats an exact family match as a family-level match', () => {
+    const exact = identity(sourcePart({ typography: { ...instrumentSource.typography, family: 'Instrument Sans Medium' } }), [instrumentMedium]);
+
+    expect(observation(exact, 'font.identity')).toMatchObject({ comparison: 'match', classification: 'family-equal' });
+  });
+});
+

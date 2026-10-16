@@ -109,7 +109,7 @@ function renderObservations(record: Loose): string {
             <td>${escapeHtml(formatValue(observation.source))} <small>${escapeHtml(observation.sourceBasis)}</small></td>
             <td>${escapeHtml(formatValue(observation.runtime))} <small>${escapeHtml(observation.runtimeBasis)}</small></td>
             <td>${escapeHtml(formatValue(observation.delta))}</td><td>${escapeHtml(formatValue(observation.tolerance))}</td>
-            <td>${escapeHtml(observation.comparison)}</td></tr>`
+            <td>${escapeHtml(observation.comparison)}${observation.classification ? ` <small>${escapeHtml(observation.classification)}</small>` : ''}</td></tr>`
         )
     );
 

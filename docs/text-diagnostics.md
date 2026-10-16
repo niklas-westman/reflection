@@ -151,6 +151,27 @@ An inference is a cautious reading of the evidence, never a verdict.
 | `native-screenshot-passed` | Nothing to explain. |
 | `insufficient-evidence` | A selector did not match exactly one element, no experiment produced a measurement, or the experiment did not clearly help. |
 
+### Font identity
+
+`font.identity` compares the font the browser reports as painted (`CSS.getPlatformFontsForNode`) with the source's `family`, optional `style` and optional `postScriptName`. Names are compared in tiers, because a CSS family and a static font's internal family name are different things: CSS registers a file under `Instrument Sans` while the font's own name table says `Instrument Sans Medium`.
+
+| `classification` | Rule | `comparison` |
+| --- | --- | --- |
+| `postscript-equal` | Source and painted PostScript names are both present and equal. | `match` |
+| `postscript-conflict` | Both present and different. | `mismatch` |
+| `family-equal` | Painted internal family name equals the source family. | `match` |
+| `style-qualified-family-alias` | Painted name equals the source family plus the **source's own** style (for example `Instrument Sans` + `Medium`). | `match` |
+| `style-qualifier-conflict` | Painted name extends the source family with a different qualifier than the source style (`… Bold` against `Medium`). | `mismatch` |
+| `name-extends-source-family` | Painted name extends the family but the source supplies no style to tie the qualifier to. | `unknown` |
+| `name-differs-custom-font` | A page-loaded web font whose internal name is unrelated. An `@font-face` rule can register any file under any family, so substitution is not established. | `unknown` |
+| `system-font-mismatch` | The browser reports a non-web font whose name carries nothing from the source family: fallback or substitution is established by the browser's own report. | `mismatch` |
+
+When several fonts painted the string (mixed-script fallback) every one is judged and the worst result wins, so an emoji or CJK fallback beside a correct Latin font stays visible as a mismatch.
+
+What the rule deliberately does not do: invent a PostScript name or checksum from the font under test, strip weight or style suffixes beyond the source's own declared style, treat a matching name as proof of the authoring font binary, or excuse a real fallback. Wrong weight is still reported by `font.weight`.
+
+`unknown` is reported with the raw names and with the evidence examined (`detail.painted[].evidence`): whether the painted font is a web font, whether the element's first CSS family equals the source family, whether a loaded `FontFace` is registered under the source family, and whether that face covers the source weight. These facts support a reading but never promote an `unknown` to `match`. An `unknown` identity adds `runtime.font-identity-unestablished` to the part's missing evidence, which keeps the inference at `low` confidence and appears in its limitations.
+
 Tolerances: 0.01 css px for typography, 0.05 css px for box geometry, and 0.5 css px for the baseline, because Chromium rounds a font's ascent and descent to whole pixels. Raw deltas are always reported unrounded.
 
 ## The experiments

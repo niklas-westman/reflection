@@ -104,7 +104,7 @@ async function runChecked(input: RunTextDiagnosticsInput, native: NativeOutcome)
     if (!part) {
       throw new Error(`Unknown text part ${configured.id}.`);
     }
-    return buildPartRecord(part, observed.parts.get(configured.id) ?? null);
+    return buildPartRecord(part, observed.parts.get(configured.id) ?? null, observed.page);
   });
 
   const experiments = await runExperiments(input, loaded, experimentContext);

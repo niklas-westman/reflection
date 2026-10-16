@@ -18,6 +18,7 @@ function recordFixture(overrides: Record<string, unknown> = {}): Record<string, 
         id: 'label',
         observations: [
           { field: 'font.size', source: 14, runtime: 14, delta: 0, tolerance: 0.01, comparison: 'match', sourceBasis: 'provided', runtimeBasis: 'computed-style' },
+          { field: 'font.identity', source: { family: 'Instrument Sans', style: 'Medium', postScriptName: null }, runtime: [{ familyName: 'Instrument Sans Medium' }], delta: null, tolerance: null, comparison: 'match', classification: 'style-qualified-family-alias', sourceBasis: 'provided', runtimeBasis: 'cdp-platform-fonts' },
           { field: 'baseline.y', source: 115.00003, runtime: 115, delta: -0.00003, tolerance: 0.5, comparison: 'match', sourceBasis: 'inferred', runtimeBasis: 'observed' }
         ]
       }
@@ -82,6 +83,7 @@ describe('text diagnostics in the HTML report', () => {
     const html = panel(render(recordFixture()));
 
     expect(html).toContain('<small>inferred</small>');
+    expect(html).toContain('<small>style-qualified-family-alias</small>');
     expect(html).toContain('<small>provided</small>');
     expect(html).not.toContain('Approve');
     expect(html).not.toContain('Promote');

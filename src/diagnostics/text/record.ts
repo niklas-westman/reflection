@@ -33,6 +33,9 @@ export interface Observation {
   sourceBasis: FactBasis;
   runtimeBasis: FactBasis;
   note?: string | undefined;
+  // Additive, optional detail for consumers that want it: a graded classification and the evidence behind it.
+  classification?: string | undefined;
+  detail?: Record<string, unknown> | undefined;
 }
 
 export interface PlatformFont {

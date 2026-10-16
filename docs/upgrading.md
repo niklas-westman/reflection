@@ -1,5 +1,14 @@
 # Upgrading
 
+## 0.5.0 to 0.5.1
+
+Corrects how `font.identity` is judged. No config changes, and the record schema id is unchanged (`reflection.text-diagnostics/v1`).
+
+- **Behaviour change.** In 0.5.0, when the source had no PostScript name, the painted font's internal family name was compared with the source family as plain strings. A correctly loaded web font whose internal name carries its style (`Instrument Sans Medium` against the CSS and source family `Instrument Sans`) was reported as `font.identity: mismatch` and `font-identity-mismatch-observed`. 0.5.1 grades the comparison (`docs/text-diagnostics.md`, "Font identity"): a style-qualified alias built from the source's own style is a `match`, an unrelated web-font name is `unknown` with raw names, and a browser-reported system fallback, a conflicting style, a conflicting PostScript name and mixed-script fallback remain `mismatch`.
+- **Additive record fields.** An observation may now carry `classification` and `detail` (the evidence examined). `source` on a `font.identity` observation also reports `style`. Consumers that read only `comparison`, `note`, `source` and `runtime` keep working; their values can differ from 0.5.0 for the alias case above.
+- **Re-run diagnostics** produced by 0.5.0 that reported `font-identity-mismatch-observed` solely because of this naming: the new records replace them. Binding keys include the tool version, so older records are recognisably older.
+- Native screenshot outcomes, artifacts, thresholds and exit codes are unchanged.
+
 ## 0.4.x to 0.5.0
 
 No breaking changes. Projects that do not configure `textDiagnostics` get identical results, thresholds and exit codes.
