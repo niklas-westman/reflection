@@ -299,6 +299,87 @@ describe('font identity with a CSS family alias (real web font)', () => {
   }, 60_000);
 });
 
+describe('capture policy applied to diagnostic sessions', () => {
+  const pulse = (offsetMs: number): PageOverrides => ({
+    extraCss: '@keyframes pulse { 50% { color: #888888; } }',
+    labelStyle: `animation: pulse 700ms linear infinite; animation-delay: -${offsetMs}ms;`
+  });
+  const policy = (animations: 'none' | 'settle') => ({ stabilization: { animations } }) as const;
+  const phases = [0, 175, 350, 525];
+
+  it('applies the same policy to native capture and diagnostic sessions, so an animated label is observed in one state', async () => {
+    for (const offsetMs of phases) {
+      server.setOverrides(interLabel.storyId, pulse(offsetMs));
+
+      const run = await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, caseOverrides: policy('none') });
+      const record = recordOf(run);
+
+      expect(observation(record, 'color').comparison, `phase ${offsetMs}`).toBe('match');
+      expect(record.state).toBe('available');
+    }
+  }, 120_000);
+
+  it('would otherwise observe an arbitrary phase (the same page without a policy)', async () => {
+    const comparisons: string[] = [];
+    for (const offsetMs of phases) {
+      server.setOverrides(interLabel.storyId, pulse(offsetMs));
+      const record = recordOf(await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true }));
+      comparisons.push(observation(record, 'color').comparison);
+    }
+
+    expect(comparisons).toContain('mismatch');
+  }, 120_000);
+
+  it('records the effective policy in the record, its inputs and the diagnostic session', async () => {
+    const run = await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, caseOverrides: policy('settle') });
+    const record = recordOf(run);
+    const checkPolicy = run.check.metadata.capturePolicy as { hash: string };
+
+    expect(checkPolicy.hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(record.inputs?.capture).toMatchObject({ policyHash: checkPolicy.hash, policy: { stabilization: { method: 'web-animations-settle', source: 'case' } } });
+    expect(record.runtime?.capture).toMatchObject({
+      policyHash: checkPolicy.hash,
+      equivalence: 'identical-policy',
+      native: { policyHash: checkPolicy.hash },
+      diagnosticSession: { policyHash: checkPolicy.hash, stabilization: { method: 'web-animations-settle' } }
+    });
+  }, 40_000);
+
+  it('records no capture policy for an unconfigured case', async () => {
+    const record = recordOf(await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true }));
+
+    expect(record.inputs?.capture).toBeNull();
+    expect(record.runtime?.capture).toBeNull();
+  }, 40_000);
+
+  it('stales earlier evidence when the policy changes: the binding key differs for every policy change', async () => {
+    const keyOf = async (caseOverrides: Record<string, unknown>) => recordOf(await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, withDiagnostics: true, runId: 'fixed', caseOverrides })).inputs?.bindingKey;
+
+    const none = await keyOf(policy('none'));
+    expect(await keyOf(policy('none'))).toBe(none);
+    expect(await keyOf(policy('settle'))).not.toBe(none);
+    expect(await keyOf({ stabilization: { animations: 'none', settleMs: 25 } })).not.toBe(none);
+    expect(await keyOf({})).not.toBe(none);
+    expect(none).toMatch(/^[a-f0-9]{64}$/);
+  }, 180_000);
+
+  it('applies a forced interaction to the diagnostic session as well, leaving native outcomes alone', async () => {
+    const baseline = await runFixtureCase({ baseUrl: server.baseUrl, spec: interLabel, caseOverrides: policy('none') });
+    const withDiagnostics = await runFixtureCase({
+      baseUrl: server.baseUrl,
+      spec: interLabel,
+      withDiagnostics: true,
+      caseOverrides: { stabilization: { animations: 'none' }, browserState: { kind: 'hover', selector: '.button' } }
+    });
+    const record = recordOf(withDiagnostics);
+
+    expect(record.runtime?.capture?.diagnosticSession).toMatchObject({ interaction: { kind: 'hover', selector: '.button', matchesHover: true } });
+    expect(record.runtime?.capture?.native).toMatchObject({ interaction: { kind: 'hover', matchesHover: true } });
+    expect(baseline.check.status).toBe('fail');
+    expect(withDiagnostics.check.status).toBe('fail');
+  }, 60_000);
+});
+
 describe('a second, non-Marwes fixture (Lora caption, pinned versioned source)', () => {
   it('works offline with different font, string, theme and identity', async () => {
     const run = await runFixtureCase({ baseUrl: server.baseUrl, spec: loraCaption, withDiagnostics: true });

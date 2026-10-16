@@ -12,6 +12,8 @@ export interface CaseSession {
   page: Page;
   context: BrowserContext;
   fontResponses: FontResponseCollector;
+  // What this session's capture policy established; absent when no policy is declared.
+  capture?: unknown;
   close(): Promise<void>;
 }
 

@@ -166,6 +166,32 @@ describe('doctorCommand', () => {
     expect(output).toContain('Text diagnostics broken: source ./missing/bundle.json, 1 part, bundle invalid: The bundle file does not exist');
   });
 
+  it('prints the effective capture policy for component cases that declare one', async () => {
+    const configPath = await writeConfig(`
+      export default {
+        project: 'capture-fixture',
+        contracts: {
+          component: {
+            storybook: { command: 'x', readyUrl: 'http://127.0.0.1:6006' },
+            cases: [
+              { id: 'pressed', storyId: 'b--p', baseline: 'p.webp', browserState: { kind: 'pressed', selector: '.btn' }, stabilization: { animations: 'settle', settleMs: 20 } },
+              { id: 'legacy-hover', storyId: 'b--h', baseline: 'h.webp', browserState: { kind: 'hover', selector: '.btn', animationStabilization: { disableAnimations: true } } },
+              { id: 'static', storyId: 'b--s', baseline: 's.webp', stabilization: { animations: 'none', verify: false } },
+              { id: 'plain', storyId: 'b--d', baseline: 'd.webp' }
+            ]
+          }
+        }
+      };
+    `);
+
+    const output = await captureDoctor({ config: configPath });
+
+    expect(output).toContain('Capture policy pressed: interaction pressed on .btn, stabilization web-animations-settle (source case, settle 20ms, verify on, 100ms apart)');
+    expect(output).toContain('Capture policy legacy-hover: interaction hover on .btn, stabilization css-none (source browser-state, settle 0ms, verify off)');
+    expect(output).toContain('Capture policy static: interaction none, stabilization css-none (source case, settle 0ms, verify off)');
+    expect(output).not.toContain('Capture policy plain');
+  });
+
   it('summarizes portal component runtime and ready URL', async () => {
     const configPath = await writeConfig(`
       export default {

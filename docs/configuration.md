@@ -406,7 +406,7 @@ Case/runtime rules:
 Pseudo-state policy:
 
 - Prefer runtime-controlled variants for hover, focus, active, selected, open, and disabled states.
-- If a browser-forced state is necessary, configure `browserState` with `kind: 'hover' | 'focus'`, a selector, and effective animation stabilization.
+- If a browser-forced state is necessary, configure `browserState` with `kind: 'hover' | 'focus' | 'pressed'`, a selector, and effective animation stabilization (the legacy `browserState.animationStabilization` or the case-level `stabilization` policy). `pressed` holds a genuine pointer-down through the capture. `stabilization: { animations: 'none' | 'settle' }` also works on cases with no browser state. See `docs/capture-policy.md`.
 - Reflection records `statePolicy` metadata in reports so reviewers can tell whether the state came from the story or was forced in the browser.
 
 ## Print contract

@@ -259,7 +259,7 @@ probes: {
 
 Prefer story-controlled states. A story named `Button/Hover` or `Button/Focused` is usually more deterministic than moving the mouse in the browser.
 
-When the browser must force a state, Reflection requires effective animation stabilization:
+When the browser must force a state (`hover`, `focus` or `pressed`), Reflection requires effective animation stabilization, either as the legacy `browserState.animationStabilization` shown below or as the case-level `stabilization` policy. Pressed holds a real pointer-down through the capture, and `stabilization` also works with no browser state at all to make animated default captures repeatable. See `docs/capture-policy.md`.
 
 ```ts
 {
@@ -281,7 +281,9 @@ Reports include `statePolicy` metadata:
 
 - `story-controlled` when no `browserState` is configured;
 - `portal-controlled` when the generated portal renders the state;
-- `browser-forced-with-stabilization` when Reflection applies hover/focus in the browser.
+- `browser-forced-with-stabilization` when Reflection applies hover, focus or pressed in the browser.
+
+Cases that declare a browser state or stabilization also carry `capturePolicy` and `captureOutcome` metadata.
 
 ## Print page baselines
 

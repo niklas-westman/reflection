@@ -1,5 +1,17 @@
 # Upgrading
 
+## 0.5.x to 0.6.0
+
+No breaking changes. Cases that declare neither a `pressed` state nor `stabilization` are captured exactly as before, with the same metadata, artifacts, thresholds and exit codes.
+
+- **Pressed.** `browserState.kind` now accepts `pressed`, a genuine held pointer-down (`docs/capture-policy.md`). Cases that were `unsupported` for Pressed can be enrolled with `browserState: { kind: 'pressed', selector }` and a `stabilization` policy. An unusable target fails the case explicitly; nothing is captured as a substitute.
+- **Stabilization without an interaction.** New case-level `stabilization: { animations: 'none' | 'settle', settleMs?, verify?, verifyDelayMs? }` works on default, disabled and loading cases. Opt in per case; there is no global default.
+- **`verify` is on by default** for the new policy: the capture is taken twice and must be identical, otherwise the case fails with `capture-stabilization-failed`. This can fail a case that passes today only if you opt in to `stabilization` and the page has motion the policy cannot control. Set `verify: false` to opt out explicitly.
+- **`browserState.animationStabilization` is now optional** when the case has `stabilization`. Existing hover and focus configs are valid and behave exactly as before (no verification, `css-none`, source `browser-state`).
+- **Additive metadata.** Cases that declare a policy gain `metadata.capturePolicy` (with a `hash`) and `metadata.captureOutcome`; failures gain `metadata.captureError`. Evidence captured under a different `capturePolicy.hash` was captured under a different policy and should not be carried forward.
+- **Text diagnostics** apply the same policy to their sessions and add `inputs.capture` and `runtime.capture` to the record. The record schema id is unchanged. `inputs.bindingKey` now also covers the policy, so keys differ from any computed before this release (the tool version is already part of the key, and cases with no policy now include `capture: null`).
+- Existing configs need no changes. To adopt, replace a Pressed-unsupported enrolment with a `pressed` browser state, add `stabilization` to animated default or loading cases, and rerun. Reference images and thresholds are unaffected.
+
 ## 0.5.0 to 0.5.1
 
 Corrects how `font.identity` is judged. No config changes, and the record schema id is unchanged (`reflection.text-diagnostics/v1`).

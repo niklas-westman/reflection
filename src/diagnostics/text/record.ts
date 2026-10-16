@@ -69,6 +69,8 @@ export interface RuntimePageRecord {
   fontFaces: Array<{ family: string; weight: string; style: string; stretch: string; status: string }>;
   // Hashes are of the font files the page downloaded. Which downloaded file painted the text is not established.
   fontResponses: Array<{ url: string; status: number; bytes: number | null; sha256: string | null }>;
+  // The capture policy applied to this session and to the native capture. Null when the case declares none.
+  capture: { policyHash: string; native: unknown; diagnosticSession: unknown; equivalence: 'identical-policy' } | null;
 }
 
 export interface PartRecord {
@@ -145,6 +147,8 @@ export interface NativeOutcome {
 }
 
 export interface TextDiagnosticsInputs {
+  // Effective interaction and stabilization policy; part of bindingKey, so a policy change stales earlier evidence.
+  capture: { policy: unknown; policyHash: string } | null;
   bundleSha256: string;
   referenceSha256: string;
   referenceBinding: 'identical-bytes' | 'identical-pixels';

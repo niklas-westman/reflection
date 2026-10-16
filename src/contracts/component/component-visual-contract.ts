@@ -5,6 +5,10 @@ import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
 import type { CheckDiagnostic, CheckResult, DiagnosticEvidence, FailureClass } from '../../core/report-schema.js';
 import type { ServerConfig } from '../../core/server-manager.js';
+import { CaptureStateError } from './capture-errors.js';
+import { resolveCapturePolicy, type CapturePolicy, type CaseStabilizationConfig, type EffectiveInteraction } from './capture-policy.js';
+import { pressTarget, type PressedEvidence, type PressedHandle, type ReleaseEvidence } from './pressed-interaction.js';
+import { installPreInteractionStabilization, settleAfterInteraction, verifyStableCapture, type SettleEvidence, type VerificationEvidence } from './stabilization.js';
 import { createBrowserContext, resolveViewport, type ViewportSize } from '../../integrations/playwright/context-factory.js';
 import type { TextDiagnosticsRecord } from '../../diagnostics/text/record.js';
 import { createFontResponseCollector } from '../../diagnostics/text/runtime-observation.js';
@@ -33,17 +37,21 @@ export type ComponentVisualCase = {
   strict?: boolean | undefined;
   stateNote?: string | undefined;
   browserState?: ComponentBrowserState | undefined;
+  stabilization?: CaseStabilizationConfig | undefined;
   probes?: ComponentProbes | undefined;
   textDiagnostics?: TextDiagnosticsCaseConfig | undefined;
 };
 
 export type ComponentBrowserState = {
-  kind: 'hover' | 'focus';
+  kind: 'hover' | 'focus' | 'pressed';
   selector: string;
-  animationStabilization: {
-    disableAnimations?: boolean | undefined;
-    waitMs?: number | undefined;
-  };
+  position?: { x: number; y: number } | undefined;
+  animationStabilization?:
+    | {
+        disableAnimations?: boolean | undefined;
+        waitMs?: number | undefined;
+      }
+    | undefined;
 };
 
 export type ComponentFraming = {
@@ -195,6 +203,7 @@ async function runComponentVisualCase(input: {
   const baselinePath = resolveCaseBaselinePath(input.visualCase);
   const blocking = input.visualCase.blocking === true || input.visualCase.strict === true;
   const strict = input.visualCase.strict === true || input.visualCase.blocking === true;
+  const capturePolicy = resolveCapturePolicy({ browserState: input.visualCase.browserState, stabilization: input.visualCase.stabilization });
 
   if (!(await pathExists(baselinePath))) {
     return createMissingBaselineCheck({
@@ -204,7 +213,8 @@ async function runComponentVisualCase(input: {
       blocking,
       metadata: {
         ...createComponentSourceMetadata(input),
-        ...createComponentMetadata(input.visualCase, input.componentSource)
+        ...createComponentMetadata(input.visualCase, input.componentSource),
+        ...(capturePolicy ? { capturePolicy } : {})
       }
     });
   }
@@ -222,7 +232,7 @@ async function runComponentVisualCase(input: {
       viewport,
       viewportSize,
       framing: resolveComponentFraming(input.visualCase.framing, input.componentSource),
-      browserState: input.visualCase.browserState,
+      capturePolicy,
       probes: input.visualCase.probes
     });
     const actualArtifact = capture.artifact;
@@ -252,19 +262,30 @@ async function runComponentVisualCase(input: {
           diffArtifact,
           caseViewport: resolveViewport(viewport, viewportSize),
           browser: input.browser,
+          capture: capturePolicy ? { policy: capturePolicy, nativeOutcome: capture.outcome } : undefined,
           openCaseSession: async () => {
             const fontResponses = createFontResponseCollector();
-            const { context, page } = await openComponentPage({
+            const opened = await openComponentPage({
               browser: input.browser,
               targetUrl: input.targetUrl,
               componentSource: input.componentSource,
               viewport,
               viewportSize,
               framing: resolveComponentFraming(input.visualCase.framing, input.componentSource),
-              browserState: input.visualCase.browserState,
-              onPage: (opened) => fontResponses.attach(opened)
+              capturePolicy,
+              onPage: (page) => fontResponses.attach(page)
             });
-            return { page, context, fontResponses, close: () => context.close() };
+            // The same policy as the native capture, applied by the same code, so both describe one state.
+            return {
+              page: opened.page,
+              context: opened.context,
+              fontResponses,
+              capture: opened.outcome,
+              close: async () => {
+                await opened.release();
+                await opened.context.close();
+              }
+            };
           },
           store: input.store,
           artifactBase
@@ -293,6 +314,7 @@ async function runComponentVisualCase(input: {
         baselinePath: input.visualCase.baseline,
         ...createComponentMetadata(input.visualCase, input.componentSource),
         ...(capture.runtimeProbes ? { runtimeProbes: capture.runtimeProbes } : {}),
+        ...(capturePolicy ? { capturePolicy, captureOutcome: capture.outcome } : {}),
         ...(textDiagnostics ? { textDiagnostics: textDiagnostics.record } : {}),
         ...(failureClass ? { failureClass } : {})
       },
@@ -305,7 +327,9 @@ async function runComponentVisualCase(input: {
         : { suggestedNextStep: 'Inspect expected, actual, and diff artifacts. If intentional, update only this component visual baseline.' })
     };
   } catch (error) {
+    const captureError = error instanceof CaptureStateError ? error : undefined;
     const summary = `${input.visualCase.id} component visual capture failed: ${error instanceof Error ? error.message : String(error)}`;
+    const failureClass = input.componentSource === 'portal' ? 'adapter-fixture-mismatch' : 'tool-error';
     return {
       id: `visual.${input.visualCase.id}`,
       suite: 'visual',
@@ -314,25 +338,34 @@ async function runComponentVisualCase(input: {
       severity: blocking ? 'blocking' : 'review',
       summary,
       artifacts: [expectedArtifact],
-      failureClass: input.componentSource === 'portal' ? 'adapter-fixture-mismatch' : 'tool-error',
+      failureClass,
       confidence: 0.9,
       diagnostics: [
         {
-          kind: 'component-capture-error',
+          kind: captureError ? 'component-capture-state-error' : 'component-capture-error',
           severity: 'error',
-          message: summary
+          message: summary,
+          ...(captureError ? { evidence: [{ kind: captureError.code, summary: captureError.message, data: captureError.evidence }] } : {})
         }
       ],
-      recommendations: ['Fix the component visual runtime setup, then rerun Reflection.'],
+      recommendations: [
+        captureError
+          ? 'The declared capture policy could not be established, so nothing was captured as a substitute. Fix the fixture or the policy, then rerun Reflection.'
+          : 'Fix the component visual runtime setup, then rerun Reflection.'
+      ],
       metadata: {
-        classification: 'tool-error',
-        failureClass: input.componentSource === 'portal' ? 'adapter-fixture-mismatch' : 'tool-error',
+        classification: captureError?.classification ?? 'tool-error',
+        failureClass,
+        ...(captureError ? { captureError: { code: captureError.code, classification: captureError.classification, evidence: captureError.evidence } } : {}),
         ...createComponentSourceMetadata(input),
         viewport,
         baselinePath: input.visualCase.baseline,
-        ...createComponentMetadata(input.visualCase, input.componentSource)
+        ...createComponentMetadata(input.visualCase, input.componentSource),
+        ...(capturePolicy ? { capturePolicy } : {})
       },
-      suggestedNextStep: 'Fix the component visual runtime setup, then rerun Reflection.'
+      suggestedNextStep: captureError
+        ? 'Fix the fixture or the capture policy so the declared state can be established, then rerun.'
+        : 'Fix the component visual runtime setup, then rerun Reflection.'
     };
   }
 }
@@ -344,12 +377,27 @@ interface ComponentPageInput {
   viewport: string;
   viewportSize?: ViewportSize | undefined;
   framing?: EffectiveComponentFraming | undefined;
-  browserState?: ComponentBrowserState | undefined;
+  capturePolicy?: CapturePolicy | undefined;
   // Runs before navigation so listeners (for example font responses) see the first load.
   onPage?: ((page: Page) => void) | undefined;
 }
 
-// Opens the component in its own context in exactly the state that gets screenshotted: framing and forced browser state included.
+export type InteractionEvidence =
+  | PressedEvidence
+  | { kind: 'hover'; selector: string; matchesHover: boolean | null }
+  | { kind: 'focus'; selector: string; focused: boolean | null };
+
+export interface CaptureOutcome {
+  policyHash: string;
+  interaction: InteractionEvidence | null;
+  stabilization: SettleEvidence | null;
+  verification: VerificationEvidence | null;
+  release: ReleaseEvidence | null;
+}
+
+// Opens the component in its own context in exactly the state that gets screenshotted. Native capture, probes and
+// text-diagnostic sessions all come through here, so one policy is applied by one piece of code.
+// The caller must call release() (a no-op unless a pointer is held) before closing the context.
 function createTextDiagnosticsSummary(record: TextDiagnosticsRecord): CheckDiagnostic {
   const headline = record.inference ? record.inference.summary : record.reasons[0]?.message ?? 'No diagnostic evidence was produced.';
   return {
@@ -368,6 +416,7 @@ function createTextDiagnosticsSummary(record: TextDiagnosticsRecord): CheckDiagn
 
 async function openComponentPage(input: ComponentPageInput) {
   const context = await createBrowserContext(input.browser, input.viewport, input.viewportSize);
+  let pressed: PressedHandle | undefined;
   try {
     const page = await context.newPage();
     input.onPage?.(page);
@@ -382,11 +431,34 @@ async function openComponentPage(input: ComponentPageInput) {
     } else if (input.framing) {
       await applyComponentFraming(page, input.framing);
     }
-    if (input.browserState) {
-      await applyBrowserState(page, input.browserState);
+
+    const policy = input.capturePolicy;
+    const outcome: CaptureOutcome = { policyHash: policy?.hash ?? '', interaction: null, stabilization: null, verification: null, release: null };
+    if (policy?.stabilization) {
+      await installPreInteractionStabilization(page, policy.stabilization);
     }
-    return { context, page };
+    if (policy?.interaction) {
+      const applied = await applyInteraction(page, policy.interaction);
+      outcome.interaction = applied.evidence;
+      pressed = applied.pressed;
+    }
+    if (policy?.stabilization) {
+      outcome.stabilization = await settleAfterInteraction(page, policy.stabilization);
+    }
+
+    const held = pressed;
+    return {
+      context,
+      page,
+      outcome,
+      release: async (): Promise<ReleaseEvidence | null> => {
+        const evidence = held ? await held.release() : null;
+        outcome.release = evidence;
+        return evidence;
+      }
+    };
   } catch (error) {
+    await pressed?.release();
     await context.close();
     throw error;
   }
@@ -399,13 +471,19 @@ async function captureComponentScreenshot(
     probes?: ComponentProbes | undefined;
   }
 ) {
-  const { context, page } = await openComponentPage(input);
+  const opened = await openComponentPage(input);
   try {
-    const runtimeProbes = input.probes ? await collectRuntimeProbes(page, input.probes) : undefined;
-    const artifact = await input.store.writeBuffer(input.path, await page.screenshot());
-    return { artifact, ...(runtimeProbes ? { runtimeProbes } : {}) };
+    const runtimeProbes = input.probes ? await collectRuntimeProbes(opened.page, input.probes) : undefined;
+    const png = await opened.page.screenshot();
+    const stabilization = input.capturePolicy?.stabilization;
+    if (stabilization?.verify) {
+      opened.outcome.verification = await verifyStableCapture(opened.page, png, stabilization, undefined);
+    }
+    const artifact = await input.store.writeBuffer(input.path, png);
+    return { artifact, outcome: opened.outcome, ...(runtimeProbes ? { runtimeProbes } : {}) };
   } finally {
-    await context.close();
+    await opened.release();
+    await opened.context.close();
   }
 }
 
@@ -542,20 +620,25 @@ async function assertPortalFrameDimensions(page: Page, viewportSize: ViewportSiz
   }
 }
 
-async function applyBrowserState(page: Page, browserState: ComponentBrowserState): Promise<void> {
-  if (browserState.animationStabilization.disableAnimations !== false) {
-    await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; }' });
+async function applyInteraction(page: Page, interaction: EffectiveInteraction): Promise<{ evidence: InteractionEvidence; pressed?: PressedHandle }> {
+  const locator = page.locator(interaction.selector);
+  if (interaction.kind === 'pressed') {
+    const pressed = await pressTarget(page, interaction);
+    return { evidence: pressed.evidence, pressed };
   }
 
-  if (browserState.kind === 'hover') {
-    await page.locator(browserState.selector).hover();
-  } else {
-    await page.locator(browserState.selector).focus();
+  const centred = interaction.position.x === 0.5 && interaction.position.y === 0.5;
+  if (interaction.kind === 'hover') {
+    const box = centred ? undefined : await locator.boundingBox();
+    // Centred hover keeps Playwright's default point, exactly as before pointer positions were configurable.
+    await locator.hover(box ? { position: { x: box.width * interaction.position.x, y: box.height * interaction.position.y } } : undefined);
+    const matchesHover = await locator.evaluate((target) => target.matches(':hover')).catch(() => null);
+    return { evidence: { kind: 'hover', selector: interaction.selector, matchesHover } };
   }
 
-  if (browserState.animationStabilization.waitMs && browserState.animationStabilization.waitMs > 0) {
-    await page.waitForTimeout(browserState.animationStabilization.waitMs);
-  }
+  await locator.focus();
+  const focused = await locator.evaluate((target) => target === document.activeElement).catch(() => null);
+  return { evidence: { kind: 'focus', selector: interaction.selector, focused } };
 }
 
 function createComponentStateMetadata(visualCase: ComponentVisualCase, componentSource: ComponentSource): Record<string, unknown> {

@@ -1,6 +1,7 @@
 import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { CommanderError } from 'commander';
+import { resolveCapturePolicy } from '../contracts/component/capture-policy.js';
 import { loadTextSource, TextDiagnosticsInputError } from '../diagnostics/text/bundle-loader.js';
 import { loadReflectionConfig, type ReflectionConfig } from '../core/config.js';
 import { ExitCode } from '../core/exit-codes.js';
@@ -123,6 +124,7 @@ function printConfigSummary(config: ReflectionConfig, serverReachability: string
   if (component) {
     const runtime = describeComponentRuntime(component);
     console.log(`Component contract: ${component.enabled === false ? 'disabled' : 'enabled'}, ${formatCount(component.cases.length, 'case')}, runtime ${runtime}`);
+    printCapturePolicies(component);
     if (component.portal) {
       console.log(`Component portal: readyUrl ${component.portal.readyUrl}, reuseExisting ${component.portal.reuseExisting}, timeoutMs ${component.portal.timeoutMs}`);
     }
@@ -193,6 +195,21 @@ function printContextSetup(label: string, setup: DoctorBrowserConfig['setup']): 
 
   if (parts.length > 0) {
     console.log(`${label} environment: ${parts.join(', ')}`);
+  }
+}
+
+function printCapturePolicies(component: NonNullable<ReflectionConfig['contracts']['component']>): void {
+  for (const visualCase of component.cases) {
+    const policy = resolveCapturePolicy({ browserState: visualCase.browserState, stabilization: visualCase.stabilization });
+    if (!policy) {
+      continue;
+    }
+
+    const interaction = policy.interaction ? `${policy.interaction.kind} on ${policy.interaction.selector}` : 'none';
+    const stabilization = policy.stabilization
+      ? `${policy.stabilization.method} (source ${policy.stabilization.source}, settle ${policy.stabilization.settleMs}ms, verify ${policy.stabilization.verify ? `on, ${policy.stabilization.verifyDelayMs}ms apart` : 'off'})`
+      : 'none';
+    console.log(`Capture policy ${visualCase.id}: interaction ${interaction}, stabilization ${stabilization}, hash ${policy.hash.slice(0, 12)}`);
   }
 }
 

@@ -873,3 +873,53 @@ describe('component textDiagnostics config', () => {
   });
 });
 
+describe('component capture policy config (Pressed and stabilization)', () => {
+  function caseConfig(extra: Record<string, unknown>) {
+    return {
+      project: 'capture-policy-fixture',
+      contracts: {
+        component: {
+          storybook: { command: 'x', readyUrl: 'http://127.0.0.1:6006' },
+          cases: [{ id: 'button', storyId: 'button--primary', baseline: 'button.webp', ...extra }]
+        }
+      }
+    };
+  }
+
+  it('accepts a pressed state with a case-level stabilization policy and no legacy animationStabilization', () => {
+    const config = validateReflectionConfig(
+      caseConfig({ browserState: { kind: 'pressed', selector: '.btn', position: { x: 0.25, y: 0.75 } }, stabilization: { animations: 'settle', settleMs: 30, verify: true, verifyDelayMs: 50 } })
+    );
+
+    expect(config.contracts.component?.cases[0]).toMatchObject({
+      browserState: { kind: 'pressed', selector: '.btn', position: { x: 0.25, y: 0.75 } },
+      stabilization: { animations: 'settle', settleMs: 30, verify: true, verifyDelayMs: 50 }
+    });
+  });
+
+  it('accepts stabilization on a case with no browser state', () => {
+    expect(validateReflectionConfig(caseConfig({ stabilization: { animations: 'none' } })).contracts.component?.cases[0]?.stabilization).toEqual({ animations: 'none' });
+  });
+
+  it('keeps legacy hover and focus configs valid exactly as before', () => {
+    for (const kind of ['hover', 'focus']) {
+      expect(() => validateReflectionConfig(caseConfig({ browserState: { kind, selector: '.btn', animationStabilization: { disableAnimations: true } } }))).not.toThrow();
+    }
+  });
+
+  it.each(['hover', 'focus', 'pressed'])('still requires effective stabilization for a forced %s state', (kind) => {
+    expect(() => validateReflectionConfig(caseConfig({ browserState: { kind, selector: '.btn' } }))).toThrow(/require effective animation stabilization/);
+    expect(() => validateReflectionConfig(caseConfig({ browserState: { kind, selector: '.btn', animationStabilization: { disableAnimations: false, waitMs: 0 } } }))).toThrow(/effective animation stabilization/);
+  });
+
+  it('rejects a pointer position on focus, out-of-range fractions and unknown stabilization keys', () => {
+    const stabilization = { animations: 'none' };
+    expect(() => validateReflectionConfig(caseConfig({ browserState: { kind: 'focus', selector: '.b', position: { x: 0.5, y: 0.5 } }, stabilization }))).toThrow(/focus has no pointer position/);
+    expect(() => validateReflectionConfig(caseConfig({ browserState: { kind: 'pressed', selector: '.b', position: { x: 1.5, y: 0.5 } }, stabilization }))).toThrow(/Invalid Reflection config/);
+    expect(() => validateReflectionConfig(caseConfig({ stabilization: { animations: 'freeze' } }))).toThrow(/Invalid Reflection config/);
+    expect(() => validateReflectionConfig(caseConfig({ stabilization: { animations: 'none', pause: true } }))).toThrow(/pause/);
+    expect(() => validateReflectionConfig(caseConfig({ stabilization: { animations: 'none', settleMs: 99_999 } }))).toThrow(/Invalid Reflection config/);
+    expect(() => validateReflectionConfig(caseConfig({ stabilization: {} }))).toThrow(/Invalid Reflection config/);
+  });
+});
+

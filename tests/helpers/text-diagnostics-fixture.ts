@@ -76,6 +76,8 @@ export interface PageOverrides {
   labelStyle?: string;
   // Unregistered family used instead of the fixture font, to force a fallback.
   omitFontFace?: boolean;
+  // Extra stylesheet text, for example keyframes.
+  extraCss?: string;
 }
 
 export function componentHtml(spec: FixtureSpec, overrides: PageOverrides = {}): string {
@@ -92,6 +94,7 @@ export function componentHtml(spec: FixtureSpec, overrides: PageOverrides = {}):
   <meta charset="utf-8">
   <style>
     ${fontFace}
+    ${overrides.extraCss ?? ''}
     html, body { margin: 0; width: ${spec.frame.width}px; height: ${spec.frame.height}px; background: ${spec.colors.background}; overflow: hidden; }
     #storybook-root { position: relative; width: ${spec.frame.width}px; height: ${spec.frame.height}px; }
     .button { position: absolute; left: ${spec.button.x}px; top: ${spec.button.y}px; width: ${spec.button.width}px; height: ${spec.button.height}px; border: 0; padding: 0; border-radius: ${spec.button.radius}px; background: ${spec.colors.button}; display: flex; align-items: center; justify-content: center; }

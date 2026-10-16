@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { canonicalJson } from '../../core/canonical-json.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Browser } from 'playwright';
@@ -53,6 +54,8 @@ export interface RunTextDiagnosticsInput {
   caseViewport: { width: number; height: number };
   browser: Browser;
   openCaseSession: () => Promise<CaseSession>;
+  // The effective capture policy and what the native capture established. Diagnostic sessions apply the same policy.
+  capture?: { policy: { hash: string }; nativeOutcome: unknown } | undefined;
   store: ArtifactStore;
   artifactBase: string;
 }
@@ -129,7 +132,7 @@ async function runChecked(input: RunTextDiagnosticsInput, native: NativeOutcome)
     nativeOutcome: native,
     source: describeSource(loaded),
     inputs,
-    runtime: observed.page,
+    runtime: { ...observed.page, capture: describeCapture(input, observed.sessionCapture) },
     parts: partRecords,
     experiments: experimentRecords,
     inference,
@@ -204,6 +207,7 @@ async function observeParts(input: RunTextDiagnosticsInput) {
     return {
       parts: observed.parts,
       page: observed.page,
+      sessionCapture: session.capture ?? null,
       browser: { name: input.browser.browserType().name(), version: input.browser.version() }
     };
   } finally {
@@ -284,6 +288,7 @@ function createInputs(
   browser: { name: string; version: string }
 ): TextDiagnosticsInputs {
   const withoutKey = {
+    capture: input.capture ? { policy: input.capture.policy, policyHash: input.capture.policy.hash } : null,
     bundleSha256: loaded.bundleSha256,
     referenceSha256: loaded.bundle.reference.sha256,
     referenceBinding,
@@ -302,6 +307,14 @@ function createInputs(
     }
   };
   return { ...withoutKey, bindingKey: sha256(canonicalJson({ runId: input.runId, caseId: input.caseId, ...withoutKey })) };
+}
+
+function describeCapture(input: RunTextDiagnosticsInput, sessionOutcome: unknown): NonNullable<TextDiagnosticsRecord['runtime']>['capture'] {
+  if (!input.capture) {
+    return null;
+  }
+
+  return { policyHash: input.capture.policy.hash, native: input.capture.nativeOutcome, diagnosticSession: sessionOutcome, equivalence: 'identical-policy' };
 }
 
 function describeSource(loaded: LoadedTextSource): NonNullable<TextDiagnosticsRecord['source']> {
@@ -389,17 +402,4 @@ function toArtifactRef(artifact: RecordArtifact): ArtifactRef {
 
 function sha256(bytes: Buffer | string): string {
   return createHash('sha256').update(bytes).digest('hex');
-}
-
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(',')}]`;
-  }
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, entry]) => entry !== undefined)
-      .sort(([a], [b]) => (a < b ? -1 : 1));
-    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
 }

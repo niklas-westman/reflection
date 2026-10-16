@@ -40,7 +40,7 @@ pnpm pack
 From the consuming repository:
 
 ```bash
-pnpm add -D /absolute/path/to/reflection/reflection-check-0.5.1.tgz
+pnpm add -D /absolute/path/to/reflection/reflection-check-0.6.0.tgz
 pnpm exec reflection doctor
 ```
 

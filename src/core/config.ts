@@ -197,24 +197,43 @@ const LifecycleHookSchema = z.strictObject({
   artifacts: z.array(LifecycleArtifactSchema).default([])
 });
 
+const PointerPositionSchema = z.strictObject({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
+
 const ComponentBrowserStateSchema = z
   .strictObject({
-    kind: z.enum(['hover', 'focus']),
+    kind: z.enum(['hover', 'focus', 'pressed']),
     selector: z.string().min(1),
-    animationStabilization: z.strictObject({
-      disableAnimations: z.boolean().optional(),
-      waitMs: z.number().int().nonnegative().max(5_000).optional()
-    })
+    // Where the pointer lands, as fractions of the target box. Hover and pressed only; defaults to the centre.
+    position: PointerPositionSchema.optional(),
+    animationStabilization: z
+      .strictObject({
+        disableAnimations: z.boolean().optional(),
+        waitMs: z.number().int().nonnegative().max(5_000).optional()
+      })
+      .optional()
   })
   .superRefine((value, context) => {
-    if (value.animationStabilization.disableAnimations !== true && (value.animationStabilization.waitMs ?? 0) <= 0) {
+    if (value.animationStabilization && value.animationStabilization.disableAnimations !== true && (value.animationStabilization.waitMs ?? 0) <= 0) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['animationStabilization'],
         message: 'browser-forced pseudo states require effective animation stabilization'
       });
     }
+
+    if (value.position && value.kind === 'focus') {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['position'], message: 'focus has no pointer position; position applies to hover and pressed' });
+    }
   });
+
+const CaptureStabilizationSchema = z.strictObject({
+  // none: CSS animations and transitions removed (base state). settle: Web Animations finished or cancelled after the interaction.
+  animations: z.enum(['none', 'settle']),
+  settleMs: z.number().int().nonnegative().max(5_000).optional(),
+  // Capture twice and require identical pixels; on by default so unstabilized motion fails explicitly.
+  verify: z.boolean().optional(),
+  verifyDelayMs: z.number().int().nonnegative().max(2_000).optional()
+});
 
 const TextDiagnosticsSchema = z
   .strictObject({
@@ -250,6 +269,7 @@ const ComponentVisualCaseSchema = z
     strict: z.boolean().optional(),
     stateNote: z.string().min(1).optional(),
     browserState: ComponentBrowserStateSchema.optional(),
+    stabilization: CaptureStabilizationSchema.optional(),
     probes: ComponentProbesSchema.optional(),
     textDiagnostics: TextDiagnosticsSchema.optional()
   })
@@ -275,6 +295,14 @@ const ComponentVisualCaseSchema = z
         code: z.ZodIssueCode.custom,
         path: ['viewportSize'],
         message: 'portal component visual cases require viewportSize'
+      });
+    }
+
+    if (value.browserState && !value.browserState.animationStabilization && !value.stabilization) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['browserState', 'animationStabilization'],
+        message: 'browser-forced pseudo states require effective animation stabilization (set browserState.animationStabilization or the case stabilization policy)'
       });
     }
   });
