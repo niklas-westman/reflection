@@ -142,6 +142,30 @@ describe('doctorCommand', () => {
     expect(output).toContain('Route my-work environment: clock 2026-10-03T09:00:00+02:00, locale sv-SE');
   });
 
+  it('validates configured text diagnostics bundles offline and reports their state', async () => {
+    const fixtureBundle = join(process.cwd(), 'tests/fixtures/text-diagnostics/inter-label/bundle.json');
+    const configPath = await writeConfig(`
+      export default {
+        project: 'text-fixture',
+        contracts: {
+          component: {
+            storybook: { command: 'x', readyUrl: 'http://127.0.0.1:6006' },
+            cases: [
+              { id: 'refresh', storyId: 'button--refresh', baseline: 'refresh.webp', textDiagnostics: { source: ${JSON.stringify(fixtureBundle)}, parts: [{ id: 'refresh-label', selector: '.label' }] } },
+              { id: 'broken', storyId: 'button--broken', baseline: 'broken.webp', textDiagnostics: { source: './missing/bundle.json', parts: [{ id: 'a', selector: '.a' }] } }
+            ]
+          }
+        }
+      };
+    `);
+
+    const output = await captureDoctor({ config: configPath });
+
+    expect(output).toContain('Text diagnostics refresh:');
+    expect(output).toContain('1 part, bundle valid (live-diagnostic, version unknown, identity caller-attested, 2 outlines)');
+    expect(output).toContain('Text diagnostics broken: source ./missing/bundle.json, 1 part, bundle invalid: The bundle file does not exist');
+  });
+
   it('summarizes portal component runtime and ready URL', async () => {
     const configPath = await writeConfig(`
       export default {

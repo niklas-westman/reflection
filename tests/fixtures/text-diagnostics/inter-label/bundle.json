@@ -1,0 +1,117 @@
+{
+  "schema": "reflection.text-source/v1",
+  "source": {
+    "id": "fixture:inter-label",
+    "scope": "live-diagnostic",
+    "sourceVersion": null,
+    "document": {
+      "id": null,
+      "name": "Fixture document A"
+    },
+    "fileIdentity": {
+      "reportedId": null,
+      "attestedId": "fixture-file-a",
+      "verification": "caller-attested"
+    },
+    "receipt": {
+      "id": "receipt-inter-label",
+      "kind": "caller-attestation"
+    },
+    "capturedAt": "2026-10-16T00:00:00.000Z",
+    "exportSettings": {
+      "generator": "scripts/generate-text-fixtures.mjs",
+      "outlinedText": true
+    }
+  },
+  "context": {
+    "theme": "dark",
+    "adapter": "fixture-html"
+  },
+  "viewport": {
+    "width": 160,
+    "height": 64,
+    "deviceScaleFactor": 1
+  },
+  "reference": {
+    "id": "reference",
+    "role": "reference",
+    "path": "reference/reference.webp",
+    "mediaType": "image/webp",
+    "bytes": 686,
+    "sha256": "4ec7c9859a0a5dc3ebc9b7ded06228009d7d92931cbd361ac90025ddab6d16a3"
+  },
+  "outlines": [
+    {
+      "id": "frame",
+      "role": "outlined-source",
+      "path": "source/frame.svg",
+      "mediaType": "image/svg+xml",
+      "bytes": 3371,
+      "sha256": "42ca01a7952723547681e2955ad79f98f80678e79f1fb9209d1f4f03fd6cd35f",
+      "kind": "frame",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 160,
+        "height": 64
+      }
+    },
+    {
+      "id": "label",
+      "role": "outlined-source",
+      "path": "source/label.svg",
+      "mediaType": "image/svg+xml",
+      "bytes": 3260,
+      "sha256": "8a3c3687e31a358201c3f6541741810b4d9cdfb26c8fcd0603d6ee9a7c3314bc",
+      "kind": "text-outline",
+      "bounds": {
+        "x": 55.595977,
+        "y": 24,
+        "width": 48.808047,
+        "height": 16
+      },
+      "partIds": [
+        "refresh-label"
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "id": "refresh-label",
+      "expectedText": "Refresh",
+      "layerName": "label",
+      "box": {
+        "x": 55.595977,
+        "y": 24,
+        "width": 48.808047,
+        "height": 16,
+        "basis": "observed"
+      },
+      "baseline": {
+        "y": 37.092773,
+        "basis": "inferred"
+      },
+      "transform": null,
+      "typography": {
+        "family": "Inter",
+        "postScriptName": "Inter-Medium",
+        "size": 14,
+        "weight": 500,
+        "tracking": {
+          "unit": "percent",
+          "value": -3
+        },
+        "lineHeight": {
+          "unit": "px",
+          "value": 16
+        },
+        "direction": "ltr",
+        "color": "#ffffff"
+      },
+      "fontAsset": {
+        "sha256": null,
+        "note": "The authoring-font binary is not independently known."
+      }
+    }
+  ]
+}

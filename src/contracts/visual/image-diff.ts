@@ -246,7 +246,7 @@ function analyzeVisualDiff(expected: RgbaImage, actual: RgbaImage, diff: PNG, di
   };
 }
 
-function isPixelmatchDiffPixel(data: Buffer, offset: number): boolean {
+export function isPixelmatchDiffPixel(data: Buffer, offset: number): boolean {
   const red = data[offset] ?? 0;
   const green = data[offset + 1] ?? 0;
   const blue = data[offset + 2] ?? 0;

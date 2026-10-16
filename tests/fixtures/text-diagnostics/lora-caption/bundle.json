@@ -1,0 +1,116 @@
+{
+  "schema": "reflection.text-source/v1",
+  "source": {
+    "id": "fixture:lora-caption",
+    "scope": "pinned",
+    "sourceVersion": "fixture-2026-10-16",
+    "document": {
+      "id": "fixture-doc-b",
+      "name": "Fixture document B"
+    },
+    "fileIdentity": {
+      "reportedId": "fixture-file-b",
+      "attestedId": null,
+      "verification": "reported"
+    },
+    "receipt": {
+      "id": "receipt-lora-caption",
+      "kind": "export-receipt"
+    },
+    "capturedAt": "2026-10-16T00:00:00.000Z",
+    "exportSettings": {
+      "generator": "scripts/generate-text-fixtures.mjs",
+      "outlinedText": true
+    }
+  },
+  "context": {
+    "theme": "paper"
+  },
+  "viewport": {
+    "width": 200,
+    "height": 72,
+    "deviceScaleFactor": 1
+  },
+  "reference": {
+    "id": "reference",
+    "role": "reference",
+    "path": "reference/reference.webp",
+    "mediaType": "image/webp",
+    "bytes": 960,
+    "sha256": "8e6f21ee1a353d6cfec5ee87b1d62b2d4a249a5ea0b8ea3e8e75f92ff21ac79d"
+  },
+  "outlines": [
+    {
+      "id": "frame",
+      "role": "outlined-source",
+      "path": "source/frame.svg",
+      "mediaType": "image/svg+xml",
+      "bytes": 7366,
+      "sha256": "9609b68332e41dfbc68c70db016c0c84e95f96b7998acbc20ba873298513b14e",
+      "kind": "frame",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 200,
+        "height": 72
+      }
+    },
+    {
+      "id": "label",
+      "role": "outlined-source",
+      "path": "source/label.svg",
+      "mediaType": "image/svg+xml",
+      "bytes": 7250,
+      "sha256": "b17ebcd18eb40b747b4166526be5c06c4d893c1e9dfe838e807b8bc6418e2cb9",
+      "kind": "text-outline",
+      "bounds": {
+        "x": 61.2,
+        "y": 24,
+        "width": 77.6,
+        "height": 24
+      },
+      "partIds": [
+        "send-caption"
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "id": "send-caption",
+      "expectedText": "Skicka åäö",
+      "layerName": "label",
+      "box": {
+        "x": 61.2,
+        "y": 24,
+        "width": 77.6,
+        "height": 24,
+        "basis": "observed"
+      },
+      "baseline": {
+        "y": 41.856,
+        "basis": "inferred"
+      },
+      "transform": null,
+      "typography": {
+        "family": "Lora",
+        "postScriptName": "Lora-Regular",
+        "size": 16,
+        "weight": 400,
+        "tracking": {
+          "unit": "percent",
+          "value": 0
+        },
+        "lineHeight": {
+          "unit": "px",
+          "value": 24
+        },
+        "direction": "ltr",
+        "color": "#fbf8f1"
+      },
+      "fontAsset": {
+        "sha256": null,
+        "note": "The authoring-font binary is not independently known."
+      }
+    }
+  ]
+}

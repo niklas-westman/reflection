@@ -57,10 +57,13 @@ function detectWebpEncoding(content: Buffer): BaselineImageFormat {
 }
 
 export async function readImage(path: string): Promise<{ image: RgbaImage; format: BaselineImageFormat }> {
-  const content = await readFile(path);
+  return decodeImageBytes(await readFile(path), path);
+}
+
+export async function decodeImageBytes(content: Buffer, label: string): Promise<{ image: RgbaImage; format: BaselineImageFormat }> {
   const format = detectImageFormat(content);
   if (!format) {
-    throw new UnsupportedImageFormatError(path);
+    throw new UnsupportedImageFormatError(label);
   }
 
   if (format === 'png') {

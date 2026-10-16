@@ -833,3 +833,43 @@ describe('strict config validation and 0.3.0 route options', () => {
   });
 });
 
+describe('component textDiagnostics config', () => {
+  function componentConfig(textDiagnostics: unknown) {
+    return {
+      project: 'text-diagnostics-fixture',
+      contracts: {
+        component: {
+          storybook: { command: 'x', readyUrl: 'http://127.0.0.1:6006' },
+          cases: [{ id: 'button', storyId: 'button--primary', baseline: 'button.webp', textDiagnostics }]
+        }
+      }
+    };
+  }
+
+  it('accepts a source, parts, context, region padding and experiment toggles', () => {
+    const config = validateReflectionConfig(
+      componentConfig({
+        source: 'design/text/button-bundle.json',
+        parts: [{ id: 'refresh-label', selector: '[data-part="label"]' }],
+        context: { theme: 'dark', adapter: 'react' },
+        regionPadding: 3,
+        experiments: { frameRender: true, partOverlay: false }
+      })
+    );
+
+    expect(config.contracts.component?.cases[0]?.textDiagnostics).toMatchObject({ source: 'design/text/button-bundle.json', regionPadding: 3, experiments: { partOverlay: false } });
+  });
+
+  it('leaves cases without textDiagnostics untouched', () => {
+    expect(validateReflectionConfig(componentConfig(undefined)).contracts.component?.cases[0]?.textDiagnostics).toBeUndefined();
+  });
+
+  it('rejects unknown keys, empty parts, duplicate part ids and a bad padding', () => {
+    expect(() => validateReflectionConfig(componentConfig({ source: 'b.json', parts: [{ id: 'a', selector: '.a' }], approve: true }))).toThrow(/approve/);
+    expect(() => validateReflectionConfig(componentConfig({ source: 'b.json', parts: [] }))).toThrow(/Invalid Reflection config/);
+    expect(() => validateReflectionConfig(componentConfig({ source: 'b.json', parts: [{ id: 'a', selector: '.a' }, { id: 'a', selector: '.b' }] }))).toThrow(/duplicate text part id "a"/);
+    expect(() => validateReflectionConfig(componentConfig({ source: 'b.json', parts: [{ id: 'a', selector: '.a', extra: 1 }] }))).toThrow(/extra/);
+    expect(() => validateReflectionConfig(componentConfig({ source: 'b.json', parts: [{ id: 'a', selector: '.a' }], regionPadding: 99 }))).toThrow(/Invalid Reflection config/);
+  });
+});
+

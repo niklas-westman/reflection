@@ -5,7 +5,10 @@ import type { ArtifactStore } from '../../core/artifact-store.js';
 import { createBaselineStore, createMissingBaselineCheck } from '../../core/baseline-store.js';
 import type { CheckDiagnostic, CheckResult, DiagnosticEvidence, FailureClass } from '../../core/report-schema.js';
 import type { ServerConfig } from '../../core/server-manager.js';
-import { createBrowserContext, type ViewportSize } from '../../integrations/playwright/context-factory.js';
+import { createBrowserContext, resolveViewport, type ViewportSize } from '../../integrations/playwright/context-factory.js';
+import type { TextDiagnosticsRecord } from '../../diagnostics/text/record.js';
+import { createFontResponseCollector } from '../../diagnostics/text/runtime-observation.js';
+import { runTextDiagnostics, type TextDiagnosticsCaseConfig } from '../../diagnostics/text/run-text-diagnostics.js';
 import { launchBrowser } from '../../integrations/playwright/browser-manager.js';
 import { startReflectionPortalServer, type PortalConfig } from '../../integrations/portal/server.js';
 import { startStorybookServer } from '../../integrations/storybook/server.js';
@@ -31,6 +34,7 @@ export type ComponentVisualCase = {
   stateNote?: string | undefined;
   browserState?: ComponentBrowserState | undefined;
   probes?: ComponentProbes | undefined;
+  textDiagnostics?: TextDiagnosticsCaseConfig | undefined;
 };
 
 export type ComponentBrowserState = {
@@ -89,6 +93,8 @@ export type ComponentVisualContractConfig = {
   storybook?: ServerConfig | undefined;
   portal?: PortalConfig | undefined;
   cases: ComponentVisualCase[];
+  // Base directory for relative text-diagnostics sources; the run command passes the config's directory.
+  configDir?: string | undefined;
 };
 
 export async function runComponentVisualContract(
@@ -146,7 +152,8 @@ export async function runComponentVisualContract(
           targetUrl: storyUrl,
           targetLabel: visualCase.storyId,
           store,
-          browser
+          browser,
+          configDir: config.configDir ?? process.cwd()
         })
       );
     }
@@ -160,7 +167,8 @@ export async function runComponentVisualContract(
           targetUrl: portalUrl,
           targetLabel: visualCase.path,
           store,
-          browser
+          browser,
+          configDir: config.configDir ?? process.cwd()
         })
       );
     }
@@ -179,6 +187,7 @@ async function runComponentVisualCase(input: {
   targetLabel: string;
   store: ArtifactStore;
   browser: Awaited<ReturnType<typeof launchBrowser>>;
+  configDir: string;
 }): Promise<CheckResult> {
   const viewport = input.visualCase.viewport ?? 'component';
   const viewportSize = input.visualCase.viewportSize;
@@ -229,6 +238,38 @@ async function runComponentVisualCase(input: {
       strict
     });
     const diffArtifact = result.diffPath ? await input.store.describeArtifact(diffRelativePath, 'visual-diff', 'diff') : undefined;
+    // Runs after the real screenshot and comparison exist, in separate browser sessions; it can only add evidence.
+    const textDiagnostics = input.visualCase.textDiagnostics
+      ? await runTextDiagnostics({
+          config: input.visualCase.textDiagnostics,
+          configDir: input.configDir,
+          runId: input.store.runId,
+          caseId: input.visualCase.id,
+          baselinePath,
+          native: result,
+          expectedArtifact,
+          actualArtifact,
+          diffArtifact,
+          caseViewport: resolveViewport(viewport, viewportSize),
+          browser: input.browser,
+          openCaseSession: async () => {
+            const fontResponses = createFontResponseCollector();
+            const { context, page } = await openComponentPage({
+              browser: input.browser,
+              targetUrl: input.targetUrl,
+              componentSource: input.componentSource,
+              viewport,
+              viewportSize,
+              framing: resolveComponentFraming(input.visualCase.framing, input.componentSource),
+              browserState: input.visualCase.browserState,
+              onPage: (opened) => fontResponses.attach(opened)
+            });
+            return { page, context, fontResponses, close: () => context.close() };
+          },
+          store: input.store,
+          artifactBase
+        })
+      : undefined;
     const severity: CheckResult['severity'] = result.status === 'fail' && blocking ? 'blocking' : 'review';
     const details = result.status === 'pass' ? undefined : formatVisualDiagnosticsDetails(result.diagnostics, result.expectedFormat);
     const failureClass = result.status === 'pass' ? undefined : classifyComponentVisualFailure(result, capture.runtimeProbes);
@@ -244,7 +285,7 @@ async function runComponentVisualCase(input: {
       severity,
       summary: createComponentVisualSummary(input.visualCase.id, result),
       ...(details ? { details } : {}),
-      artifacts: [expectedArtifact, actualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
+      artifacts: [expectedArtifact, actualArtifact, ...(diffArtifact ? [diffArtifact] : []), ...(textDiagnostics?.artifacts ?? [])],
       metadata: {
         ...result,
         ...createComponentSourceMetadata(input),
@@ -252,10 +293,11 @@ async function runComponentVisualCase(input: {
         baselinePath: input.visualCase.baseline,
         ...createComponentMetadata(input.visualCase, input.componentSource),
         ...(capture.runtimeProbes ? { runtimeProbes: capture.runtimeProbes } : {}),
+        ...(textDiagnostics ? { textDiagnostics: textDiagnostics.record } : {}),
         ...(failureClass ? { failureClass } : {})
       },
       ...(failureClass ? { failureClass, confidence: classifyComponentVisualConfidence(failureClass, result, capture.runtimeProbes) } : {}),
-      ...(diagnostics.length > 0 ? { diagnostics } : {}),
+      ...(diagnostics.length > 0 || textDiagnostics ? { diagnostics: [...diagnostics, ...(textDiagnostics ? [createTextDiagnosticsSummary(textDiagnostics.record)] : [])] } : {}),
       ...(evidence.length > 0 ? { evidence } : {}),
       ...(recommendations.length > 0 ? { recommendations } : {}),
       ...(result.status === 'pass'
@@ -295,21 +337,40 @@ async function runComponentVisualCase(input: {
   }
 }
 
-async function captureComponentScreenshot(input: {
+interface ComponentPageInput {
   browser: Awaited<ReturnType<typeof launchBrowser>>;
-  store: ArtifactStore;
-  path: string;
   targetUrl: string;
   componentSource: ComponentSource;
   viewport: string;
   viewportSize?: ViewportSize | undefined;
   framing?: EffectiveComponentFraming | undefined;
   browserState?: ComponentBrowserState | undefined;
-  probes?: ComponentProbes | undefined;
-}) {
+  // Runs before navigation so listeners (for example font responses) see the first load.
+  onPage?: ((page: Page) => void) | undefined;
+}
+
+// Opens the component in its own context in exactly the state that gets screenshotted: framing and forced browser state included.
+function createTextDiagnosticsSummary(record: TextDiagnosticsRecord): CheckDiagnostic {
+  const headline = record.inference ? record.inference.summary : record.reasons[0]?.message ?? 'No diagnostic evidence was produced.';
+  return {
+    kind: 'text-diagnostics',
+    severity: 'info',
+    message: `Text diagnostics (${record.state}): ${headline} Diagnostic only; the native screenshot outcome is unchanged.`,
+    evidence: [
+      {
+        kind: 'text-diagnostics-record',
+        summary: `State ${record.state}${record.inference ? `, inference ${record.inference.id}` : ''}.`,
+        data: { schema: record.schema, state: record.state, inference: record.inference?.id ?? null, bindingKey: record.inputs?.bindingKey ?? null }
+      }
+    ]
+  };
+}
+
+async function openComponentPage(input: ComponentPageInput) {
   const context = await createBrowserContext(input.browser, input.viewport, input.viewportSize);
   try {
     const page = await context.newPage();
+    input.onPage?.(page);
     await page.goto(input.targetUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined);
     if (input.componentSource === 'portal') {
@@ -324,6 +385,22 @@ async function captureComponentScreenshot(input: {
     if (input.browserState) {
       await applyBrowserState(page, input.browserState);
     }
+    return { context, page };
+  } catch (error) {
+    await context.close();
+    throw error;
+  }
+}
+
+async function captureComponentScreenshot(
+  input: ComponentPageInput & {
+    store: ArtifactStore;
+    path: string;
+    probes?: ComponentProbes | undefined;
+  }
+) {
+  const { context, page } = await openComponentPage(input);
+  try {
     const runtimeProbes = input.probes ? await collectRuntimeProbes(page, input.probes) : undefined;
     const artifact = await input.store.writeBuffer(input.path, await page.screenshot());
     return { artifact, ...(runtimeProbes ? { runtimeProbes } : {}) };

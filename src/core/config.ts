@@ -216,6 +216,25 @@ const ComponentBrowserStateSchema = z
     }
   });
 
+const TextDiagnosticsSchema = z
+  .strictObject({
+    // Path to a reflection.text-source/v1 bundle, relative to the config file. Files inside the bundle must stay inside its directory.
+    source: z.string().min(1),
+    parts: z.array(z.strictObject({ id: z.string().min(1), selector: z.string().min(1) })).min(1),
+    context: z.record(z.string().min(1), z.string()).optional(),
+    regionPadding: z.number().int().min(0).max(32).optional(),
+    experiments: z.strictObject({ frameRender: z.boolean().optional(), partOverlay: z.boolean().optional() }).optional()
+  })
+  .superRefine((value, context) => {
+    const seen = new Set<string>();
+    for (const [index, part] of value.parts.entries()) {
+      if (seen.has(part.id)) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: ['parts', index, 'id'], message: `duplicate text part id "${part.id}"` });
+      }
+      seen.add(part.id);
+    }
+  });
+
 const ComponentVisualCaseSchema = z
   .strictObject({
     id: z.string().min(1),
@@ -231,7 +250,8 @@ const ComponentVisualCaseSchema = z
     strict: z.boolean().optional(),
     stateNote: z.string().min(1).optional(),
     browserState: ComponentBrowserStateSchema.optional(),
-    probes: ComponentProbesSchema.optional()
+    probes: ComponentProbesSchema.optional(),
+    textDiagnostics: TextDiagnosticsSchema.optional()
   })
   .superRefine((value, context) => {
     if (value.storyId && value.path) {

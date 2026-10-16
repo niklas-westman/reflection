@@ -1,3 +1,5 @@
+import { escapeAttr, escapeHtml } from './html-escape.js';
+import { renderTextDiagnosticsPanel } from './report-html-text-diagnostics.js';
 import type { ArtifactRef, CheckDiagnostic, CheckResult, ReflectionReport } from './report-schema.js';
 
 const STATUS_LABELS: Record<ReflectionReport['status'], string> = {
@@ -210,6 +212,7 @@ function renderCheckCard(check: CheckResult): string {
     ${renderFailureClass(check)}
     ${renderDetails(check.details)}
     ${renderDiagnostics(check.diagnostics)}
+    ${renderTextDiagnosticsPanel(check)}
     ${renderRecommendations(check)}
     ${renderArtifactList(check.artifacts)}
   </article>`;
@@ -327,19 +330,6 @@ function isImageArtifact(artifact: ArtifactRef): boolean {
   return artifact.path.endsWith('.png') && ['expected', 'actual', 'diff'].includes(artifact.role ?? '');
 }
 
-function escapeHtml(value: unknown): string {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(value: unknown): string {
-  return escapeHtml(value).replace(/`/g, '&#96;');
-}
-
 function escapeJsonForScript(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }
@@ -419,6 +409,18 @@ h3 { font-size: 15px; line-height: 1.25; }
 .details { margin-top: 12px; }
 .details summary { cursor: pointer; color: var(--muted); }
 pre { white-space: pre-wrap; overflow: auto; margin: 10px 0 0; padding: 12px; border-radius: 10px; background: #111; color: #f2f2f2; font-size: 12px; }
+.text-diagnostics { margin-top: 16px; border: 1px dashed var(--border); border-radius: 12px; padding: 14px; background: var(--panel-soft); }
+.text-diagnostics__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.text-diagnostics__head h4 { margin: 0 8px 0 0; }
+.text-diagnostics__statement, .text-diagnostics__note { color: var(--muted); font-size: 13px; }
+.text-diagnostics__images { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 12px; }
+.text-diagnostics__images a { display: grid; gap: 6px; font-size: 12px; text-decoration: none; }
+.text-diagnostics__images img { max-width: 100%; image-rendering: pixelated; border: 1px solid var(--border); background: #fff; }
+.text-diagnostics__table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
+.text-diagnostics__table caption { text-align: left; font-weight: 700; padding-bottom: 6px; }
+.text-diagnostics__table th, .text-diagnostics__table td { border-bottom: 1px solid var(--border); padding: 4px 6px; text-align: left; vertical-align: top; }
+.text-diagnostics__table .obs--mismatch td { font-weight: 700; }
+.text-diagnostics__inference { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--border); }
 .diagnostics, .recommendations, .artifact-list { margin-top: 12px; }
 .diagnostic { border-left: 3px solid var(--review); padding-left: 10px; margin-top: 8px; }
 .diagnostic span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }

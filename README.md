@@ -18,6 +18,7 @@ Current status: Reflection has the core local validation loop: config → option
 - [`docs/configuration.md`](docs/configuration.md) — supported config shape, run modes, browser/design/component/print contracts.
 - [`docs/browser-contract.md`](docs/browser-contract.md) — rendered route expectations and screenshot evidence.
 - [`docs/visual-contract.md`](docs/visual-contract.md) — route/component baselines, review-only diffs, and baseline update policy.
+- [`docs/text-diagnostics.md`](docs/text-diagnostics.md) — diagnostic-only evidence for native text versus outlined-vector rendering.
 - [`docs/artifacts-and-gc.md`](docs/artifacts-and-gc.md) — report bundle layout, artifact roots, and safe garbage collection.
 - [`docs/agent-workflows.md`](docs/agent-workflows.md) — agent completion loop and baseline-update rules.
 - [`docs/validation-process.md`](docs/validation-process.md) — canonical operating guide for agents and CI.

@@ -369,6 +369,8 @@ export function mountReflectionCase(input: ReflectionPortalMountInput) {
 }
 ```
 
+Component cases may set `textDiagnostics` (`source`, `parts`, `context`, `regionPadding`, `experiments`) to add diagnostic-only text-rendering evidence beside the native comparison; see `docs/text-diagnostics.md`.
+
 Portal cases must define `viewportSize`. Reflection uses that exact size for the browser viewport and for the generated portal frame. This keeps the config as the source of truth for frame dimensions.
 
 ### Shared case fields

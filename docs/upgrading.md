@@ -1,5 +1,16 @@
 # Upgrading
 
+## 0.4.x to 0.5.0
+
+No breaking changes. Projects that do not configure `textDiagnostics` get identical results, thresholds and exit codes.
+
+- New optional `textDiagnostics` on component visual cases, a new `reflection.text-source/v1` bundle format and a `reflection.text-diagnostics/v1` record. See `docs/text-diagnostics.md`.
+- The record is stored in a check's `metadata.textDiagnostics` and in `visual/<case>/text-diagnostics/`. The report schema version is unchanged, and the check gains one `info` entry in `diagnostics`.
+- `report.html` gains a "Text diagnostics" panel on checks that carry a record.
+- `reflection doctor` validates configured bundles offline.
+- The package now depends on `fast-xml-parser` (bounded, passive SVG inspection).
+- Diagnostics are diagnostic only: they never change a check's status, severity or the process exit code, and they grant no compliance.
+
 ## 0.3.x to 0.4.0
 
 No breaking changes. Existing PNG baselines and configs work as before.

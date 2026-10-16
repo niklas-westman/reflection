@@ -1,5 +1,7 @@
 import { access } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { CommanderError } from 'commander';
+import { loadTextSource, TextDiagnosticsInputError } from '../diagnostics/text/bundle-loader.js';
 import { loadReflectionConfig, type ReflectionConfig } from '../core/config.js';
 import { ExitCode } from '../core/exit-codes.js';
 import { getRouteViewportName, isCustomRouteViewport } from '../core/viewport.js';
@@ -47,6 +49,7 @@ export async function doctorCommand(options: DoctorCommandOptions = {}): Promise
 
   if (config) {
     printConfigSummary(config, serverReachability);
+    await printTextDiagnosticsSummary(config, dirname(resolve(options.config ?? '.')));
   }
 
   if (!runtime.nodeSupported) {
@@ -190,6 +193,30 @@ function printContextSetup(label: string, setup: DoctorBrowserConfig['setup']): 
 
   if (parts.length > 0) {
     console.log(`${label} environment: ${parts.join(', ')}`);
+  }
+}
+
+async function printTextDiagnosticsSummary(config: ReflectionConfig, configDir: string): Promise<void> {
+  for (const visualCase of config.contracts.component?.cases ?? []) {
+    const diagnostics = visualCase.textDiagnostics;
+    if (!diagnostics) {
+      continue;
+    }
+
+    const label = `Text diagnostics ${visualCase.id}: source ${diagnostics.source}, ${formatCount(diagnostics.parts.length, 'part')}`;
+    try {
+      const loaded = await loadTextSource(resolve(configDir, diagnostics.source));
+      const { source } = loaded.bundle;
+      console.log(
+        `${label}, bundle valid (${source.scope}, version ${source.sourceVersion ?? 'unknown'}, identity ${source.fileIdentity.verification}, ${formatCount(loaded.outlines.length, 'outline')})`
+      );
+    } catch (error) {
+      if (error instanceof TextDiagnosticsInputError) {
+        console.log(`${label}, bundle ${error.state}: ${error.reasons.map((reason) => reason.message).join('; ')}`);
+        continue;
+      }
+      console.log(`${label}, bundle error: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }
 

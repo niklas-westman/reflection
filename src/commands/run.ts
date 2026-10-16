@@ -156,7 +156,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     }
 
     if (canRunDownstream && shouldRunComponent) {
-      checks.push(...(await runComponentVisualContract(componentConfig, store)));
+      checks.push(...(await runComponentVisualContract({ ...componentConfig, configDir: options.config ? dirname(resolve(options.config)) : process.cwd() }, store)));
     }
 
     if (canRunDownstream && shouldRunPrint && printConfig && browserConfig) {
