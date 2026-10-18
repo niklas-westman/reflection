@@ -19,6 +19,7 @@ export type RouteVisualBaselineCase = {
   blocking?: boolean | undefined;
   strict?: boolean | undefined;
   scenario?: string | undefined;
+  ref?: string | undefined;
 };
 
 export type CompareRouteVisualBaselineInput = {
@@ -47,6 +48,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
       artifacts: [],
       metadata: {
         classification: 'missing-actual-screenshot',
+        ...(input.visualCase.ref ? { ref: input.visualCase.ref } : {}),
         routeId: input.visualCase.route,
         viewport: input.visualCase.viewport,
         baselinePath: input.visualCase.baseline
@@ -66,6 +68,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
       blocking,
       artifacts: [actualVisualArtifact],
       metadata: {
+        ...(input.visualCase.ref ? { ref: input.visualCase.ref } : {}),
         routeId: input.visualCase.route,
         viewport: input.visualCase.viewport,
         ...(input.visualCase.state ? { state: input.visualCase.state } : {}),
@@ -105,6 +108,7 @@ export async function compareRouteVisualBaseline(input: CompareRouteVisualBaseli
     artifacts: [expectedArtifact, actualVisualArtifact, ...(diffArtifact ? [diffArtifact] : [])],
     metadata: {
       ...result,
+      ...(input.visualCase.ref ? { ref: input.visualCase.ref } : {}),
       routeId: input.visualCase.route,
       viewport: input.visualCase.viewport,
       ...(input.visualCase.state ? { state: input.visualCase.state } : {}),

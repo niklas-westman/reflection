@@ -1,5 +1,15 @@
 # Upgrading
 
+## 0.6.x to the next release (unreleased)
+
+Additive. No existing config or report changes meaning.
+
+- **`report.inputs[]`, `report.meta` and `report.resultHash`** are new optional report fields (schema version stays 2). Reports from earlier versions still validate. A consumer on an older version that re-parses a new report drops these fields.
+- **Config:** optional top-level `inputs` and `meta`, and an optional `ref` on component visual cases and route `visualSmoke` cases. See `docs/configuration.md`, "Run inputs, metadata and case refs". Unknown fields stay invalid.
+- **`environment.browser`** (`{ name, version }`) is now also recorded in `--mode visual` runs, which launch their browser outside the browser contract. It stays absent when no browser was launched.
+- **Join fix.** Report-level artifacts are attached to a scenario's evidence group only when a whole path segment equals the scenario id. Before, any path containing the id as a substring matched (`a` matched `scenarios/abc/shot.png`). This can remove an artifact that was wrongly grouped.
+- `metadata.diffPath` (absolute) and `portalUrl` are unchanged. They differ between identical runs and are excluded from `resultHash`.
+
 ## 0.5.x to 0.6.0
 
 No breaking changes. Cases that declare neither a `pressed` state nor `stabilization` are captured exactly as before, with the same metadata, artifacts, thresholds and exit codes.

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ExitCode } from './exit-codes.js';
+import { computeResultHash } from './result-hash.js';
 import type { RunMode } from './config.js';
 
 export const CheckStatusSchema = z.enum(['pass', 'fail', 'warn', 'skipped', 'error']);
@@ -97,6 +98,26 @@ export const EvidenceGroupSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
+const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+
+// A file or directory entry the run depended on, so a reader can later tell whether the inputs changed.
+export const ReportInputSchema = z.object({
+  role: z.string().min(1),
+  // Relative to the config directory, with forward slashes; never an absolute path.
+  key: z.string().min(1),
+  hashKind: z.enum(['bytes', 'canonical-json']),
+  sha256: Sha256Schema.optional(),
+  bytes: z.number().int().nonnegative().optional(),
+  missing: z.boolean().optional()
+});
+
+export const ResultHashSchema = z.object({
+  // Stable across identical runs: only check id, status, severity and failure class.
+  verdict: Sha256Schema,
+  // Adds measurements and artifact hashes; informational, because animated states can drift.
+  measured: Sha256Schema
+});
+
 export const ReportSummarySchema = z.object({
   passed: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
@@ -136,7 +157,10 @@ export const ReflectionReportSchema = z.object({
   checks: z.array(CheckResultSchema),
   artifacts: z.array(ArtifactRefSchema),
   suggestedNextSteps: z.array(SuggestedNextStepSchema),
-  evidenceGroups: z.array(EvidenceGroupSchema)
+  evidenceGroups: z.array(EvidenceGroupSchema),
+  inputs: z.array(ReportInputSchema).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
+  resultHash: ResultHashSchema.optional()
 });
 
 export type CheckStatus = z.output<typeof CheckStatusSchema>;
@@ -150,6 +174,8 @@ export type CheckDiagnostic = z.output<typeof CheckDiagnosticSchema>;
 export type CheckResult = z.output<typeof CheckResultSchema>;
 export type ReflectionReport = z.output<typeof ReflectionReportSchema>;
 export type ReportSummary = z.output<typeof ReportSummarySchema>;
+export type ReportInput = z.output<typeof ReportInputSchema>;
+export type ResultHash = z.output<typeof ResultHashSchema>;
 export type SuggestedNextStep = z.output<typeof SuggestedNextStepSchema>;
 export type EvidenceGroup = z.output<typeof EvidenceGroupSchema>;
 
@@ -274,6 +300,8 @@ export function createReport(input: {
   checks: CheckResult[];
   artifacts?: ArtifactRef[];
   suggestedNextSteps?: SuggestedNextStep[];
+  inputs?: ReportInput[];
+  meta?: Record<string, unknown>;
 }): ReflectionReport {
   const status = deriveReportStatus(input.checks);
   return validateReport({
@@ -290,7 +318,10 @@ export function createReport(input: {
     checks: input.checks,
     artifacts: input.artifacts ?? [],
     suggestedNextSteps: input.suggestedNextSteps ?? deriveSuggestedNextSteps(input.checks),
-    evidenceGroups: deriveEvidenceGroups(input.checks, input.artifacts ?? [])
+    evidenceGroups: deriveEvidenceGroups(input.checks, input.artifacts ?? []),
+    ...(input.inputs ? { inputs: input.inputs } : {}),
+    ...(input.meta ? { meta: input.meta } : {}),
+    resultHash: computeResultHash(input.checks)
   });
 }
 
@@ -312,7 +343,7 @@ export function deriveEvidenceGroups(checks: CheckResult[], reportArtifacts: Art
   return [...groups.entries()].map(([id, group]) => ({
     id,
     checks: [...new Set(group.checks)],
-    artifacts: dedupeArtifacts([...group.artifacts, ...reportArtifacts.filter((artifact) => artifact.path.includes(id))])
+    artifacts: dedupeArtifacts([...group.artifacts, ...reportArtifacts.filter((artifact) => artifact.path.split('/').includes(id))])
   }));
 }
 

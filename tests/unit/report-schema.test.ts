@@ -232,6 +232,43 @@ describe('validateReport', () => {
     });
   });
 
+  it('does not join report artifacts to a scenario by substring', () => {
+    const report = createReport({
+      runId: 'join-report',
+      project: 'report-fixture',
+      startedAt: new Date('2026-05-31T12:00:00.000Z'),
+      finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+      mode: 'print',
+      ci: false,
+      checks: [check({ id: 'print.a', suite: 'print', metadata: { scenario: 'a' } })],
+      artifacts: [
+        { type: 'screenshot', role: 'actual', path: 'scenarios/abc/shot.png' },
+        { type: 'screenshot', role: 'actual', path: 'scenarios/a/shot.png' }
+      ]
+    });
+
+    expect(report.evidenceGroups[0]?.artifacts).toEqual([{ type: 'screenshot', role: 'actual', path: 'scenarios/a/shot.png' }]);
+  });
+
+  it('records inputs, meta and a result hash on new reports, and still reads reports without them', () => {
+    const report = createReport({
+      runId: 'hash-report',
+      project: 'report-fixture',
+      startedAt: new Date('2026-05-31T12:00:00.000Z'),
+      finishedAt: new Date('2026-05-31T12:00:01.000Z'),
+      mode: 'visual',
+      ci: false,
+      checks: [check({ status: 'pass' })],
+      inputs: [{ role: 'config', key: 'reflection.config.ts', hashKind: 'bytes', sha256: 'a'.repeat(64), bytes: 10 }],
+      meta: { provider: 'example' }
+    });
+
+    expect(report.inputs).toHaveLength(1);
+    expect(report.meta).toEqual({ provider: 'example' });
+    expect(report.resultHash?.verdict).toMatch(/^[a-f0-9]{64}$/);
+    expect(validateReport({ ...report, inputs: undefined, meta: undefined, resultHash: undefined }).resultHash).toBeUndefined();
+  });
+
   it('accepts classified diagnostics and structured evidence on checks', () => {
     const report = createReport({
       runId: 'diagnostic-report',

@@ -18,6 +18,8 @@ type TargetBase = {
   source: TargetSource;
   runModes: RunMode[];
   blocking: boolean;
+  // Opaque host identifier carried from the case config; Reflection never interprets it.
+  ref?: string | undefined;
 };
 
 export type BrowserRouteTarget = TargetBase & {
@@ -111,6 +113,7 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
         source: 'reflection-config',
         runModes: ['smoke', 'full'],
         blocking: visualCase.blocking === true || visualCase.strict === true,
+        ...(visualCase.ref ? { ref: visualCase.ref } : {}),
         route: {
           path: visualCase.route
         },
@@ -134,6 +137,7 @@ export function compileReflectionTargets(config: ReflectionConfig): TargetIR {
         source: 'reflection-config',
         runModes: ['visual', 'full'],
         blocking: componentCase.blocking === true || componentCase.strict === true,
+        ...(componentCase.ref ? { ref: componentCase.ref } : {}),
         component: {
           source: componentCase.path ? 'portal' : 'storybook',
           ...(componentCase.storyId ? { storyId: componentCase.storyId } : {}),

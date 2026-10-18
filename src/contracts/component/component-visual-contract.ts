@@ -36,6 +36,7 @@ export type ComponentVisualCase = {
   blocking?: boolean | undefined;
   strict?: boolean | undefined;
   stateNote?: string | undefined;
+  ref?: string | undefined;
   browserState?: ComponentBrowserState | undefined;
   stabilization?: CaseStabilizationConfig | undefined;
   probes?: ComponentProbes | undefined;
@@ -105,12 +106,25 @@ export type ComponentVisualContractConfig = {
   configDir?: string | undefined;
 };
 
+export interface ComponentVisualContractRun {
+  checks: CheckResult[];
+  // Absent when no browser was launched.
+  browser?: { name: string; version: string };
+}
+
 export async function runComponentVisualContract(
   config: ComponentVisualContractConfig | undefined,
   store: ArtifactStore
 ): Promise<CheckResult[]> {
+  return (await runComponentVisualContractWithBrowser(config, store)).checks;
+}
+
+export async function runComponentVisualContractWithBrowser(
+  config: ComponentVisualContractConfig | undefined,
+  store: ArtifactStore
+): Promise<ComponentVisualContractRun> {
   if (!config || config.enabled === false || config.cases.length === 0) {
-    return [];
+    return { checks: [] };
   }
 
   const storybookCases = config.cases.filter(isStorybookCase);
@@ -147,6 +161,7 @@ export async function runComponentVisualContract(
         )
       : undefined;
   const browser = await launchBrowser();
+  const browserIdentity = { name: browser.browserType().name(), version: browser.version() };
 
   try {
     const checks: CheckResult[] = [];
@@ -180,7 +195,7 @@ export async function runComponentVisualContract(
         })
       );
     }
-    return checks;
+    return { checks, browser: browserIdentity };
   } finally {
     await browser.close();
     await storybook?.server.stop();
@@ -652,6 +667,7 @@ function createComponentStateMetadata(visualCase: ComponentVisualCase, component
 function createComponentMetadata(visualCase: ComponentVisualCase, componentSource: ComponentSource): Record<string, unknown> {
   const framing = resolveComponentFraming(visualCase.framing, componentSource);
   return {
+    ...(visualCase.ref ? { ref: visualCase.ref } : {}),
     ...(visualCase.viewportSize ? { viewportSize: visualCase.viewportSize } : {}),
     ...(framing ? { framing } : {}),
     ...createComponentStateMetadata(visualCase, componentSource)

@@ -2,13 +2,14 @@ import { CommanderError } from 'commander';
 import { availableParallelism } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { runBrowserContract } from '../contracts/browser/browser-contract.js';
-import { runComponentVisualContract } from '../contracts/component/component-visual-contract.js';
+import { runComponentVisualContractWithBrowser } from '../contracts/component/component-visual-contract.js';
 import { runDesignContract } from '../contracts/design/design-contract.js';
 import { runPrintContract } from '../contracts/print/print-contract.js';
 import { runBeforeRunHooks } from '../contracts/setup/lifecycle.js';
 import { createArtifactStore } from '../core/artifact-store.js';
 import { isRunMode, loadReflectionConfig, type ReflectionConfig, type RunMode } from '../core/config.js';
 import { describeOperatingSystem, getPlaywrightVersion, getReflectionVersion } from '../core/environment.js';
+import { hashReportInputs, listCaseBaselineFiles } from '../core/input-hashing.js';
 import { ExitCode } from '../core/exit-codes.js';
 import { createRunManifest } from '../core/manifest.js';
 import { createReport, deriveExitCode, type CheckResult } from '../core/report-schema.js';
@@ -95,6 +96,23 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     console.error(message);
     throw error;
   }
+  const configDir = options.config ? dirname(resolve(options.config)) : process.cwd();
+  let inputs: Awaited<ReturnType<typeof hashReportInputs>> | undefined;
+  if (config) {
+    try {
+      inputs = await hashReportInputs({
+        configDir,
+        ...(options.config ? { configFile: resolve(options.config) } : {}),
+        declared: config.inputs,
+        baselineFiles: listCaseBaselineFiles(config, mode)
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(message);
+      throw new CommanderError(ExitCode.ToolOrConfigError, 'reflection.inputs', message);
+    }
+  }
+
   const store = await createArtifactStore({ rootDir, runId });
   const checks: CheckResult[] = [];
   let server: ManagedServer | undefined;
@@ -146,7 +164,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     if (canRunDownstream && shouldRunBrowser && browserConfig) {
       checks.push(await createEnvironmentCheck(mode, server));
 
-      const browserResult = await runBrowserContract({ ...browserConfig, configDir: options.config ? dirname(resolve(options.config)) : process.cwd() }, store);
+      const browserResult = await runBrowserContract({ ...browserConfig, configDir }, store);
       checks.push(...browserResult.checks);
       browserIdentity = browserResult.browser;
     }
@@ -156,7 +174,9 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     }
 
     if (canRunDownstream && shouldRunComponent) {
-      checks.push(...(await runComponentVisualContract({ ...componentConfig, configDir: options.config ? dirname(resolve(options.config)) : process.cwd() }, store)));
+      const componentRun = await runComponentVisualContractWithBrowser({ ...componentConfig, configDir }, store);
+      checks.push(...componentRun.checks);
+      browserIdentity ??= componentRun.browser;
     }
 
     if (canRunDownstream && shouldRunPrint && printConfig && browserConfig) {
@@ -198,7 +218,9 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
       ...(browserIdentity ? { browser: browserIdentity } : {}),
       ...(hasRunFilter(runFilter) ? { filter: runFilter } : {})
     },
-    checks
+    checks,
+    ...(inputs ? { inputs } : {}),
+    ...(config?.meta ? { meta: config.meta } : {})
   });
   const reportArtifacts = await writeReports(store, report);
   const manifest = createRunManifest({ report: { ...report, artifacts: reportArtifacts }, files: reportArtifacts });

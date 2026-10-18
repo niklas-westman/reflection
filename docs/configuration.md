@@ -36,8 +36,37 @@ import { defineReflection } from '../../src/core/define-reflection';
 | `contracts.component` | no | Storybook-backed component visual checks. |
 | `contracts.print` | no | Browser route print-to-PDF checks and optional rendered PDF page baselines. |
 | `lifecycle.beforeRun` | no | Project-owned setup commands that run before servers/contracts. |
+| `inputs` | no | Files or directories the run depends on, recorded with hashes in `report.inputs`. See "Run inputs, metadata and case refs". |
+| `meta` | no | Small free-form object copied to `report.meta`. See "Run inputs, metadata and case refs". |
 
 Run mode is currently selected by the CLI with `reflection run --mode <mode>` and defaults to `smoke` when omitted. The `--ci` flag changes CI/report-root behavior but does not select a separate config-defined run mode yet.
+
+## Run inputs, metadata and case refs
+
+A project that builds on Reflection (a design-system governance tool, a release portal) often needs to know what a run was based on, and to join a check to its own requirement. Reflection records this without interpreting it.
+
+```ts
+export default defineReflection({
+  project: 'my-app',
+  inputs: [
+    { role: 'source', path: 'design/snapshot.json', canonical: 'json' },
+    { role: 'tokens', path: 'design/tokens' }
+  ],
+  meta: { provider: 'my-governance-tool' },
+  contracts: {
+    component: {
+      cases: [{ id: 'button-primary', ref: 'requirement-17' /* ... */ }]
+    }
+  }
+});
+```
+
+- **`inputs`** lists files or directories, relative to the config directory. Directories are walked recursively (symlinks are not followed). `canonical: 'json'` hashes JSON files by their parsed content, so formatting-only changes do not change the hash. Reflection always adds the config file and, for the cases a mode will compare, each baseline file. The report gets `report.inputs[]` with `role`, `key` (relative to the config directory, forward slashes, never absolute), `hashKind` (`bytes` or `canonical-json`), `sha256`, `bytes`, and `missing: true` for a file that does not exist. A missing input never fails the run. Reflection does not judge whether inputs changed; compare `inputs` between reports to decide.
+- **`meta`** is copied to `report.meta`. It must be JSON-serializable, at most 16 KB, and free of credential-like text, because reports are often published.
+- **`ref`** on a component visual case or a route `visualSmoke` case is an opaque string (up to 256 characters, no credential-like text). It is copied to `check.metadata.ref` and to the target IR, so a host can join a check to its own requirement by exact identity instead of by filename.
+- **`report.resultHash`** has two hashes. `verdict` covers only each check's `id`, `status`, `severity` and `failureClass`, so two identical runs give the same value regardless of run id, timestamps or paths. `measured` also covers diff measurements, artifact hashes and the capture policy hash and is informational: animated states can differ between identical runs.
+
+These fields are optional and additive. Reports written without them still validate.
 
 ## Run modes
 

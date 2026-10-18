@@ -923,3 +923,43 @@ describe('component capture policy config (Pressed and stabilization)', () => {
   });
 });
 
+
+describe('host-owned config fields', () => {
+  const component = {
+    portal: { entry: '/entry.js', readyUrl: 'http://127.0.0.1:5199' },
+    cases: [{ id: 'button', path: '/button', viewportSize: { width: 10, height: 10 }, baseline: 'button.png' }]
+  };
+
+  it('defaults inputs to an empty list and leaves meta unset', () => {
+    const config = validateReflectionConfig({ project: 'host', contracts: { component } });
+
+    expect(config.inputs).toEqual([]);
+    expect(config.meta).toBeUndefined();
+  });
+
+  it('accepts declared inputs, free-form meta and a case ref', () => {
+    const config = validateReflectionConfig({
+      project: 'host',
+      inputs: [{ role: 'source', path: 'source', canonical: 'json' }],
+      meta: { provider: 'example', nested: { count: 2 } },
+      contracts: { component: { ...component, cases: [{ ...component.cases[0], ref: 'requirement-17' }] } }
+    });
+
+    expect(config.inputs[0]).toEqual({ role: 'source', path: 'source', canonical: 'json' });
+    expect(config.meta).toEqual({ provider: 'example', nested: { count: 2 } });
+    expect(config.contracts.component?.cases[0]?.ref).toBe('requirement-17');
+  });
+
+  it('keeps unknown top-level and input fields invalid', () => {
+    expect(() => validateReflectionConfig({ project: 'host', contracts: {}, extra: true })).toThrow('Invalid Reflection config');
+    expect(() => validateReflectionConfig({ project: 'host', contracts: {}, inputs: [{ role: 'a', path: 'b', hash: 'x' }] })).toThrow('Invalid Reflection config');
+  });
+
+  it('rejects oversized meta and credential-like meta or ref text', () => {
+    expect(() => validateReflectionConfig({ project: 'host', contracts: {}, meta: { blob: 'x'.repeat(20_000) } })).toThrow('at most');
+    expect(() => validateReflectionConfig({ project: 'host', contracts: {}, meta: { header: 'authorization: Bearer abc' } })).toThrow('credential-like');
+    expect(() =>
+      validateReflectionConfig({ project: 'host', contracts: { component: { ...component, cases: [{ ...component.cases[0], ref: 'api_key=secret' }] } } })
+    ).toThrow('credential-like');
+  });
+});

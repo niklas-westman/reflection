@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { createJiti } from 'jiti';
 import { z } from 'zod';
 import { BrowserStepSchema, ClockSetupSchema, MaskSelectorSchema, NetworkSetupSchema, StabilitySchema, StateIdSchema } from './browser-scenario.js';
+import { redactSensitiveText } from './redaction.js';
 import { RouteViewportsSchema, ViewportSizeSchema } from './viewport.js';
 
 export const runModes = ['smoke', 'design', 'visual', 'print', 'full'] as const;
@@ -56,6 +57,42 @@ const ComponentProbesSchema = z.strictObject({
   parts: z.record(z.string().min(1), ComponentProbePartSchema).default({})
 });
 
+const MAX_META_BYTES = 16_384;
+
+// An opaque identifier a host uses to join a case to its own requirement. Reflection never interprets it.
+const CaseRefSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .refine((value) => redactSensitiveText(value) === value, { message: 'ref must not contain credential-like text' });
+
+const ReflectionInputSchema = z.strictObject({
+  role: z.string().min(1).max(64),
+  // A file or a directory, relative to the config directory.
+  path: z.string().min(1),
+  // Hash JSON by its parsed content so formatting-only changes do not change the hash.
+  canonical: z.literal('json').optional()
+});
+
+// Free-form host data copied into the report. It is published with the report, so it stays small and credential-free.
+const ReflectionMetaSchema = z.record(z.string().min(1), z.unknown()).superRefine((value, context) => {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'meta must be JSON-serializable' });
+    return;
+  }
+
+  if (Buffer.byteLength(serialized) > MAX_META_BYTES) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: `meta must be at most ${MAX_META_BYTES} bytes when serialized` });
+  }
+
+  if (redactSensitiveText(serialized) !== serialized) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'meta must not contain credential-like text' });
+  }
+});
+
 const RouteVisualSmokeCaseSchema = z.strictObject({
   id: z.string().min(1),
   route: z.string().min(1),
@@ -67,7 +104,8 @@ const RouteVisualSmokeCaseSchema = z.strictObject({
   threshold: VisualThresholdSchema.optional(),
   blocking: z.boolean().optional(),
   strict: z.boolean().optional(),
-  scenario: z.string().min(1).optional()
+  scenario: z.string().min(1).optional(),
+  ref: CaseRefSchema.optional()
 });
 
 const BrowserStorageSetupSchema = z.record(z.string().min(1), z.string()).optional().default({});
@@ -268,6 +306,7 @@ const ComponentVisualCaseSchema = z
     blocking: z.boolean().optional(),
     strict: z.boolean().optional(),
     stateNote: z.string().min(1).optional(),
+    ref: CaseRefSchema.optional(),
     browserState: ComponentBrowserStateSchema.optional(),
     stabilization: CaptureStabilizationSchema.optional(),
     probes: ComponentProbesSchema.optional(),
@@ -387,6 +426,8 @@ const PrintContractSchema = z.strictObject({
 
 const ReflectionConfigSchema = z.strictObject({
   project: z.string().min(1),
+  inputs: z.array(ReflectionInputSchema).default([]),
+  meta: ReflectionMetaSchema.optional(),
   run: z
   .strictObject({
       defaultMode: z.enum(runModes).default('smoke'),
