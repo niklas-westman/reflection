@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
+  computeResultHash,
   defineReflection,
+  hashReportInputs,
   type FailureClass,
   type ReflectionPortalMountInput,
   type ReflectionReport
@@ -20,6 +22,11 @@ describe('public package surface', () => {
     });
 
     expect(config.project).toBe('documented-app');
+  });
+
+  it('exports the input and result hashing providers use to check evidence against current inputs', async () => {
+    expect(typeof hashReportInputs).toBe('function');
+    expect(computeResultHash([])).toEqual({ verdict: expect.stringMatching(/^[a-f0-9]{64}$/), measured: expect.stringMatching(/^[a-f0-9]{64}$/) });
   });
 
   it('declares package entrypoints for the documented root import', async () => {
