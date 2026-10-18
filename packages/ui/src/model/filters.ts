@@ -34,6 +34,7 @@ export function rowMatches(row: MatrixRow, filters: MatrixFilters): boolean {
 export function filterMatrix(matrix: Matrix, filters: MatrixFilters): Matrix {
   return {
     columns: matrix.columns,
+    commonReference: matrix.commonReference,
     groups: matrix.groups.map((group) => {
       const rows = group.rows.filter((row) => rowMatches(row, filters));
       return { ...group, rows, reasons: group.id === 'missing' ? countReasons(rows) : [] };

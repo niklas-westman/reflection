@@ -49,7 +49,7 @@ export function CoverageBar({ summary }: { summary: CoverageSummary }): ReactNod
     { label: 'Proven', value: summary.proven, fill: 'var(--bar-pass)' },
     { label: 'Failing', value: summary.failing, fill: 'var(--bar-fail)' },
     { label: 'Needs design or not enrolled', value: (summary.needsDesign ?? 0) + (summary.notEnrolled ?? 0), fill: 'var(--border-strong)' },
-    { label: 'Not proven', value: summary.unknown, fill: 'var(--idle)' }
+    { label: 'Not proven', value: summary.unknown, fill: 'repeating-linear-gradient(45deg, var(--idle) 0 3px, var(--surface) 3px 6px)' }
   ].filter((part) => part.value > 0);
 
   return (

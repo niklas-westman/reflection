@@ -7,6 +7,12 @@ import { renderApp } from './helpers/render-app';
 
 const subjectPath = '/bundles/docs-site/subjects/pricing';
 
+// A number from one of the summary panels, by panel and label.
+function stat(panel: 'Required items' | 'Comparisons', label: string): string {
+  const term = within(screen.getByLabelText(panel)).getByText(label, { selector: 'dt' });
+  return term.parentElement?.querySelector('dd')?.textContent ?? '';
+}
+
 async function openSubject(path = subjectPath): Promise<void> {
   const catalog = await makeCatalog([{ id: 'docs-site', projection: makeProjection() }]);
   renderApp(catalog, path);
@@ -17,9 +23,8 @@ describe('the subject page', () => {
   it('shows required items and comparisons as separate groups, from the shared counts', async () => {
     await openSubject();
 
-    const summary = screen.getByLabelText('Summary');
-    expect(summary).toHaveTextContent('6 required · 1 proven · 1 failing · 1 needs design · 1 not enrolled · 2 not proven');
-    expect(summary).toHaveTextContent('5 executed · 4 passed · 1 failed · 1 not run');
+    expect(['Required', 'Proven', 'Failing', 'Needs design', 'Not enrolled', 'Not proven'].map((label) => stat('Required items', label))).toEqual(['6', '1', '1', '1', '1', '2']);
+    expect(['Executed', 'Passed', 'Failed', 'Not run'].map((label) => stat('Comparisons', label))).toEqual(['5', '4', '1', '1']);
   });
 
   it('lists the failure first and leaves Missing collapsed with its reasons', async () => {
@@ -44,12 +49,29 @@ describe('the subject page', () => {
     expect(screen.getByText('No design has been selected for the promo banner')).toBeInTheDocument();
   });
 
-  it('shows the reference as availability and source, with no verdict', async () => {
+  it('says what the shared reference is once, in the column header, and not on every row', async () => {
     await openSubject();
 
+    const header = screen.getByRole('columnheader', { name: /Reference/ });
+    expect(header).toHaveTextContent('Reference screenshots · approved by a person');
     const row = screen.getByRole('row', { name: /hero\.desktop/ });
-    expect(within(row).getByText('Reference screenshots')).toBeInTheDocument();
-    expect(within(row).getByText('Approved by a person')).toBeInTheDocument();
+    expect(within(row).queryByText('Reference screenshots')).not.toBeInTheDocument();
+    expect(within(row).getByLabelText('Reference screenshots · approved by a person')).toBeInTheDocument();
+  });
+
+  it('spells out a row whose reference differs from the shared one', async () => {
+    await openSubject();
+
+    const row = screen.getByRole('row', { name: /banner\.desktop/ });
+    // banner.desktop has no comparison and no design record, so nothing is known about its reference.
+    expect(within(row).getByText('Unknown')).toBeInTheDocument();
+  });
+
+  it('never shows a pass or fail for a reference', async () => {
+    await openSubject();
+
+    const header = screen.getByRole('columnheader', { name: /Reference/ });
+    expect(header).not.toHaveTextContent(/pass|fail/i);
   });
 
   it('links a cell to its comparison and says what it holds', async () => {
@@ -63,7 +85,10 @@ describe('the subject page', () => {
   it('says where the proof came from, with its own date', async () => {
     await openSubject();
 
-    expect(screen.getByText(/Proof based on Reference screenshots, captured 14 Oct 2026/)).toBeInTheDocument();
+    const provenance = screen.getByLabelText('Provenance');
+    expect(within(provenance).getByText('Proof based on')).toBeInTheDocument();
+    expect(within(provenance).getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
+    expect(within(provenance).getByText('15 Oct 2026 · screenshot-compare 2.1.0')).toBeInTheDocument();
   });
 
   it('reads a sound bundle as offline and never as current', async () => {
@@ -79,7 +104,7 @@ describe('the subject page', () => {
     expect(screen.getByText('Showing 1 of 6 items')).toBeInTheDocument();
     expect(screen.getByText('hero.phone')).toBeInTheDocument();
     expect(screen.queryByText('hero.desktop')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Summary')).toHaveTextContent('6 required');
+    expect(stat('Required items', 'Required')).toBe('6');
   });
 
   it('removes an outcome filter with its chip', async () => {
@@ -123,6 +148,20 @@ describe('the subject page', () => {
   });
 });
 
+describe('a reference nobody confirmed', () => {
+  it('warns in the header when every approval was recorded by an agent', async () => {
+    const projection = makeProjection();
+    for (const entry of projection.comparisons) {
+      if (entry.reference) entry.reference.approval = { state: 'holds', attestation: 'agent', by: 'import-script', at: '2026-10-14T09:00:00.000Z' };
+    }
+    const catalog = await makeCatalog([{ id: 'docs-site', projection }]);
+    renderApp(catalog, subjectPath);
+
+    const header = await screen.findByRole('columnheader', { name: /Reference/ });
+    expect(header).toHaveTextContent('▲ Reference screenshots · recorded by an agent');
+  });
+});
+
 describe('counts a provider cannot give', () => {
   it('shows an unknown bucket as unknown, never as 0', async () => {
     const projection = makeProjection({ provider: { name: 'p', readinessConcepts: { needsDesign: false, notEnrolled: false }, capabilities: [] } });
@@ -130,9 +169,9 @@ describe('counts a provider cannot give', () => {
     renderApp(catalog, subjectPath);
     await screen.findByRole('heading', { level: 1, name: 'pricing' });
 
-    const summary = screen.getByLabelText('Summary');
-    expect(summary).toHaveTextContent('unknown needs design · unknown not enrolled');
-    expect(summary).not.toHaveTextContent('0 needs design');
+    expect(stat('Required items', 'Needs design')).toBe('Unknown');
+    expect(stat('Required items', 'Not enrolled')).toBe('Unknown');
+    expect(stat('Required items', 'Proven')).toBe('1');
   });
 
   it('warns that the count is a lower bound when only what ran is listed', async () => {
@@ -140,7 +179,7 @@ describe('counts a provider cannot give', () => {
     renderApp(catalog, subjectPath);
 
     expect(await screen.findByText('Only checks that ran are listed')).toBeInTheDocument();
-    expect(screen.getByLabelText('Summary')).toHaveTextContent('6 listed (lower bound)');
+    expect(stat('Required items', 'Listed (lower bound)')).toBe('6');
   });
 });
 
@@ -155,7 +194,7 @@ describe('untrustworthy bundles', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(tampered);
     expect(screen.getByText('Evidence invalid')).toBeInTheDocument();
     // hero.phone was the only failure. With its evidence unusable nothing fails and the item reads as unknown.
-    expect(screen.getByLabelText('Summary')).toHaveTextContent('1 proven · 0 failing');
+    expect([stat('Required items', 'Proven'), stat('Required items', 'Failing')]).toEqual(['1', '0']);
     expect(screen.getByRole('link', { name: /hero\.phone, chrome: Unknown: evidence unusable/ })).toBeInTheDocument();
     expect(screen.queryByText('Evidence current')).not.toBeInTheDocument();
   });

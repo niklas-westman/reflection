@@ -30,7 +30,8 @@ The demo bundles are written from the projection package's fixtures, with genera
 
 - **Counts come from one function** (`summarizeProjection` / `summarizeReadiness`). Required items and comparisons are shown as two groups with one unit each, never as one ratio. A bucket the provider has no concept of reads "unknown", never 0.
 - **Outcome groups:** Failed, Not proven, Passed, Missing. Missing is collapsed with a count of reasons; a long Passed group starts collapsed. Collapsed rows still count.
-- **Reference column** shows availability, source and who approved it. It never shows a pass or fail.
+- **Reference column** says what the shared reference is once, in its header (source and who approved it), and each row only says where it differs. An approval nobody confirmed (recorded by an agent, or lapsed) is shown in warning colour. A reference never shows a pass or fail.
+- **Summary** is two panels of numbers, one unit each. The header shows where the proof came from (source and its date, the run, the evidence state) as labelled facts.
 - **Evidence state:** a bundle has no live inputs to compare with, so a sound bundle reads "Offline bundle · freshness not verified". It never reads "Current". A bundle with a missing or tampered file reads "Evidence invalid": the affected comparisons lose their proof and count as unknown everywhere, and the inventory stays navigable. A bundle that cannot be trusted as a whole (changed manifest or projection, unsupported version) is refused, and the viewer does not fall back to another one.
 - **Files are verified.** The bundle opens at once; in the background every file is read and hashed ("Verifying files…"), and each image is hash-checked before it is shown.
 - **URLs carry the view:** search, outcome and dimension filters and density are in the address, so a link reproduces what you were looking at.

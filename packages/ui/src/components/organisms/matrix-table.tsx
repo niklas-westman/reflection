@@ -15,12 +15,11 @@ const Wrap = styled.div`
   border: 1px solid var(--border);
   border-radius: ${({ theme }) => theme.radius.lg};
   background: var(--surface);
-  overflow: auto;
+  overflow: clip;
 `;
 
 const Table = styled.table<{ $density: Density }>`
   width: 100%;
-  min-width: 56rem;
   border-collapse: separate;
   border-spacing: 0;
   --row-height: ${({ $density }) => ROW_HEIGHT[$density]};
@@ -44,12 +43,20 @@ const Table = styled.table<{ $density: Density }>`
     letter-spacing: 0.06em;
     height: 2.375rem;
   }
+  tbody tr.item td,
+  tbody tr.item th {
+    height: var(--row-height);
+    background: var(--surface);
+  }
   tbody tr.item td {
     height: var(--row-height);
     background: var(--surface);
   }
   tbody tr.item:hover td {
     background: var(--surface-2);
+  }
+  th[scope='row'] {
+    font-weight: 400;
   }
   td.identity,
   th.identity {
@@ -66,18 +73,36 @@ const Table = styled.table<{ $density: Density }>`
   }
 `;
 
-const GroupButton = styled.button`
+const GROUP_ACCENT: Record<MatrixGroup['id'], string> = {
+  failed: 'var(--fail)',
+  'not-proven': 'var(--gap)',
+  passed: 'var(--pass)',
+  missing: 'var(--border-strong)'
+};
+
+const GroupButton = styled.button<{ $group: MatrixGroup['id'] }>`
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: ${({ theme }) => theme.space.sm};
   width: 100%;
-  min-height: 2.5rem;
-  padding: 0 ${({ theme }) => theme.space.sm};
+  min-height: 2.75rem;
+  padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.xs};
   border: 0;
-  background: var(--surface-2);
-  font-weight: 600;
+  border-left: 3px solid ${({ $group }) => GROUP_ACCENT[$group]};
+  background: ${({ $group }) => ($group === 'failed' ? 'var(--fail-bg)' : 'var(--surface-2)')};
   text-align: left;
 
+  .title {
+    font-weight: 650;
+  }
+  .count {
+    font-variant-numeric: tabular-nums;
+    padding: 0 0.5rem;
+    border-radius: ${({ theme }) => theme.radius.pill};
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: ${({ theme }) => theme.font.xs};
+  }
   .why {
     font-weight: 400;
     color: var(--muted);
@@ -86,6 +111,11 @@ const GroupButton = styled.button`
   .caret {
     color: var(--muted);
     width: 0.875rem;
+  }
+  .hint {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: ${({ theme }) => theme.font.xs};
   }
 `;
 
@@ -106,6 +136,15 @@ const Detail = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+// An approval nobody confirmed (recorded by an agent, or lapsed) is a trust fact, so it is shown in warning colour.
+const CommonReference = styled.div<{ $caution: boolean }>`
+  font-weight: ${({ $caution }) => ($caution ? 600 : 400)};
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: ${({ theme }) => theme.font.xs};
+  color: ${({ $caution }) => ($caution ? 'var(--gap)' : 'var(--text)')};
 `;
 
 const Small = styled.div`
@@ -132,6 +171,7 @@ const CellLink = styled.a<{ $failed: boolean }>`
 
 const Dashed = styled.span`
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   gap: ${({ theme }) => theme.space.xs};
   color: var(--muted);
@@ -172,6 +212,12 @@ export function MatrixTable({ matrix, subjectId, density, filtersActive }: Matri
             </th>
             <th className="reference" scope="col">
               Reference
+              {matrix.commonReference ? (
+                <CommonReference $caution={isCaution(matrix.commonReference)}>
+                  {isCaution(matrix.commonReference) ? '▲ ' : ''}
+                  {describeReferenceSource(matrix.commonReference)}
+                </CommonReference>
+              ) : null}
             </th>
             {matrix.columns.map((column) => (
               <th key={column.id} scope="col">
@@ -188,12 +234,14 @@ export function MatrixTable({ matrix, subjectId, density, filtersActive }: Matri
               <tbody key={group.id} aria-label={OUTCOME_TITLES[group.id]}>
                 <tr>
                   <th colSpan={columnCount} scope="colgroup" style={{ padding: 0 }}>
-                    <GroupButton type="button" aria-expanded={open} onClick={() => setToggled((state) => ({ ...state, [group.id]: !open }))}>
+                    <GroupButton $group={group.id} type="button" aria-expanded={open} onClick={() => setToggled((state) => ({ ...state, [group.id]: !open }))}>
                       <span className="caret" aria-hidden="true">
                         {open ? '▾' : '▸'}
                       </span>
-                      {OUTCOME_TITLES[group.id]} <span style={{ fontWeight: 400 }}>{group.rows.length}</span>
+                      <span className="title">{OUTCOME_TITLES[group.id]}</span>
+                      <span className="count">{group.rows.length}</span>
                       <span className="why">{describeGroup(group)}</span>
+                      {open ? null : <span className="hint">Show {group.rows.length}</span>}
                     </GroupButton>
                   </th>
                 </tr>
@@ -239,7 +287,7 @@ function ItemRow({ row, columns, subjectId, density }: { row: MatrixRow; columns
         {row.detail ? <Detail title={row.detail}>{row.detail}</Detail> : null}
       </th>
       <td className="reference">
-        <ReferenceCell reference={row.reference} />
+        <ReferenceCell row={row} />
       </td>
       {columns.map((column) => {
         const cell = row.cells.get(column.id);
@@ -253,13 +301,30 @@ function ItemRow({ row, columns, subjectId, density }: { row: MatrixRow; columns
   );
 }
 
-// The reference has availability and a source, never a verdict.
-function ReferenceCell({ reference }: { reference: ReferenceSummary }): ReactNode {
+function isCaution(reference: ReferenceSummary): boolean {
+  return reference.attestation === 'agent' || reference.approval === 'lapsed';
+}
+
+function describeReferenceSource(reference: ReferenceSummary): string {
+  return [reference.source ?? 'Reference', describeApproval(reference).toLowerCase()].filter(Boolean).join(' · ');
+}
+
+// The reference has availability and a source, never a verdict. A row that shares the header's reference only
+// says its approval; a row that differs says everything.
+function ReferenceCell({ row }: { row: MatrixRow }): ReactNode {
+  const { reference } = row;
   if (reference.availability === 'missing') {
     return <Dashed>Missing</Dashed>;
   }
   if (reference.availability === 'unmapped') {
     return <Dashed>Not mapped</Dashed>;
+  }
+  if (row.referenceIsCommon) {
+    return (
+      <Small aria-label={describeReferenceSource(reference)} title={describeReferenceSource(reference)}>
+        —
+      </Small>
+    );
   }
   return (
     <div>

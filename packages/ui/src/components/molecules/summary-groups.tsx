@@ -3,46 +3,79 @@ import styled from 'styled-components';
 import type { CoverageSummary } from 'reflection-projection';
 import type { ComparisonCounts } from '../../model/comparison-outcome';
 
-const Groups = styled.div`
+const Panels = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.xl};
+  gap: ${({ theme }) => theme.space.md};
+`;
 
+const Panel = styled.section`
+  flex: 1 1 24rem;
+  padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md} ${({ theme }) => theme.space.md};
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: ${({ theme }) => theme.radius.lg};
+
+  h2 {
+    margin: 0 0 ${({ theme }) => theme.space.sm};
+    font-size: ${({ theme }) => theme.font.xs};
+    font-weight: 550;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
   dl {
-    margin: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.md};
-    align-items: baseline;
+    gap: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.lg};
+    margin: 0;
   }
+`;
+
+type Tone = 'neutral' | 'pass' | 'fail';
+
+const TONE_COLORS: Record<Tone, string> = { neutral: 'var(--text)', pass: 'var(--pass)', fail: 'var(--fail)' };
+
+const TileBox = styled.div<{ $tone: Tone; $major: boolean }>`
+  display: flex;
+  flex-direction: column-reverse;
+  min-width: 4rem;
+
   dt {
     color: var(--muted);
     font-size: ${({ theme }) => theme.font.xs};
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
   }
   dd {
     margin: 0;
-  }
-  b {
+    font-size: ${({ $major }) => ($major ? '1.75rem' : '1.375rem')};
+    line-height: 1.15;
     font-weight: 650;
+    letter-spacing: -0.02em;
+    color: ${({ $tone }) => TONE_COLORS[$tone]};
+  }
+  dd.unknown {
+    font-size: ${({ theme }) => theme.font.md};
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    padding-top: 0.25rem;
   }
 `;
 
-const Unknown = styled.span`
-  color: var(--muted);
-`;
+interface TileProps {
+  label: string;
+  value: number | null;
+  tone?: Tone;
+  major?: boolean;
+}
 
-/** A bucket the provider has no concept of is shown as unknown. Zero would claim that nothing is in it. */
-function Bucket({ value, label }: { value: number | null; label: string }): ReactNode {
-  return value === null ? (
-    <span title="This provider does not report this">
-      <Unknown>unknown</Unknown> {label}
-    </span>
-  ) : (
-    <span>
-      <b>{value}</b> {label}
-    </span>
+// A bucket the provider has no concept of reads "Unknown". Zero would claim that nothing is in it.
+function Tile({ label, value, tone = 'neutral', major = false }: TileProps): ReactNode {
+  return (
+    <TileBox $tone={value === null ? 'neutral' : tone} $major={major} title={value === null ? 'This provider does not report this' : undefined}>
+      <dt>{label}</dt>
+      {value === null ? <dd className="unknown">Unknown</dd> : <dd>{value}</dd>}
+    </TileBox>
   );
 }
 
@@ -53,38 +86,30 @@ export interface SummaryGroupsProps {
   lowerBound: boolean;
 }
 
-/** Two groups with one unit each: required items, and comparisons. They are never shown as one ratio. */
+/** Two panels with one unit each: required items, and comparisons. They are never shown as one ratio. */
 export function SummaryGroups({ items, comparisons, lowerBound }: SummaryGroupsProps): ReactNode {
   return (
-    <Groups aria-label="Summary">
-      <dl>
-        <dt>Required items</dt>
-        <dd>
-          <b>{items.required}</b> {lowerBound ? 'listed (lower bound)' : 'required'} · <b>{items.proven}</b> proven · <b>{items.failing}</b> failing
-          {' · '}
-          <Bucket value={items.needsDesign} label="needs design" />
-          {' · '}
-          <Bucket value={items.notEnrolled} label="not enrolled" />
-          {items.unknown > 0 ? (
-            <>
-              {' · '}
-              <b>{items.unknown}</b> not proven
-            </>
-          ) : null}
-        </dd>
-      </dl>
-      <dl>
-        <dt>Comparisons</dt>
-        <dd>
-          <b>{comparisons.executed}</b> executed · <b>{comparisons.passed}</b> passed · <b>{comparisons.failed}</b> failed
-          {comparisons.notRun > 0 ? (
-            <>
-              {' · '}
-              <b>{comparisons.notRun}</b> not run
-            </>
-          ) : null}
-        </dd>
-      </dl>
-    </Groups>
+    <Panels aria-label="Summary">
+      <Panel aria-label="Required items">
+        <h2>Required items</h2>
+        <dl>
+          <Tile label={lowerBound ? 'Listed (lower bound)' : 'Required'} value={items.required} major />
+          <Tile label="Proven" value={items.proven} tone="pass" />
+          <Tile label="Failing" value={items.failing} tone={items.failing > 0 ? 'fail' : 'neutral'} />
+          <Tile label="Needs design" value={items.needsDesign} />
+          <Tile label="Not enrolled" value={items.notEnrolled} />
+          {items.unknown > 0 ? <Tile label="Not proven" value={items.unknown} /> : null}
+        </dl>
+      </Panel>
+      <Panel aria-label="Comparisons">
+        <h2>Comparisons</h2>
+        <dl>
+          <Tile label="Executed" value={comparisons.executed} major />
+          <Tile label="Passed" value={comparisons.passed} tone="pass" />
+          <Tile label="Failed" value={comparisons.failed} tone={comparisons.failed > 0 ? 'fail' : 'neutral'} />
+          {comparisons.notRun > 0 ? <Tile label="Not run" value={comparisons.notRun} /> : null}
+        </dl>
+      </Panel>
+    </Panels>
   );
 }

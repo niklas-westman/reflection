@@ -39,6 +39,7 @@ export interface MatrixRow {
   // The provider's own longer explanation, shown on the row.
   detail: string | undefined;
   reference: ReferenceSummary;
+  referenceIsCommon: boolean;
   cells: Map<string, MatrixCell>;
 }
 
@@ -52,6 +53,8 @@ export interface MatrixGroup {
 export interface Matrix {
   columns: MatrixColumn[];
   groups: MatrixGroup[];
+  // The reference most rows share. Shown once in the column header so rows only say where they differ.
+  commonReference: ReferenceSummary | undefined;
 }
 
 const NO_ADAPTER = '';
@@ -87,6 +90,7 @@ export function buildMatrix({ projection, subject, unusableComparisonIds }: Buil
       reason: reasonFor(readiness, comparisons, requirement, unusableComparisonIds),
       detail: readiness === 'needs-design' || readiness === 'not-enrolled' ? requirement.design?.reason : undefined,
       reference: summarizeReference(requirement, comparisons, snapshotLabels),
+      referenceIsCommon: false,
       cells: buildCells(columns, comparisons, unusableComparisonIds)
     };
   });
@@ -95,7 +99,29 @@ export function buildMatrix({ projection, subject, unusableComparisonIds }: Buil
     const groupRows = rows.filter((row) => row.group === id);
     return { id, rows: groupRows, reasons: id === 'missing' ? countReasons(groupRows) : [] };
   });
-  return { columns, groups };
+  const commonReference = findCommonReference(rows);
+  for (const row of rows) {
+    row.referenceIsCommon = commonReference !== undefined && referenceKey(row.reference) === referenceKey(commonReference);
+  }
+  return { columns, groups, commonReference };
+}
+
+const COMMON_SHARE = 0.6;
+
+// A reference is "common" when at least two available rows share it and they are most of the available rows.
+function findCommonReference(rows: MatrixRow[]): ReferenceSummary | undefined {
+  const available = rows.filter((row) => row.reference.availability === 'available');
+  const counts = new Map<string, { reference: ReferenceSummary; count: number }>();
+  for (const row of available) {
+    const key = referenceKey(row.reference);
+    counts.set(key, { reference: row.reference, count: (counts.get(key)?.count ?? 0) + 1 });
+  }
+  const [top] = [...counts.values()].sort((a, b) => b.count - a.count);
+  return top && top.count >= 2 && top.count / available.length >= COMMON_SHARE ? top.reference : undefined;
+}
+
+export function referenceKey(reference: ReferenceSummary): string {
+  return [reference.availability, reference.source ?? '', reference.approval ?? '', reference.attestation ?? ''].join('|');
 }
 
 function buildColumns(comparisons: Comparison[]): MatrixColumn[] {

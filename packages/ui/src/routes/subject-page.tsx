@@ -19,7 +19,7 @@ import { groupBySubject, type SubjectGroup } from '../model/subject-model';
 
 const Title = styled.div`
   display: flex;
-  align-items: center;
+  align-items: baseline;
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.space.sm};
 
@@ -29,12 +29,32 @@ const Title = styled.div`
     letter-spacing: -0.02em;
     font-weight: 650;
   }
+  .kind {
+    color: var(--muted);
+    font-size: ${({ theme }) => theme.font.sm};
+  }
 `;
 
-const Meta = styled.p`
-  margin: ${({ theme }) => theme.space.xxs} 0 0;
-  color: var(--muted);
-  font-size: ${({ theme }) => theme.font.sm};
+// Where the evidence came from, as labelled facts rather than a sentence.
+const Provenance = styled.dl`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.xl};
+  margin: ${({ theme }) => theme.space.sm} 0 0;
+
+  div {
+    min-width: 0;
+  }
+  dt {
+    color: var(--muted);
+    font-size: ${({ theme }) => theme.font.xs};
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  dd {
+    margin: 0.125rem 0 0;
+    font-size: ${({ theme }) => theme.font.sm};
+  }
 `;
 
 const Empty = styled.div`
@@ -83,12 +103,24 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
     <>
       <Title>
         <h1>{subject.id}</h1>
-        <Pill $tone="idle">{subject.kind === 'component' ? 'Component' : 'Page'}</Pill>
+        <span className="kind">{subject.kind === 'component' ? 'Component' : 'Page'}</span>
         <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{manifest.release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
-        <ValidityPill validity={prepared.validity} verifying={verifying} />
       </Title>
-      <Meta>{describeSources(projection, subject)}</Meta>
-      <Spacer $size="sm" />
+      <Provenance aria-label="Provenance">
+        {describeSources(projection, subject).map((fact) => (
+          <div key={fact.label}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+          </div>
+        ))}
+        <div>
+          <dt>Evidence</dt>
+          <dd>
+            <ValidityPill validity={prepared.validity} verifying={verifying} />
+          </dd>
+        </div>
+      </Provenance>
+      <Spacer />
       <Notice />
       <Spacer $size="sm" />
       <SummaryGroups items={subject.summary} comparisons={subject.comparisonCounts} lowerBound={projection.inventory === 'executed-only'} />
@@ -153,21 +185,26 @@ function Notice(): ReactNode {
   return null;
 }
 
+interface Fact {
+  label: string;
+  value: string;
+}
+
 // Which design data the proof actually read, with its own date, and the run that produced it.
-function describeSources(projection: Projection, subject: SubjectGroup): string {
+function describeSources(projection: Projection, subject: SubjectGroup): Fact[] {
   const snapshotIds = new Set(subject.comparisons.flatMap((comparison) => (comparison.snapshotId ? [comparison.snapshotId] : [])));
   const snapshots = projection.snapshots.filter((snapshot) => snapshotIds.has(snapshot.id));
   const runIds = new Set(subject.comparisons.flatMap((comparison) => (comparison.runId ? [comparison.runId] : [])));
   const runs = projection.runs.filter((run) => runIds.has(run.id));
 
-  const parts: string[] = [];
+  const facts: Fact[] = [];
   if (snapshots.length > 0) {
-    parts.push(`Proof based on ${snapshots.map((snapshot) => `${snapshot.label ?? snapshot.role}, captured ${formatDate(snapshot.capturedAt)}`).join('; ')}`);
+    facts.push({ label: 'Proof based on', value: snapshots.map((snapshot) => `${snapshot.label ?? snapshot.role}, captured ${formatDate(snapshot.capturedAt)}`).join('; ') });
   }
   if (runs.length === 1 && runs[0]) {
-    parts.push(`run finished ${formatDate(runs[0].finishedAt)} with ${runs[0].engine.name}${runs[0].engine.version ? ` ${runs[0].engine.version}` : ''}`);
+    facts.push({ label: 'Run', value: `${formatDate(runs[0].finishedAt)} · ${runs[0].engine.name}${runs[0].engine.version ? ` ${runs[0].engine.version}` : ''}` });
   } else if (runs.length > 1) {
-    parts.push(`${runs.length} runs`);
+    facts.push({ label: 'Runs', value: `${runs.length} runs` });
   }
-  return parts.length > 0 ? parts.join(' · ') : 'No source or run is recorded for this subject.';
+  return facts.length > 0 ? facts : [{ label: 'Proof based on', value: 'No source or run is recorded for this subject' }];
 }
