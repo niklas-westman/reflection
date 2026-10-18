@@ -1,0 +1,636 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "id": "docs-site",
+    "name": "Docs site"
+  },
+  "provider": {
+    "name": "screenshot-compare",
+    "readinessConcepts": {
+      "needsDesign": false,
+      "notEnrolled": true
+    },
+    "capabilities": []
+  },
+  "generatedAt": "2026-10-15T10:00:00Z",
+  "inventory": "full",
+  "snapshots": [
+    {
+      "id": "reference-set-2026-10-14",
+      "kind": "screenshots",
+      "role": "reference-set",
+      "label": "Reference screenshots",
+      "capturedAt": "2026-10-14T08:30:00Z",
+      "sha256": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "pricing/hero.desktop",
+      "label": "hero.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "viewport": "1440x900"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/hero.tablet",
+      "label": "hero.tablet",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "viewport": "834x1112"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/hero.phone",
+      "label": "hero.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "viewport": "390x844"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/faq-open.desktop",
+      "label": "faq-open.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "faq-open",
+        "viewport": "1440x900"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/faq-open.phone",
+      "label": "faq-open.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "faq-open",
+        "viewport": "390x844"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/footer.desktop",
+      "label": "footer.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "footer",
+        "viewport": "1440x900"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": false,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/footer.phone",
+      "label": "footer.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "footer",
+        "viewport": "390x844"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": false,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    },
+    {
+      "id": "pricing/banner.desktop",
+      "label": "banner.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "banner",
+        "viewport": "1440x900"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "reference-set-2026-10-14"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "docs-site/pricing/hero.desktop/chrome",
+      "requirementId": "pricing/hero.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "adapter": "chrome",
+        "viewport": "1440x900"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/hero.desktop.png",
+          "sha256": "14b7fef2ac821f0bfe6ed9f7e7dfec4636bb0b3d31a4d22a5aca553d3afe1a54"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/chrome/hero.desktop.png",
+        "sha256": "8237820b0166b745b01a223f21175ed43425ce43555b295b0463b0a74c4c456b"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/hero.desktop/firefox",
+      "requirementId": "pricing/hero.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "adapter": "firefox",
+        "viewport": "1440x900"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/hero.desktop.png",
+          "sha256": "14b7fef2ac821f0bfe6ed9f7e7dfec4636bb0b3d31a4d22a5aca553d3afe1a54"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/firefox/hero.desktop.png",
+        "sha256": "953837db2cf44fc5dca08864e00e08254e8fc9233028b9e7b97873b7d83d7be9"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/hero.tablet/chrome",
+      "requirementId": "pricing/hero.tablet",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "adapter": "chrome",
+        "viewport": "834x1112"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/hero.tablet.png",
+          "sha256": "aac58651e2ddd6a3e7bca5b351fe15adfbf9ab528e8ec11b315468fff75f07d5"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/chrome/hero.tablet.png",
+        "sha256": "2323e8ac2739594540cce02c2af3030675075c1acfdaa62be5c32932f14d8322"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/hero.tablet/firefox",
+      "requirementId": "pricing/hero.tablet",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "adapter": "firefox",
+        "viewport": "834x1112"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/hero.tablet.png",
+          "sha256": "aac58651e2ddd6a3e7bca5b351fe15adfbf9ab528e8ec11b315468fff75f07d5"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/firefox/hero.tablet.png",
+        "sha256": "c7f16adc7e2eefaa2e0928e05120b864c50f668699cd610b7161752e9f81830e"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/hero.phone/chrome",
+      "requirementId": "pricing/hero.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "adapter": "chrome",
+        "viewport": "390x844"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/hero.phone.png",
+          "sha256": "bf261adee00c2cf621d46c5908e8c4f2e0cc04282bf4eda98f2476eb597711ff"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "failed"
+      },
+      "verdict": {
+        "status": "warn",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/chrome/hero.phone.png",
+        "sha256": "4b55e0c00b1d3177328cb56b346ddfedc6866541dcfeb193267c6e99d2775f27"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 412,
+          "diffPixels": 412
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/hero.phone/firefox",
+      "requirementId": "pricing/hero.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "hero",
+        "adapter": "firefox",
+        "viewport": "390x844"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/hero.phone.png",
+          "sha256": "bf261adee00c2cf621d46c5908e8c4f2e0cc04282bf4eda98f2476eb597711ff"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/firefox/hero.phone.png",
+        "sha256": "96a84b612f753812bf2e655a41712be3d774c8e87a2dd3c72bdb9de21deea918"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/faq-open.desktop/chrome",
+      "requirementId": "pricing/faq-open.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "faq-open",
+        "adapter": "chrome",
+        "viewport": "1440x900"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/faq-open.desktop.png",
+          "sha256": "271eae99af60e6fc7516267bc5b2aefcf8c9e5a25ff217bd1af3222b04d0b60e"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/chrome/faq-open.desktop.png",
+        "sha256": "3f8a932153a52fefcf8c0c01fd733dc3185a167781de6840d028da8af67187db"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/faq-open.desktop/firefox",
+      "requirementId": "pricing/faq-open.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "faq-open",
+        "adapter": "firefox",
+        "viewport": "1440x900"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/faq-open.desktop.png",
+          "sha256": "271eae99af60e6fc7516267bc5b2aefcf8c9e5a25ff217bd1af3222b04d0b60e"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/firefox/faq-open.desktop.png",
+        "sha256": "4e2fd5b0a4966dede1961d97df6dd5b59ba197c4a944b987a09399ef94719129"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/faq-open.phone/chrome",
+      "requirementId": "pricing/faq-open.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "faq-open",
+        "adapter": "chrome",
+        "viewport": "390x844"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/faq-open.phone.png",
+          "sha256": "21c047ee7337390567b977f25221eba942640e1660fcd328ca0fdf9d0ad9f537"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "runs/a/chrome/faq-open.phone.png",
+        "sha256": "eed6ecfb1d9941893c37edcd66084504ede8fb67c4a532717c3419c47a7d1287"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 0,
+          "diffPixels": 0
+        }
+      }
+    },
+    {
+      "id": "docs-site/pricing/faq-open.phone/firefox",
+      "requirementId": "pricing/faq-open.phone",
+      "subject": {
+        "kind": "page",
+        "id": "pricing",
+        "state": "faq-open",
+        "adapter": "firefox",
+        "viewport": "390x844"
+      },
+      "snapshotId": "reference-set-2026-10-14",
+      "runId": "run-2026-10-15-a",
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "references/faq-open.phone.png",
+          "sha256": "21c047ee7337390567b977f25221eba942640e1660fcd328ca0fdf9d0ad9f537"
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "human",
+          "by": "reviewer@example.com",
+          "at": "2026-10-14T09:00:00Z",
+          "boundTo": "7f323bbbbbcab1f4c0bec277cbf224fa185c51598f4b508637864b4985cfd25c"
+        }
+      },
+      "proof": {
+        "visual": "not-run"
+      },
+      "verdict": {
+        "status": "skipped",
+        "severity": "review"
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-2026-10-15-a",
+      "finishedAt": "2026-10-15T09:55:00Z",
+      "engine": {
+        "name": "screenshot-compare",
+        "version": "2.1.0"
+      }
+    }
+  ],
+  "meta": {
+    "note": "Independent fixture: no Figma, no component framework, adapters are browsers."
+  }
+}

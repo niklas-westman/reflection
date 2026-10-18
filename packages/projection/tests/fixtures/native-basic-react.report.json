@@ -1,0 +1,479 @@
+{
+  "schemaVersion": 2,
+  "runId": "2026-10-18T16-23-50Z-local",
+  "project": "basic-react",
+  "startedAt": "2026-10-18T16:23:50.296Z",
+  "finishedAt": "2026-10-18T16:23:53.749Z",
+  "status": "fail",
+  "mode": "smoke",
+  "ci": false,
+  "environment": {
+    "profile": "local",
+    "platform": "darwin",
+    "nodeVersion": "v25.9.0",
+    "workers": 4,
+    "reflectionVersion": "0.6.0",
+    "playwrightVersion": "1.60.0",
+    "os": {
+      "platform": "darwin",
+      "release": "25.2.0",
+      "arch": "arm64"
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "148.0.7778.96"
+    }
+  },
+  "summary": {
+    "passed": 4,
+    "failed": 2,
+    "warnings": 0,
+    "skipped": 0,
+    "blockingFailures": 2,
+    "reviewItems": 0
+  },
+  "checks": [
+    {
+      "id": "environment.smoke.server",
+      "suite": "environment",
+      "target": "http://127.0.0.1:5173",
+      "status": "pass",
+      "severity": "info",
+      "summary": "Browser target server ready at http://127.0.0.1:5173.",
+      "artifacts": [],
+      "metadata": {
+        "serverStarted": true,
+        "serverReused": false,
+        "pid": 32908
+      }
+    },
+    {
+      "id": "browser.login.desktop",
+      "suite": "browser",
+      "target": "/login desktop",
+      "status": "pass",
+      "severity": "blocking",
+      "summary": "Login route rendered on desktop.",
+      "artifacts": [
+        {
+          "type": "screenshot",
+          "role": "actual",
+          "path": "browser/login/desktop/actual.png",
+          "bytes": 77435,
+          "sha256": "499e5ad0d2f2228e65d4def39addcf6916821cc80457124721afd1f832d01ad1"
+        },
+        {
+          "type": "metadata",
+          "path": "browser/login/desktop/metadata.json",
+          "bytes": 1346,
+          "sha256": "2097411a5a97e0b6d67aa635905ea1909799a8bb407f7923edeb700e3059f672"
+        }
+      ],
+      "metadata": {
+        "route": "/login",
+        "routeId": "login",
+        "viewport": "desktop",
+        "finalUrl": "http://127.0.0.1:5173/login",
+        "expectations": [
+          {
+            "expectation": "visible role heading named \"Login\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "visible label \"Email\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "visible label \"Password\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "visible role button named \"Sign in\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "noText Sign up",
+            "status": "pass"
+          },
+          {
+            "expectation": "noText Register",
+            "status": "pass"
+          },
+          {
+            "expectation": "noHorizontalOverflow true",
+            "status": "pass"
+          },
+          {
+            "expectation": "noConsoleErrors true",
+            "status": "pass"
+          },
+          {
+            "expectation": "screenshot final",
+            "status": "pass"
+          }
+        ],
+        "failures": [],
+        "environment": {
+          "viewportSize": {
+            "width": 1440,
+            "height": 900
+          },
+          "deviceScaleFactor": 1,
+          "locale": "en-US",
+          "timezone": "Europe/Stockholm",
+          "colorScheme": "light",
+          "reducedMotion": "no-preference",
+          "clockFixed": false
+        },
+        "stability": {
+          "disableAnimations": false,
+          "hideCaret": true,
+          "waitFor": [
+            "fonts",
+            "images"
+          ],
+          "settleMs": 0
+        },
+        "privacyWarning": "Screenshots may contain private UI data. Use maskSelectors for sensitive regions.",
+        "maskSelectors": [],
+        "maskedSelectors": [],
+        "masks": []
+      }
+    },
+    {
+      "id": "browser.login.mobile",
+      "suite": "browser",
+      "target": "/login mobile",
+      "status": "pass",
+      "severity": "blocking",
+      "summary": "Login route rendered on mobile.",
+      "artifacts": [
+        {
+          "type": "screenshot",
+          "role": "actual",
+          "path": "browser/login/mobile/actual.png",
+          "bytes": 59293,
+          "sha256": "6e7512a224aa4ba5dba9ee2b5f41c4fb52d1e757c1f19df18222dee85b53c3b9"
+        },
+        {
+          "type": "metadata",
+          "path": "browser/login/mobile/metadata.json",
+          "bytes": 1344,
+          "sha256": "b02c623054deeeab6e8c1268c0118d7972b5ed25e76f63627d559d6444918979"
+        }
+      ],
+      "metadata": {
+        "route": "/login",
+        "routeId": "login",
+        "viewport": "mobile",
+        "finalUrl": "http://127.0.0.1:5173/login",
+        "expectations": [
+          {
+            "expectation": "visible role heading named \"Login\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "visible label \"Email\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "visible label \"Password\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "visible role button named \"Sign in\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "noText Sign up",
+            "status": "pass"
+          },
+          {
+            "expectation": "noText Register",
+            "status": "pass"
+          },
+          {
+            "expectation": "noHorizontalOverflow true",
+            "status": "pass"
+          },
+          {
+            "expectation": "noConsoleErrors true",
+            "status": "pass"
+          },
+          {
+            "expectation": "screenshot final",
+            "status": "pass"
+          }
+        ],
+        "failures": [],
+        "environment": {
+          "viewportSize": {
+            "width": 390,
+            "height": 844
+          },
+          "deviceScaleFactor": 1,
+          "locale": "en-US",
+          "timezone": "Europe/Stockholm",
+          "colorScheme": "light",
+          "reducedMotion": "no-preference",
+          "clockFixed": false
+        },
+        "stability": {
+          "disableAnimations": false,
+          "hideCaret": true,
+          "waitFor": [
+            "fonts",
+            "images"
+          ],
+          "settleMs": 0
+        },
+        "privacyWarning": "Screenshots may contain private UI data. Use maskSelectors for sensitive regions.",
+        "maskSelectors": [],
+        "maskedSelectors": [],
+        "masks": []
+      }
+    },
+    {
+      "id": "browser.overflow.mobile",
+      "suite": "browser",
+      "target": "/overflow mobile",
+      "status": "fail",
+      "severity": "blocking",
+      "summary": "Page has horizontal overflow: scroll width 496px exceeds viewport 390px.",
+      "details": "{\"hasOverflow\":true,\"viewportWidth\":390,\"scrollWidth\":496}",
+      "artifacts": [
+        {
+          "type": "screenshot",
+          "role": "actual",
+          "path": "browser/overflow/mobile/actual.png",
+          "bytes": 17614,
+          "sha256": "98d0d3d878c3deec3424b700de22b5a422639b38e1f201bc1a9aed2900c8b55b"
+        },
+        {
+          "type": "metadata",
+          "path": "browser/overflow/mobile/metadata.json",
+          "bytes": 1164,
+          "sha256": "c3d343c169d51ed89f323123b6e71a772d4da9843b9f676e76648963135e214a"
+        }
+      ],
+      "metadata": {
+        "route": "/overflow",
+        "routeId": "overflow",
+        "viewport": "mobile",
+        "finalUrl": "http://127.0.0.1:5173/overflow",
+        "expectations": [
+          {
+            "expectation": "visible role heading named \"Overflow fixture\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "noHorizontalOverflow true",
+            "status": "fail",
+            "message": "Page has horizontal overflow: scroll width 496px exceeds viewport 390px."
+          },
+          {
+            "expectation": "screenshot final",
+            "status": "pass"
+          }
+        ],
+        "classification": "layout-overflow",
+        "failures": [
+          {
+            "classification": "layout-overflow",
+            "summary": "Page has horizontal overflow: scroll width 496px exceeds viewport 390px.",
+            "details": "{\"hasOverflow\":true,\"viewportWidth\":390,\"scrollWidth\":496}"
+          }
+        ],
+        "environment": {
+          "viewportSize": {
+            "width": 390,
+            "height": 844
+          },
+          "deviceScaleFactor": 1,
+          "locale": "en-US",
+          "timezone": "Europe/Stockholm",
+          "colorScheme": "light",
+          "reducedMotion": "no-preference",
+          "clockFixed": false
+        },
+        "stability": {
+          "disableAnimations": false,
+          "hideCaret": true,
+          "waitFor": [
+            "fonts",
+            "images"
+          ],
+          "settleMs": 0
+        },
+        "privacyWarning": "Screenshots may contain private UI data. Use maskSelectors for sensitive regions.",
+        "maskSelectors": [],
+        "maskedSelectors": [],
+        "masks": []
+      },
+      "suggestedNextStep": "Inspect screenshot and browser metadata, then fix the rendered UI contract failure."
+    },
+    {
+      "id": "browser.console-error.desktop",
+      "suite": "browser",
+      "target": "/console-error desktop",
+      "status": "fail",
+      "severity": "blocking",
+      "summary": "Page emitted 1 console error.",
+      "details": "Reflection fixture intentional console error",
+      "artifacts": [
+        {
+          "type": "screenshot",
+          "role": "actual",
+          "path": "browser/console-error/desktop/actual.png",
+          "bytes": 76260,
+          "sha256": "253ffa2c9b6b0887db99e918c3d4b7afebf4a45fb8f6139d54e8b48a1b7c61fb"
+        },
+        {
+          "type": "metadata",
+          "path": "browser/console-error/desktop/metadata.json",
+          "bytes": 1122,
+          "sha256": "fe5b576a5c7f23a8a9123d24abb814ddc5a79d89d81a89d92c784038161fdb40"
+        }
+      ],
+      "metadata": {
+        "route": "/console-error",
+        "routeId": "console-error",
+        "viewport": "desktop",
+        "finalUrl": "http://127.0.0.1:5173/console-error",
+        "expectations": [
+          {
+            "expectation": "visible role heading named \"Console error fixture\" (exact)",
+            "status": "pass"
+          },
+          {
+            "expectation": "noConsoleErrors true",
+            "status": "fail",
+            "message": "Page emitted 1 console error."
+          },
+          {
+            "expectation": "screenshot final",
+            "status": "pass"
+          }
+        ],
+        "classification": "console-error",
+        "failures": [
+          {
+            "classification": "console-error",
+            "summary": "Page emitted 1 console error.",
+            "details": "Reflection fixture intentional console error"
+          }
+        ],
+        "environment": {
+          "viewportSize": {
+            "width": 1440,
+            "height": 900
+          },
+          "deviceScaleFactor": 1,
+          "locale": "en-US",
+          "timezone": "Europe/Stockholm",
+          "colorScheme": "light",
+          "reducedMotion": "no-preference",
+          "clockFixed": false
+        },
+        "stability": {
+          "disableAnimations": false,
+          "hideCaret": true,
+          "waitFor": [
+            "fonts",
+            "images"
+          ],
+          "settleMs": 0
+        },
+        "privacyWarning": "Screenshots may contain private UI data. Use maskSelectors for sensitive regions.",
+        "maskSelectors": [],
+        "maskedSelectors": [],
+        "masks": []
+      },
+      "suggestedNextStep": "Inspect screenshot and browser metadata, then fix the rendered UI contract failure."
+    },
+    {
+      "id": "visual.login-mobile",
+      "suite": "visual",
+      "target": "/login mobile",
+      "status": "pass",
+      "severity": "review",
+      "summary": "login-mobile matches approved visual baseline.",
+      "artifacts": [
+        {
+          "type": "image",
+          "role": "expected",
+          "path": "visual/login-mobile/expected.png",
+          "bytes": 59293,
+          "sha256": "6e7512a224aa4ba5dba9ee2b5f41c4fb52d1e757c1f19df18222dee85b53c3b9"
+        },
+        {
+          "type": "image",
+          "role": "actual",
+          "path": "visual/login-mobile/actual.png",
+          "bytes": 59293,
+          "sha256": "6e7512a224aa4ba5dba9ee2b5f41c4fb52d1e757c1f19df18222dee85b53c3b9"
+        },
+        {
+          "type": "visual-diff",
+          "role": "diff",
+          "path": "visual/login-mobile/diff.png",
+          "bytes": 19422,
+          "sha256": "4be9a24dd9f21ae7f60ceb617cad225b4cac20116c24f26007bba59b9533077c"
+        }
+      ],
+      "metadata": {
+        "status": "pass",
+        "classification": "visual-match",
+        "width": 390,
+        "height": 860,
+        "expected": {
+          "width": 390,
+          "height": 860
+        },
+        "actual": {
+          "width": 390,
+          "height": 860
+        },
+        "expectedFormat": "png",
+        "diffPixels": 0,
+        "diffRatio": 0,
+        "dimensionMismatch": false,
+        "threshold": {
+          "maxDiffPixelRatio": 0.01
+        },
+        "diffPath": "<repo>/.reflection/runs/2026-10-18T16-23-50Z-local/visual/login-mobile/diff.png",
+        "routeId": "login",
+        "viewport": "mobile",
+        "baselinePath": "browser/login/mobile.chromium-linux.light.png"
+      }
+    }
+  ],
+  "artifacts": [],
+  "suggestedNextSteps": [
+    {
+      "kind": "fix",
+      "summary": "Fix blocking checks before updating baselines: browser.overflow.mobile, browser.console-error.desktop."
+    }
+  ],
+  "evidenceGroups": [],
+  "inputs": [
+    {
+      "role": "baseline",
+      "key": "../../tests/fixtures/baselines/browser/login/mobile.chromium-linux.light.png",
+      "hashKind": "bytes",
+      "sha256": "6e7512a224aa4ba5dba9ee2b5f41c4fb52d1e757c1f19df18222dee85b53c3b9",
+      "bytes": 59293
+    },
+    {
+      "role": "config",
+      "key": "reflection.config.ts",
+      "hashKind": "bytes",
+      "sha256": "001e11db7c7ac2461a6fe69536b116161e9623368ea1132a6bb12a2458938038",
+      "bytes": 2044
+    }
+  ],
+  "resultHash": {
+    "verdict": "f965464a9029dcf9b3c0a57378f78ec863bbf06f82f9b27f4d855b0a1a20b935",
+    "measured": "864c5a6cd2ed1e38b90485409fdedf7a09c1e13ed877472f81a9fe6ff2fd11ea"
+  }
+}

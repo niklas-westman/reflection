@@ -1,0 +1,625 @@
+{
+  "_note": "Real values mapped from Marwes Button evidence (probe P1, 2026-10-18): 5 comparisons and 3 requirement items. Verdicts are derived from proof for this sample. Requirements beyond these are placeholders added by the test builder to reach the real counts.",
+  "project": {
+    "id": "marwes",
+    "name": "Marwes"
+  },
+  "provider": {
+    "name": "marwes-governance",
+    "readinessConcepts": {
+      "needsDesign": true,
+      "notEnrolled": true
+    },
+    "capabilities": []
+  },
+  "snapshots": [
+    {
+      "id": "figma-2410234809276115335",
+      "kind": "figma",
+      "role": "proof-source",
+      "capturedAt": "2026-10-14T15:02:45Z",
+      "version": "2410234809276115335",
+      "sha256": "41c47b43dff4c1cea23b5985b6a7dd6499bbb2df173a95d97f4a163bfb5c8da3",
+      "fileKey": "nybMu3iJUnnOvWtuxjMG8b",
+      "originalFileKey": "VTv3dNTvt7R5EytQF47XbB",
+      "note": "fresh REST file capture and Figma Bridge variable export on 2026-10-14; not owner approval"
+    }
+  ],
+  "runs": [
+    {
+      "id": "button-1792176757488-9d1f652c-4030-4579-be30-9d69c9d809a0",
+      "finishedAt": "2026-10-16T19:12:35.159Z",
+      "engine": {
+        "name": "reflection-check",
+        "version": "0.6.0"
+      },
+      "startedAt": "2026-10-16T18:52:37.411Z",
+      "runner": {
+        "node": "v25.9.0",
+        "browser": "148.0.7778.96",
+        "playwright": "1.60.0",
+        "platform": "darwin",
+        "arch": "arm64"
+      },
+      "scope": "staged",
+      "nativeValidity": "current"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "design.primary.default.md.right.light",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "primary",
+        "state": "default",
+        "mode": "light",
+        "dimensions": {
+          "size": "md",
+          "icon": "right"
+        }
+      },
+      "requiredProofs": [
+        "structural",
+        "visual",
+        "behavior"
+      ],
+      "enrolled": true,
+      "label": "primary \u00b7 default \u00b7 md \u00b7 icon right",
+      "design": {
+        "availability": "available",
+        "nodeId": "1461:11483",
+        "snapshotId": "figma-2410234809276115335"
+      }
+    },
+    {
+      "id": "public.primary.focus.light",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "primary",
+        "state": "focus",
+        "mode": "light"
+      },
+      "requiredProofs": [
+        "structural",
+        "visual",
+        "behavior"
+      ],
+      "enrolled": true,
+      "label": "primary \u00b7 focus",
+      "design": {
+        "availability": "available",
+        "nodeId": "1461:11495",
+        "reason": "Approved standard focus rule (DC-009, Figma Standard 1364:11348 / Ring 1461:13442): 2px ring / 4px clear gap. Ordinary Primary control source 1461:11495 composes with the independent focus rule and image source 3977:38660; theme-bound Figma capture frame 6047:15464. Rule mappings and real adapter fixtures are enrolled as button.standard-focus-example. Exact staged proof and owner review remain pending; references are not promoted.",
+        "snapshotId": "figma-2410234809276115335"
+      }
+    },
+    {
+      "id": "public.neutral.loading.light",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "neutral",
+        "state": "loading",
+        "mode": "light"
+      },
+      "requiredProofs": [
+        "structural",
+        "visual",
+        "behavior"
+      ],
+      "enrolled": false,
+      "label": "neutral \u00b7 loading",
+      "design": {
+        "availability": "missing",
+        "reason": "Pinned October 14 Figma capture nybMu3iJUnnOvWtuxjMG8b / 2410234809276115335. No dedicated neutral loading selection or approved variant-specific visual composition was found in the pinned Button/Icon button catalogs and all 23 Classic Spinner instances. Existing loading Button compositions use Primary or Secondary; generic disable/prepend guidance 1737:10712 / 1780:1603 does not resolve this variant's Spinner paint, caption, geometry and state policy. Request an explicit composition rule. Visual review is skipped pending design; required proof remains.",
+        "snapshotId": "figma-2410234809276115335"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "marwes/button/button.basic-icon-right/light/react",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "button.basic-icon-right",
+        "mode": "light",
+        "adapter": "react",
+        "viewport": "390x220"
+      },
+      "snapshotId": "figma-2410234809276115335",
+      "runId": "button-1792176757488-9d1f652c-4030-4579-be30-9d69c9d809a0",
+      "proof": {
+        "integrity": "passed",
+        "structural": "passed",
+        "visual": "passed",
+        "behavior": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "design.primary.default.md.right.light",
+      "sourceNodeIds": [
+        "1362:7471",
+        "1461:11483"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "react-button.basic-icon-right-light-expected.png",
+          "sha256": "1bcbb5f90526a66148c3964594f66f007f36e94a9a054250652d8bbd17c7dc73"
+        },
+        "approval": {
+          "state": "none",
+          "note": "source/manifest.json capture.provenance says \"not owner approval\"; coverage-contract item text for the focus case says references are not promoted. Reflection own summary string still says \"approved component visual baseline\"."
+        },
+        "baselineSha256": "e7662b150749c1db357af08324a254727bf0ea1a42f23583551e4dc527ec0064",
+        "baselineCreatedAt": "2026-10-15T16:35:20.094Z",
+        "origin": "figma-bridge-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "react-button.basic-icon-right-light-actual.png",
+        "sha256": "427f750011a240796225af0475b329f07ba6a7b860914b6dc48b66c997fafbad"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 34,
+          "ratio": 0.00039627039627039627
+        },
+        "artifact": {
+          "role": "diff",
+          "path": "react-button.basic-icon-right-light-diff.png",
+          "sha256": "0642f9887c14d43d59b05c73bf0d7559c6acbcd59ec8f8f7394f4e053376acaf",
+          "width": 390,
+          "height": 220
+        },
+        "threshold": {
+          "maxDiffPixels": 60,
+          "maxDiffPixelRatio": 0.0008
+        }
+      },
+      "measurements": {
+        "total": 28,
+        "passed": 28,
+        "samples": [
+          {
+            "part": "surface",
+            "property": "backgroundColor",
+            "expected": "rgba(47, 49, 252, 1)",
+            "actual": "rgba(47, 49, 252, 1)",
+            "passed": true,
+            "tolerance": "0",
+            "tokenChain": [
+              "button/primary/surface",
+              "action/primary/surface",
+              "Primary/Core",
+              "Blue/500"
+            ],
+            "sourceNodeId": "I1461:11483;1362:7472"
+          },
+          {
+            "part": "surface",
+            "property": "borderRadius",
+            "expected": "4",
+            "actual": "4",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "button/radius",
+              "sp-4"
+            ],
+            "sourceNodeId": "I1461:11483;1362:7472"
+          },
+          {
+            "part": "layout",
+            "property": "paddingTop",
+            "expected": "12",
+            "actual": "12",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "button/padding-v",
+              "sp-12"
+            ],
+            "sourceNodeId": "I1461:11483;1362:7473"
+          }
+        ]
+      },
+      "nativeOutcome": "blocked",
+      "limitations": [
+        "Glyph rasterization requires visual proof",
+        "Icon vector geometry requires visual proof"
+      ]
+    },
+    {
+      "id": "marwes/button/button.success-hover/dark/react",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "button.success-hover",
+        "mode": "dark",
+        "adapter": "react",
+        "viewport": "390x220"
+      },
+      "snapshotId": "figma-2410234809276115335",
+      "runId": "button-1792176757488-9d1f652c-4030-4579-be30-9d69c9d809a0",
+      "proof": {
+        "integrity": "passed",
+        "structural": "passed",
+        "visual": "passed",
+        "behavior": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "sourceNodeIds": [
+        "1371:7806",
+        "3873:43624"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "react-button.success-hover-dark-expected.png",
+          "sha256": "700f6e5c00911340c21e0ca0c466d860d1d6e89f07c37d352ca00e8e310b6146"
+        },
+        "approval": {
+          "state": "none",
+          "note": "source/manifest.json capture.provenance says \"not owner approval\"; coverage-contract item text for the focus case says references are not promoted. Reflection own summary string still says \"approved component visual baseline\"."
+        },
+        "baselineSha256": "8a4528065a727897f23dd8cf4d4a32d23a79da9b7581e838b5633b27234f1eea",
+        "baselineCreatedAt": "2026-10-15T16:35:23.099Z",
+        "origin": "figma-bridge-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "react-button.success-hover-dark-actual.png",
+        "sha256": "c8d1cc209dee80a5482d0c212885d71c2a98562ae1d02464692ee20cfe1b30f7"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 110,
+          "ratio": 0.001282051282051282
+        },
+        "artifact": {
+          "role": "diff",
+          "path": "react-button.success-hover-dark-diff.png",
+          "sha256": "8b8a656fb8ce1558c778370da6a88a09d67d1412a443a35c4a396b59fbf1f869",
+          "width": 390,
+          "height": 220
+        },
+        "threshold": {
+          "maxDiffPixels": 120,
+          "maxDiffPixelRatio": 0.0014
+        }
+      },
+      "measurements": {
+        "total": 28,
+        "passed": 28,
+        "samples": [
+          {
+            "part": "surface",
+            "property": "backgroundColor",
+            "expected": "rgba(0, 135, 90, 1)",
+            "actual": "rgba(0, 135, 90, 1)",
+            "passed": true,
+            "tolerance": "0",
+            "tokenChain": [
+              "button/success/surface",
+              "action/success/surface",
+              "Green/500"
+            ],
+            "sourceNodeId": "I3873:43624;1371:7807"
+          },
+          {
+            "part": "surface",
+            "property": "borderRadius",
+            "expected": "4",
+            "actual": "4",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "sp-4"
+            ],
+            "sourceNodeId": "I3873:43624;1371:7807"
+          },
+          {
+            "part": "layout",
+            "property": "paddingTop",
+            "expected": "12",
+            "actual": "12",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "button/padding-v",
+              "sp-12"
+            ],
+            "sourceNodeId": "I3873:43624;1371:7807"
+          }
+        ]
+      },
+      "nativeOutcome": "blocked",
+      "limitations": [
+        "Glyph and icon rasterization require visual proof"
+      ]
+    },
+    {
+      "id": "marwes/button/button.success-hover/dark/vue",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "button.success-hover",
+        "mode": "dark",
+        "adapter": "vue",
+        "viewport": "390x220"
+      },
+      "snapshotId": "figma-2410234809276115335",
+      "runId": "button-1792176757488-9d1f652c-4030-4579-be30-9d69c9d809a0",
+      "proof": {
+        "integrity": "passed",
+        "structural": "passed",
+        "visual": "passed",
+        "behavior": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "sourceNodeIds": [
+        "1371:7806",
+        "3873:43624"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "vue-button.success-hover-dark-expected.png",
+          "sha256": "700f6e5c00911340c21e0ca0c466d860d1d6e89f07c37d352ca00e8e310b6146"
+        },
+        "approval": {
+          "state": "none",
+          "note": "source/manifest.json capture.provenance says \"not owner approval\"; coverage-contract item text for the focus case says references are not promoted. Reflection own summary string still says \"approved component visual baseline\"."
+        },
+        "baselineSha256": "8a4528065a727897f23dd8cf4d4a32d23a79da9b7581e838b5633b27234f1eea",
+        "baselineCreatedAt": "2026-10-15T16:35:23.099Z",
+        "origin": "figma-bridge-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "vue-button.success-hover-dark-actual.png",
+        "sha256": "c8d1cc209dee80a5482d0c212885d71c2a98562ae1d02464692ee20cfe1b30f7"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 110,
+          "ratio": 0.001282051282051282
+        },
+        "artifact": {
+          "role": "diff",
+          "path": "vue-button.success-hover-dark-diff.png",
+          "sha256": "8b8a656fb8ce1558c778370da6a88a09d67d1412a443a35c4a396b59fbf1f869",
+          "width": 390,
+          "height": 220
+        },
+        "threshold": {
+          "maxDiffPixels": 120,
+          "maxDiffPixelRatio": 0.0014
+        }
+      },
+      "measurements": {
+        "total": 28,
+        "passed": 28,
+        "samples": [
+          {
+            "part": "surface",
+            "property": "backgroundColor",
+            "expected": "rgba(0, 135, 90, 1)",
+            "actual": "rgba(0, 135, 90, 1)",
+            "passed": true,
+            "tolerance": "0",
+            "tokenChain": [
+              "button/success/surface",
+              "action/success/surface",
+              "Green/500"
+            ],
+            "sourceNodeId": "I3873:43624;1371:7807"
+          },
+          {
+            "part": "surface",
+            "property": "borderRadius",
+            "expected": "4",
+            "actual": "4",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "sp-4"
+            ],
+            "sourceNodeId": "I3873:43624;1371:7807"
+          },
+          {
+            "part": "layout",
+            "property": "paddingTop",
+            "expected": "12",
+            "actual": "12",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "button/padding-v",
+              "sp-12"
+            ],
+            "sourceNodeId": "I3873:43624;1371:7807"
+          }
+        ]
+      },
+      "nativeOutcome": "blocked",
+      "limitations": [
+        "Glyph and icon rasterization require visual proof"
+      ]
+    },
+    {
+      "id": "marwes/button/button.standard-focus-example/light/react",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "button.standard-focus-example",
+        "mode": "light",
+        "adapter": "react",
+        "viewport": "390x220"
+      },
+      "snapshotId": "figma-2410234809276115335",
+      "runId": "button-1792176757488-9d1f652c-4030-4579-be30-9d69c9d809a0",
+      "proof": {
+        "integrity": "passed",
+        "structural": "passed",
+        "visual": "passed",
+        "behavior": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "public.primary.focus.light",
+      "sourceNodeIds": [
+        "1362:7481",
+        "1461:11495",
+        "1364:11348",
+        "3977:38650",
+        "3977:38660"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "react-button.standard-focus-example-light-expected.png",
+          "sha256": "0522af60af5b70bb80ee8513ba1afcce48dca0c83d652779514fef8e36f900f6"
+        },
+        "approval": {
+          "state": "none",
+          "note": "source/manifest.json capture.provenance says \"not owner approval\"; coverage-contract item text for the focus case says references are not promoted. Reflection own summary string still says \"approved component visual baseline\"."
+        },
+        "baselineSha256": "fb9098e3e494a8326e6c9d1a5e891c8f546f03cd2cd7461092c023eecc801747",
+        "baselineCreatedAt": "2026-10-16T16:30:07.187Z",
+        "origin": "figma-bridge-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": "react-button.standard-focus-example-light-actual.png",
+        "sha256": "03bddd68bb92b83769ee4b82d03e5c07ffd1312d8da6da0e0b57bc98557cbb22"
+      },
+      "diff": {
+        "metric": {
+          "name": "diff-pixels",
+          "value": 34,
+          "ratio": 0.00039627039627039627
+        },
+        "artifact": {
+          "role": "diff",
+          "path": "react-button.standard-focus-example-light-diff.png",
+          "sha256": "088f6e16d4c54f0b579e1515f7df2cfa8bf30a768338b5ea1dc4c0f0c3c5f09a",
+          "width": 390,
+          "height": 220
+        },
+        "threshold": {
+          "maxDiffPixels": 60,
+          "maxDiffPixelRatio": 0.0008
+        }
+      },
+      "measurements": {
+        "total": 32,
+        "passed": 32,
+        "samples": [
+          {
+            "part": "surface",
+            "property": "backgroundColor",
+            "expected": "rgba(47, 49, 252, 1)",
+            "actual": "rgba(47, 49, 252, 1)",
+            "passed": true,
+            "tolerance": "0",
+            "tokenChain": [
+              "button/primary/surface",
+              "action/primary/surface",
+              "Primary/Core",
+              "Blue/500"
+            ],
+            "sourceNodeId": "I1461:11495;1362:7482"
+          },
+          {
+            "part": "surface",
+            "property": "borderRadius",
+            "expected": "4",
+            "actual": "4",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "button/radius",
+              "sp-4"
+            ],
+            "sourceNodeId": "I1461:11495;1362:7482"
+          },
+          {
+            "part": "layout",
+            "property": "paddingTop",
+            "expected": "12",
+            "actual": "12",
+            "passed": true,
+            "delta": "0",
+            "tolerance": "0.02",
+            "tokenChain": [
+              "button/padding-v",
+              "sp-12"
+            ],
+            "sourceNodeId": "I1461:11495;1362:7483"
+          }
+        ]
+      },
+      "nativeOutcome": "blocked",
+      "limitations": [
+        "Glyph rasterization requires visual proof"
+      ]
+    },
+    {
+      "id": "marwes/button/button.behavior-submit/light/react",
+      "subject": {
+        "kind": "component",
+        "id": "button",
+        "variant": "button.behavior-submit",
+        "mode": "light",
+        "adapter": "react"
+      },
+      "snapshotId": "figma-2410234809276115335",
+      "runId": "button-1792176757488-9d1f652c-4030-4579-be30-9d69c9d809a0",
+      "proof": {
+        "integrity": "passed",
+        "structural": "not-run",
+        "visual": "not-run",
+        "behavior": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "limitations": [
+        "no design reference: behavior-only case"
+      ]
+    }
+  ],
+  "counts": {
+    "required": 273,
+    "proven": 203,
+    "failing": 0,
+    "needsDesign": 14,
+    "notEnrolled": 56
+  }
+}

@@ -38,6 +38,7 @@
     "prepack": "pnpm build",
     "smoke:package": "node scripts/smoke-package-install.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:packages": "pnpm --filter './packages/*' run check",
     "test": "vitest run",
     "reflection": "pnpm build && node dist/cli.js"
   },

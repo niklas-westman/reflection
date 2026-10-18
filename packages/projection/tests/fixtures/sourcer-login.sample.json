@@ -1,0 +1,477 @@
+{
+  "_note": "Real values mapped from Sourcer Login evidence (probe P1, 2026-10-18): 5 of the 30 states. The existing approval record was written by an agent on the owner words, so it is imported as an agent attestation, not a human approval. Remaining states are placeholders added by the test builder to reach the real counts.",
+  "project": {
+    "id": "sourcer",
+    "name": "Sourcer"
+  },
+  "provider": {
+    "name": "sourcer-penpot",
+    "readinessConcepts": {
+      "needsDesign": false,
+      "notEnrolled": false
+    },
+    "capabilities": []
+  },
+  "snapshots": [
+    {
+      "id": "penpot-export-d4c8d0d5",
+      "kind": "penpot",
+      "role": "proof-source",
+      "capturedAt": "2026-10-13T20:52:27.822Z",
+      "sha256": "d4c8d0d51469c2c159cc7509ed3f2dd5d5f801823584c0200d0eec0c5e6ef7a2",
+      "fileKey": "43e3d700-1eea-8163-8008-c62caef7ec3c",
+      "note": "manifest-level hash; references exported live via Penpot MCP execute_code and overwritten in place, no stage (research/2-sourcer-governance.md section 2)"
+    }
+  ],
+  "runs": [
+    {
+      "id": "2026-10-14T07-03-00-894Z",
+      "finishedAt": "2026-10-14T07:03:41.306Z",
+      "engine": {
+        "name": "pixelmatch",
+        "version": "7.2.0"
+      },
+      "runner": {
+        "playwright": "1.60.0 (derived from package.json, not recorded in result.json)"
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "id": "login/request-code.desktop",
+      "label": "request-code.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "state": "request-code",
+        "viewport": "1512x984"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "penpot-export-d4c8d0d5"
+      }
+    },
+    {
+      "id": "login/email-reset-code.phone",
+      "label": "email-reset-code.phone",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "state": "email-reset-code",
+        "viewport": "393x834"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "penpot-export-d4c8d0d5"
+      }
+    },
+    {
+      "id": "login/email-invitation",
+      "label": "email-invitation",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "state": "email-invitation",
+        "viewport": "600x1038"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "penpot-export-d4c8d0d5"
+      }
+    },
+    {
+      "id": "login/recovery-confirm-error.mobile",
+      "label": "recovery-confirm-error.mobile",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "state": "recovery-confirm-error",
+        "viewport": "393x1268"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "penpot-export-d4c8d0d5"
+      }
+    },
+    {
+      "id": "login/sign-in-filled.desktop",
+      "label": "sign-in-filled.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "state": "sign-in-filled",
+        "viewport": "1512x984"
+      },
+      "requiredProofs": [
+        "visual"
+      ],
+      "enrolled": true,
+      "design": {
+        "availability": "available",
+        "snapshotId": "penpot-export-d4c8d0d5"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "sourcer/login/request-code.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "variant": "request-code.desktop",
+        "viewport": "1512x984",
+        "dimensions": {
+          "route": "/login"
+        }
+      },
+      "snapshotId": "penpot-export-d4c8d0d5",
+      "runId": "2026-10-14T07-03-00-894Z",
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "login/request-code.desktop",
+      "sourceNodeIds": [
+        "a5d94d84-0e7a-8065-8008-c8308467f878"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "pages/login/source/penpot/references/request-code.desktop.png",
+          "sha256": "e35b21dee176715ec420231781b32769da86e15dddd51fc2f39433ac84fdf891",
+          "width": 1512,
+          "height": 984
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "agent",
+          "by": "owner@example.com",
+          "at": "2026-10-13T20:56:08.880Z",
+          "note": "record text is written by Claude on the owner words",
+          "boundTo": "d4c8d0d51469c2c159cc7509ed3f2dd5d5f801823584c0200d0eec0c5e6ef7a2"
+        },
+        "baselineCreatedAt": "2026-10-13T20:52:27.822Z",
+        "origin": "penpot-mcp-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/screenshots/request-code.desktop.png"
+      },
+      "diff": {
+        "metric": {
+          "name": "match-percent",
+          "value": 99.75,
+          "ratio": 0.0025,
+          "diffPixels": 3655
+        },
+        "artifact": {
+          "role": "diff",
+          "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/diffs/request-code.desktop.png",
+          "width": 1512,
+          "height": 984
+        },
+        "threshold": {
+          "minMatchPercent": 95,
+          "pixelmatchThreshold": 0.1
+        }
+      },
+      "nativeOutcome": "passed"
+    },
+    {
+      "id": "sourcer/login/email-reset-code.phone",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "variant": "email-reset-code.phone",
+        "viewport": "393x834",
+        "dimensions": {
+          "route": "/login",
+          "template": "reset-code"
+        }
+      },
+      "snapshotId": "penpot-export-d4c8d0d5",
+      "runId": "2026-10-14T07-03-00-894Z",
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "login/email-reset-code.phone",
+      "sourceNodeIds": [
+        "a5d94d84-0e7a-8065-8008-c8b097dfbbd8"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "pages/login/source/penpot/references/email-reset-code.phone.png",
+          "sha256": "966d760197ee522670b6be3a4c4125013ac4592b5784d7ec8ef0731722680c3b",
+          "width": 393,
+          "height": 834
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "agent",
+          "by": "owner@example.com",
+          "at": "2026-10-13T20:56:08.880Z",
+          "note": "record text is written by Claude on the owner words",
+          "boundTo": "d4c8d0d51469c2c159cc7509ed3f2dd5d5f801823584c0200d0eec0c5e6ef7a2"
+        },
+        "baselineCreatedAt": "2026-10-13T20:52:27.822Z",
+        "origin": "penpot-mcp-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/screenshots/email-reset-code.phone.png"
+      },
+      "diff": {
+        "metric": {
+          "name": "match-percent",
+          "value": 95.31,
+          "ratio": 0.046900000000000004,
+          "diffPixels": 15388
+        },
+        "artifact": {
+          "role": "diff",
+          "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/diffs/email-reset-code.phone.png",
+          "width": 393,
+          "height": 834
+        },
+        "threshold": {
+          "minMatchPercent": 95,
+          "pixelmatchThreshold": 0.1
+        }
+      },
+      "nativeOutcome": "passed"
+    },
+    {
+      "id": "sourcer/login/email-invitation",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "variant": "email-invitation",
+        "viewport": "600x1038",
+        "dimensions": {
+          "route": "/login",
+          "template": "invitation"
+        }
+      },
+      "snapshotId": "penpot-export-d4c8d0d5",
+      "runId": "2026-10-14T07-03-00-894Z",
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "login/email-invitation",
+      "sourceNodeIds": [
+        "a5d94d84-0e7a-8065-8008-c8b09952065b"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "pages/login/source/penpot/references/email-invitation.png",
+          "sha256": "aa0697b55bb33ff7d4aa0fc0c535f4c926f5676a8358d736ed56999827e425ab",
+          "width": 600,
+          "height": 1038
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "agent",
+          "by": "owner@example.com",
+          "at": "2026-10-13T20:56:08.880Z",
+          "note": "record text is written by Claude on the owner words",
+          "boundTo": "d4c8d0d51469c2c159cc7509ed3f2dd5d5f801823584c0200d0eec0c5e6ef7a2"
+        },
+        "baselineCreatedAt": "2026-10-13T20:52:27.822Z",
+        "origin": "penpot-mcp-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/screenshots/email-invitation.png"
+      },
+      "diff": {
+        "metric": {
+          "name": "match-percent",
+          "value": 95.87,
+          "ratio": 0.041299999999999996,
+          "diffPixels": 25710
+        },
+        "artifact": {
+          "role": "diff",
+          "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/diffs/email-invitation.png",
+          "width": 600,
+          "height": 1038
+        },
+        "threshold": {
+          "minMatchPercent": 95,
+          "pixelmatchThreshold": 0.1
+        }
+      },
+      "nativeOutcome": "passed"
+    },
+    {
+      "id": "sourcer/login/recovery-confirm-error.mobile",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "variant": "recovery-confirm-error.mobile",
+        "viewport": "393x1268",
+        "dimensions": {
+          "route": "/login"
+        }
+      },
+      "snapshotId": "penpot-export-d4c8d0d5",
+      "runId": "2026-10-14T07-03-00-894Z",
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "login/recovery-confirm-error.mobile",
+      "sourceNodeIds": [
+        "a5d94d84-0e7a-8065-8008-c8b3b5b13e4b"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "pages/login/source/penpot/references/recovery-confirm-error.mobile.png",
+          "sha256": "6e32a5bbccb9b5c40750cf2faa4d5a88b88b6e3fdc68b8994c6bd70ff057287e",
+          "width": 393,
+          "height": 1268
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "agent",
+          "by": "owner@example.com",
+          "at": "2026-10-13T20:56:08.880Z",
+          "note": "record text is written by Claude on the owner words",
+          "boundTo": "d4c8d0d51469c2c159cc7509ed3f2dd5d5f801823584c0200d0eec0c5e6ef7a2"
+        },
+        "baselineCreatedAt": "2026-10-13T20:52:27.822Z",
+        "origin": "penpot-mcp-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/screenshots/recovery-confirm-error.mobile.png"
+      },
+      "diff": {
+        "metric": {
+          "name": "match-percent",
+          "value": 97.79,
+          "ratio": 0.022099999999999998,
+          "diffPixels": 10992
+        },
+        "artifact": {
+          "role": "diff",
+          "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/diffs/recovery-confirm-error.mobile.png",
+          "width": 393,
+          "height": 1268
+        },
+        "threshold": {
+          "minMatchPercent": 95,
+          "pixelmatchThreshold": 0.1
+        }
+      },
+      "nativeOutcome": "passed"
+    },
+    {
+      "id": "sourcer/login/sign-in-filled.desktop",
+      "subject": {
+        "kind": "page",
+        "id": "login",
+        "variant": "sign-in-filled.desktop",
+        "viewport": "1512x984",
+        "dimensions": {
+          "route": "/login"
+        }
+      },
+      "snapshotId": "penpot-export-d4c8d0d5",
+      "runId": "2026-10-14T07-03-00-894Z",
+      "proof": {
+        "visual": "passed"
+      },
+      "verdict": {
+        "status": "pass",
+        "severity": "review"
+      },
+      "requirementId": "login/sign-in-filled.desktop",
+      "sourceNodeIds": [
+        "f2287ba5-afd1-804d-8008-c64bc28409c1"
+      ],
+      "reference": {
+        "artifact": {
+          "role": "reference",
+          "path": "pages/login/source/penpot/references/sign-in-filled.desktop.png",
+          "sha256": "c6ff4fb2bb3758e43fbea7667e00ceb3c5bbd21242bae2911670f5b7d41f2ddc",
+          "width": 1512,
+          "height": 984
+        },
+        "approval": {
+          "state": "holds",
+          "attestation": "agent",
+          "by": "owner@example.com",
+          "at": "2026-10-13T20:56:08.880Z",
+          "note": "record text is written by Claude on the owner words",
+          "boundTo": "d4c8d0d51469c2c159cc7509ed3f2dd5d5f801823584c0200d0eec0c5e6ef7a2"
+        },
+        "baselineCreatedAt": "2026-10-13T20:52:27.822Z",
+        "origin": "penpot-mcp-export"
+      },
+      "actual": {
+        "role": "actual",
+        "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/screenshots/sign-in-filled.desktop.png"
+      },
+      "diff": {
+        "metric": {
+          "name": "match-percent",
+          "value": 98.16,
+          "ratio": 0.0184,
+          "diffPixels": 27362
+        },
+        "artifact": {
+          "role": "diff",
+          "path": ".evidence/page-runs/2026-10-14T07-03-00-894Z/diffs/sign-in-filled.desktop.png",
+          "width": 1512,
+          "height": 984
+        },
+        "threshold": {
+          "minMatchPercent": 95,
+          "pixelmatchThreshold": 0.1
+        }
+      },
+      "nativeOutcome": "passed"
+    }
+  ],
+  "counts": {
+    "required": 30,
+    "proven": 30,
+    "failing": 0,
+    "needsDesign": null,
+    "notEnrolled": null
+  }
+}
