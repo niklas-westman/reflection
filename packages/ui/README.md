@@ -1,0 +1,57 @@
+# reflection-ui
+
+A read-only viewer for Reflection evidence bundles (see `reflection-projection`). It shows what was proven for each required item, for any project that can emit a bundle. It knows nothing about Figma, Penpot or a component framework.
+
+Status: step N2a (subject list and matrix). The comparison view and the release overview are the next steps.
+
+## Try it
+
+```bash
+pnpm install
+pnpm --filter reflection-projection build      # the viewer reads the built package
+pnpm --filter reflection-ui demo-bundles       # writes ./.demo-bundles (git-ignored)
+pnpm --filter reflection-ui dev                # http://localhost:5173
+```
+
+`REFLECTION_BUNDLES_DIR=/path/to/bundles pnpm --filter reflection-ui dev` serves your own folder of bundles instead. Each subfolder with a `manifest.json` is one bundle. The dev server (and `vite preview`) lists them at `/bundles/index.json` and serves their files through the same directory reader the bundle tests use, so a path can never leave its bundle. This is local only; the deployed portal brings its own index.
+
+The demo bundles are written from the projection package's fixtures, with generated placeholder images:
+
+| Bundle | Shows |
+| --- | --- |
+| `marwes-button` | A large family: 273 required, 203 proven, 14 needs design, 56 not enrolled |
+| `sourcer-login` | A provider with no "needs design" or "not enrolled" concept: those buckets read as unknown |
+| `native-basic-react` | A native Reflection report: only what ran is listed, so the count is a lower bound |
+| `docs-site` | A project unrelated to either, with a failure, two browsers and items that were never compared |
+| `docs-site-tampered-image` | One image no longer matches its hash: evidence invalid, that comparison counted as unknown |
+| `docs-site-rejected` | A manifest edited after publishing: the bundle is refused |
+
+## How it behaves
+
+- **Counts come from one function** (`summarizeProjection` / `summarizeReadiness`). Required items and comparisons are shown as two groups with one unit each, never as one ratio. A bucket the provider has no concept of reads "unknown", never 0.
+- **Outcome groups:** Failed, Not proven, Passed, Missing. Missing is collapsed with a count of reasons; a long Passed group starts collapsed. Collapsed rows still count.
+- **Reference column** shows availability, source and who approved it. It never shows a pass or fail.
+- **Evidence state:** a bundle has no live inputs to compare with, so a sound bundle reads "Offline bundle · freshness not verified". It never reads "Current". A bundle with a missing or tampered file reads "Evidence invalid": the affected comparisons lose their proof and count as unknown everywhere, and the inventory stays navigable. A bundle that cannot be trusted as a whole (changed manifest or projection, unsupported version) is refused, and the viewer does not fall back to another one.
+- **Files are verified.** The bundle opens at once; in the background every file is read and hashed ("Verifying files…"), and each image is hash-checked before it is shown.
+- **URLs carry the view:** search, outcome and dimension filters and density are in the address, so a link reproduces what you were looking at.
+
+## Layout
+
+```text
+src/
+  data/        bundle catalog (HTTP), queries, open-bundle context
+  model/       pure view model: subjects, matrix, filters, bundle state, search (no React)
+  components/  atoms, molecules, organisms
+  routes/      pages and path helpers
+  theme/       tokens (rem spacing), global style, color scheme
+scripts/       make-demo-bundles.ts
+tests/         model tests and viewer tests that read real bundles written by the writer
+```
+
+## Known limits
+
+- The bundle list reads each bundle's entry files only, so it does not show a tampered image; open the bundle to see that.
+- The full background verification reads every file once. That is cheap locally and for demo bundles; a very large bundle may want lazy or opt-in verification.
+- The matrix renders all rows of an open group without virtualization. Measure before adding it.
+- Object URLs for loaded images are not revoked; fine for a viewing session.
+- Summary-only (archived) releases and the release overview are not built yet.

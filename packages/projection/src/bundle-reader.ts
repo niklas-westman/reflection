@@ -209,15 +209,18 @@ function checkArtifactsAreDeclared(projection: Projection, manifest: BundleManif
   return problems;
 }
 
+// Files are checked a few at a time: a bundle can hold thousands of images, and one at a time is needlessly slow.
+const VERIFY_CONCURRENCY = 8;
+
 async function verifyAllFiles(source: BundleSource, manifest: BundleManifest): Promise<BundleProblem[]> {
+  const files = manifest.files.filter((file) => file.path !== BUNDLE_PROJECTION_PATH);
   const problems: BundleProblem[] = [];
-  for (const file of manifest.files) {
-    if (file.path === BUNDLE_PROJECTION_PATH) {
-      continue;
-    }
-    const verified = await readAndVerify(source, file);
-    if (!verified.ok) {
-      problems.push(verified.problem);
+  for (let start = 0; start < files.length; start += VERIFY_CONCURRENCY) {
+    const batch = await Promise.all(files.slice(start, start + VERIFY_CONCURRENCY).map((file) => readAndVerify(source, file)));
+    for (const verified of batch) {
+      if (!verified.ok) {
+        problems.push(verified.problem);
+      }
     }
   }
   return problems;
