@@ -77,7 +77,7 @@ pnpm --filter reflection-ui reflect     # smoke: every route, two desktop widths
 node dist/cli.js review --json
 ```
 
-`reflection.config.ts` lists the routes. It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. There are no visual baselines yet.
+`reflection.config.ts` lists the routes. It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. There are no visual baselines yet. The overflow check looks at the page, not at the scrolling content pane inside it, so sideways overflow within the pane is not caught.
 
 ## Layout
 
