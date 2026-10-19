@@ -22,6 +22,7 @@ The demo bundles are written from the projection package's fixtures, with genera
 | `marwes-button` | A large family: 273 required, 203 proven, 14 needs design, 56 not enrolled |
 | `sourcer-login` | A provider with no "needs design" or "not enrolled" concept: those buckets read as unknown |
 | `native-basic-react` | A native Reflection report: only what ran is listed, so the count is a lower bound |
+| `docs-site-previous` | The release `docs-site` is compared with: one reference drawn differently, an item the current release added, one it removed and a page that no longer exists |
 | `docs-site` | A project unrelated to either, with a failure, two browsers and items that were never compared. The only demo with an (illustrative) delta, so the "Since" card shows |
 | `docs-site-tampered-image` | One image no longer matches its hash: evidence invalid, that comparison counted as unknown |
 | `docs-site-rejected` | A manifest edited after publishing: the bundle is refused |
@@ -33,13 +34,15 @@ One sidebar for every route in a release: the release picker (project, release, 
 ```text
 #/                                              bundle list
 #/bundles/:bundle                               release overview
-#/bundles/:bundle/changes                       changes (not available yet)
+#/bundles/:bundle/changes                       what changed since the previous release
 #/bundles/:bundle/components/:subject           all required items for a component family
 #/bundles/:bundle/pages/:subject                all required items for a page
 #/bundles/:bundle/<section>/:subject/comparisons/:comparison   full comparison (?mode, ?zoom, ?checker, plus the filters it came from)
 ```
 
 A subject opened under the wrong section is redirected to its own.
+
+**Changes** compare this release with the one its manifest names as the previous (found among the bundles the viewer can read; a released build wins over a candidate). They are changes to the catalog of required items and to their design references, computed by `diffProjections`, and are never a pass or a fail. The page shows added, updated and removed required items with subject counts, and a card per changed subject with the design reference before and after (from the previous bundle; "Image no longer retained" when it is gone). The overview marks each subject with the change to its catalog and adds a "Design changes since" card; a subject's Changes view lists its changed items. When the previous release is not available the page says so and falls back to the delta stored in the bundle; a first release says there is nothing to compare with.
 
 **The comparison view** shows one recorded comparison large: reference, implementation and the recorded diff side by side, or overlay (opacity, blink), wipe, or the diff alone, with zoom and a shared scroll. The rail has the recorded result, failing measurements first, the recorded diff metric and threshold, and any reference caution. Below are provenance, gaps (what was not proven, plus recorded limitations) and the same item in other implementations. Previous and next walk the subject in matrix order and follow the filters of the page the reader came from. Keys: `j` and `k` (or the arrows) move between comparisons, `1` to `4` switch the mode. If the two images differ in size, Fit is overridden to native size and a banner says so: nothing is scaled to hide it. Nothing in the view can change an outcome, and the threshold is shown, not adjustable.
 

@@ -15,13 +15,21 @@ const output = resolve(process.argv[2] ?? DEFAULT_OUTPUT);
 interface Demo {
   id: string;
   projection: Projection;
+  release?: Partial<ReleaseManifest>;
+  // Images whose path contains this text are drawn in an older colour, so their hash differs from the current release.
+  oldLook?: string;
 }
+
+const docsSite = withDemoCatalog(withDemoDelta(withDemoEvidence(projectionSchema.parse(readFixture('independent-docs-site.json')))));
 
 const demos: Demo[] = [
   { id: 'marwes-button', projection: withRealSubject(buildFromSample('marwes-button.sample.json'), 'button') },
   { id: 'sourcer-login', projection: withRealSubject(buildFromSample('sourcer-login.sample.json'), 'login') },
   { id: 'native-basic-react', projection: projectFromReflectionReport(readFixture('native-basic-react.report.json') as never, { projectName: 'basic-react example' }) },
-  { id: 'docs-site', projection: withDemoDelta(withDemoEvidence(projectionSchema.parse(readFixture('independent-docs-site.json')))) }
+  { id: 'docs-site', projection: docsSite },
+  // The release docs-site is compared with: released, with one reference drawn differently, one item the current
+  // release added, one it removed, and a page that no longer exists.
+  { id: 'docs-site-previous', projection: previousOf(docsSite), release: { release: 'demo-0', state: 'released', previousRelease: null }, oldLook: 'hero.tablet' }
 ];
 
 // The sample's placeholder requirements stand in for items that were counted but not itemised. Give them the
@@ -32,6 +40,48 @@ function withRealSubject(projection: Projection, subjectId: string): Projection 
     requirements: projection.requirements.map((requirement) => (requirement.subject.id === 'placeholder' ? { ...requirement, subject: { ...requirement.subject, id: subjectId } } : requirement)),
     comparisons: projection.comparisons.map((comparison) => (comparison.subject.id === 'placeholder' ? { ...comparison, subject: { ...comparison.subject, id: subjectId } } : comparison))
   };
+}
+
+// A label, description, link and change note for the page, so the catalog fields can be seen. Illustrative.
+function withDemoCatalog(projection: Projection): Projection {
+  return projectionSchema.parse({
+    ...projection,
+    subjects: [{ id: 'pricing', kind: 'page', label: 'Pricing page', description: 'Plans and prices', sourceUrl: 'https://example.com/design/pricing', changeNote: 'Tablet hero redrawn, mobile FAQ added' }]
+  });
+}
+
+// The previous release of the docs site, derived from the current one. Illustrative.
+function previousOf(projection: Projection): Projection {
+  const previous = structuredClone(projection);
+  const dropped = 'pricing/faq-open.phone';
+  const requirements = previous.requirements.filter((requirement) => requirement.id !== dropped);
+  const comparisons = previous.comparisons.filter((comparison) => comparison.requirementId !== dropped);
+  const sample = comparisons.find((comparison) => comparison.reference && comparison.actual);
+  const extra = (id: string, subject: { kind: 'page'; id: string }): { requirement: Projection['requirements'][number]; comparison: Projection['comparisons'][number] } | undefined =>
+    sample?.reference && sample.actual
+      ? {
+          requirement: { id, label: id, subject, requiredProofs: ['visual'], enrolled: true },
+          comparison: {
+            id: `${id}/chrome`,
+            requirementId: id,
+            subject: { ...subject, adapter: 'chrome' },
+            ...(sample.snapshotId ? { snapshotId: sample.snapshotId } : {}),
+            ...(sample.runId ? { runId: sample.runId } : {}),
+            reference: { artifact: { role: 'reference', path: `legacy/${id}-reference.png` }, approval: { state: 'none' } },
+            actual: { role: 'actual', path: `legacy/${id}-chrome.png` },
+            proof: { visual: 'passed' },
+            verdict: { status: 'pass', severity: 'review' }
+          }
+        }
+      : undefined;
+  const legacyBanner = extra('legacy-banner.desktop', { kind: 'page', id: 'pricing' });
+  const checkout = extra('pay.desktop', { kind: 'page', id: 'checkout' });
+  const { delta: _delta, ...rest } = previous;
+  return projectionSchema.parse({
+    ...rest,
+    requirements: [...requirements, ...[legacyBanner, checkout].flatMap((entry) => (entry ? [entry.requirement] : []))],
+    comparisons: [...comparisons, ...[legacyBanner, checkout].flatMap((entry) => (entry ? [entry.comparison] : []))]
+  });
 }
 
 // Gives the failing docs-site comparison what a real one can carry, so the comparison view can be tried: a
@@ -92,7 +142,7 @@ if (output === resolve(DEFAULT_OUTPUT)) {
 await mkdir(output, { recursive: true });
 
 for (const demo of demos) {
-  await writeDemo(demo.id, demo.projection);
+  await writeDemo(demo.id, demo.projection, demo.release ?? {}, demo.oldLook);
 }
 
 // Two broken copies, to try the designed states: an image that no longer matches its hash, and a manifest
@@ -110,7 +160,7 @@ await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
 console.log(`Wrote ${demos.length + 2} demo bundles to ${output}`);
 
-async function writeDemo(id: string, projection: Projection): Promise<void> {
+async function writeDemo(id: string, projection: Projection, overrides: Partial<ReleaseManifest>, oldLook: string | undefined): Promise<void> {
   const artifacts = collectArtifactRefs(projection);
   // Real hashes belong to images that are not here; the writer fills in the hashes of the generated ones.
   for (const artifact of artifacts) {
@@ -129,7 +179,7 @@ async function writeDemo(id: string, projection: Projection): Promise<void> {
     const flat = `artifacts/${artifact.path.replace(/^\/+/, '').split('/').map(safeSegment).join('/')}`;
     const width = Math.min(artifact.width ?? 320, 480);
     const height = Math.round((width * (artifact.height ?? 120)) / (artifact.width ?? 320));
-    files.push({ path: flat, kind: 'artifact', content: makePng(width, Math.max(height, 40), artifact.role) });
+    files.push({ path: flat, kind: 'artifact', content: makePng(width, Math.max(height, 40), artifact.role, oldLook !== undefined && artifact.role === 'reference' && artifact.path.includes(oldLook)) });
     written.set(artifact.path, flat);
     artifact.path = flat;
   }
@@ -140,7 +190,8 @@ async function writeDemo(id: string, projection: Projection): Promise<void> {
     state: 'candidate',
     builtAt: '2026-10-18T12:00:00.000Z',
     previousRelease: projection.delta?.against ?? null,
-    snapshotIds: projection.snapshots.map((snapshot) => snapshot.id)
+    snapshotIds: projection.snapshots.map((snapshot) => snapshot.id),
+    ...overrides
   };
   await writeBundle({ directory: join(output, id), projection, release, generator: { name: 'make-demo-bundles' }, files });
 }
@@ -151,9 +202,9 @@ function safeSegment(segment: string): string {
 
 // Placeholder pictures: a plain stage with one button-like block. Failing-looking actual images are not faked;
 // the demo only needs images that exist, verify and differ by role.
-function makePng(width: number, height: number, role: string): Buffer {
+function makePng(width: number, height: number, role: string, older = false): Buffer {
   const png = new PNG({ width, height });
-  const [r, g, b] = role === 'reference' ? [37, 99, 235] : role === 'diff' ? [220, 38, 38] : [22, 163, 74];
+  const [r, g, b] = older ? [147, 51, 234] : role === 'reference' ? [37, 99, 235] : role === 'diff' ? [220, 38, 38] : [22, 163, 74];
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const inBlock = x > width * 0.25 && x < width * 0.75 && y > height * 0.3 && y < height * 0.7;

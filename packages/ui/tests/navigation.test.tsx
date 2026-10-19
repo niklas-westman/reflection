@@ -143,10 +143,10 @@ describe('the release overview', () => {
 });
 
 describe('the changes page', () => {
-  it('says changes are not available rather than showing nothing', async () => {
+  it('says there is nothing to compare with for a first release, rather than showing nothing', async () => {
     await openRelease('/bundles/docs-site/changes');
 
-    expect(await screen.findByText('Release changes are not available yet')).toBeInTheDocument();
+    expect(await screen.findByText('This is the first release')).toBeInTheDocument();
     expect(sidebar().getByRole('link', { name: 'Changes' })).toHaveAttribute('aria-current', 'page');
   });
 });

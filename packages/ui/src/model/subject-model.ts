@@ -4,6 +4,11 @@ import { countComparisons, type ComparisonCounts } from './comparison-outcome';
 /** What the rail lists. A subject is the unit a provider groups by: a component family, a page. */
 export interface SubjectGroup {
   id: string;
+  // The provider's label when it gave one, else the id. Addresses always use the id.
+  label: string;
+  description: string | undefined;
+  sourceUrl: string | undefined;
+  changeNote: string | undefined;
   kind: 'component' | 'page';
   requirements: Requirement[];
   comparisons: Comparison[];
@@ -36,12 +41,19 @@ export function groupBySubject(projection: Projection): SubjectGroup[] {
   const concepts = projection.provider.readinessConcepts;
   return [...groups.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([id, group]) => ({
-      id,
-      kind: group.kind,
-      requirements: group.requirements,
-      comparisons: group.comparisons,
-      summary: summarizeReadiness(group.requirements, group.comparisons, concepts),
-      comparisonCounts: countComparisons(group.comparisons)
-    }));
+    .map(([id, group]): SubjectGroup => {
+      const info = projection.subjects.find((entry) => entry.id === id && entry.kind === group.kind);
+      return {
+        id,
+        label: info?.label ?? id,
+        description: info?.description,
+        sourceUrl: info?.sourceUrl,
+        changeNote: info?.changeNote,
+        kind: group.kind,
+        requirements: group.requirements,
+        comparisons: group.comparisons,
+        summary: summarizeReadiness(group.requirements, group.comparisons, concepts),
+        comparisonCounts: countComparisons(group.comparisons)
+      };
+    });
 }

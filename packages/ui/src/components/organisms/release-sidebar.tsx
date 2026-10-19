@@ -213,7 +213,7 @@ function ExpandableSection({ bundleId, section, subjects, location }: { bundleId
   const [toggled, setToggled] = useState<boolean | undefined>(undefined);
   const [query, setQuery] = useState('');
   const open = toggled ?? containsCurrent;
-  const shown = subjects.filter((subject) => subject.id.toLowerCase().includes(query.trim().toLowerCase()));
+  const shown = subjects.filter((subject) => `${subject.id} ${subject.label}`.toLowerCase().includes(query.trim().toLowerCase()));
 
   if (subjects.length === 0) {
     return null;
@@ -231,7 +231,7 @@ function ExpandableSection({ bundleId, section, subjects, location }: { bundleId
           <input type="search" placeholder={`Search ${SECTION_TITLES[section].toLowerCase()}`} aria-label={`Search ${SECTION_TITLES[section].toLowerCase()}`} value={query} onChange={(event) => setQuery(event.target.value)} />
           {shown.map((subject) => (
             <NavItem key={subject.id} href={paths.subject(bundleId, subject.kind, subject.id)} aria-current={location.page === 'subject' && location.subjectId === subject.id ? 'page' : undefined}>
-              {subject.id}
+              {subject.label}
             </NavItem>
           ))}
           {shown.length === 0 ? <small>No {SECTION_TITLES[section].toLowerCase()} match.</small> : null}

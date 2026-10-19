@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
-import type { Delta } from 'reflection-projection';
+import type { Delta, ProjectionDiff } from 'reflection-projection';
 import type { AttentionItem, AttentionKind } from '../../model/attention';
 import { paths } from '../../routes/paths';
 
@@ -80,7 +80,7 @@ export function AttentionCard({ bundleId, items }: { bundleId: string; items: At
                 In{' '}
                 {item.subjects.slice(0, SHOWN_SUBJECTS).map((subject) => (
                   <a key={subject.id} href={paths.subject(bundleId, subject.kind, subject.id, item.outcome ? { outcome: item.outcome } : {})}>
-                    {subject.id}
+                    {subject.label}
                   </a>
                 ))}
                 {item.subjects.length > SHOWN_SUBJECTS ? `and ${item.subjects.length - SHOWN_SUBJECTS} more` : null}
@@ -114,6 +114,30 @@ export function ChangesCard({ delta }: { delta: Delta & { against: string } }): 
         </Row>
       ))}
       <p className="muted">{delta.sameSnapshot ? `Same design snapshot as ${delta.against}.` : `A newer design snapshot than ${delta.against}.`}</p>
+    </Card>
+  );
+}
+
+/** Design changes since the previous release that a designer may want to look at, from the release diff. */
+export function DesignChangesCard({ bundleId, diff, previousRelease }: { bundleId: string; diff: ProjectionDiff; previousRelease: string }): ReactNode {
+  const rows = [
+    { label: 'Updated references', count: diff.totals.items.referenceChanged },
+    { label: 'New required items', count: diff.totals.items.added },
+    { label: 'Removed required items', count: diff.totals.items.removed }
+  ];
+  return (
+    <Card aria-label="Design changes">
+      <h2>Design changes since {previousRelease}</h2>
+      {rows.map((row) => (
+        <Row key={row.label}>
+          <span>{row.label}</span>
+          <b>{row.count}</b>
+        </Row>
+      ))}
+      <p className="muted">
+        {diff.totals.subjects.added} subjects added, {diff.totals.subjects.updated} updated, {diff.totals.subjects.removed} removed.{' '}
+        <a href={paths.changes(bundleId)}>See the changes</a>
+      </p>
     </Card>
   );
 }

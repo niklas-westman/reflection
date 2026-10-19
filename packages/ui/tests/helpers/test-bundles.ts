@@ -77,6 +77,8 @@ export interface TestBundle {
   projection: Projection;
   // Overrides for the release record, for example a branch and commit.
   release?: Partial<ReleaseManifest>;
+  // What to write for an image, when it should differ from the default (to make a reference "change").
+  imageContent?: (path: string) => Uint8Array;
   // Runs after the bundle is written, to break it on purpose.
   damage?: (directory: string) => Promise<void>;
 }
@@ -92,7 +94,7 @@ export async function makeCatalog(bundles: TestBundle[]): Promise<BundleCatalog>
   created.push(root);
 
   for (const bundle of bundles) {
-    const files: BundleFileInput[] = [...new Set(collectArtifactRefs(bundle.projection).map((artifact) => artifact.path))].map((path) => ({ path, kind: 'artifact', content: png(path) }));
+    const files: BundleFileInput[] = [...new Set(collectArtifactRefs(bundle.projection).map((artifact) => artifact.path))].map((path) => ({ path, kind: 'artifact', content: bundle.imageContent?.(path) ?? png(path) }));
     await writeBundle({ directory: join(root, bundle.id), projection: bundle.projection, release: { ...release, snapshotIds: bundle.projection.snapshots.map((snapshot) => snapshot.id), ...bundle.release }, generator: { name: 'ui-tests' }, files });
     await bundle.damage?.(join(root, bundle.id));
   }
@@ -251,4 +253,75 @@ export function makeInspectorProjection(): Projection {
       }
     ]
   });
+}
+
+/**
+ * Two releases of one project. Compared with the previous one, the current has: a component whose reference
+ * changed (button, primary default light), one added item (secondary hover light), one removed item (legacy),
+ * a new component (select) and a removed page (checkout).
+ */
+export function makeReleasePair(): { previous: TestBundle; current: TestBundle } {
+  const current = makeComponentProjection();
+  const select = {
+    requirement: { id: 'select.default', label: 'select default', subject: { kind: 'component', id: 'select', variant: 'default' }, requiredProofs: ['visual'], enrolled: true },
+    comparison: {
+      id: 'select.default/react',
+      requirementId: 'select.default',
+      subject: { kind: 'component', id: 'select', adapter: 'react' },
+      snapshotId: 'design-sync',
+      runId: 'run-1',
+      reference: { artifact: { role: 'reference', path: 'artifacts/select.default-reference.png' }, approval: { state: 'none' } },
+      actual: { role: 'actual', path: 'artifacts/select.default-react.png' },
+      proof: { visual: 'passed' },
+      verdict: { status: 'pass', severity: 'review' }
+    }
+  };
+  const currentProjection = projectionSchema.parse({ ...current, requirements: [...current.requirements, select.requirement], comparisons: [...current.comparisons, select.comparison] });
+
+  const legacy = {
+    requirement: { id: 'button.legacy.default.light', label: 'legacy default light', subject: { kind: 'component', id: 'button', variant: 'legacy', state: 'default', mode: 'light' }, requiredProofs: ['structural', 'visual'], enrolled: true },
+    comparison: {
+      id: 'button.legacy.default.light/react',
+      requirementId: 'button.legacy.default.light',
+      subject: { kind: 'component', id: 'button', variant: 'legacy', state: 'default', mode: 'light', adapter: 'react' },
+      snapshotId: 'design-sync',
+      runId: 'run-1',
+      reference: { artifact: { role: 'reference', path: 'artifacts/legacy-reference.png' }, approval: { state: 'none' } },
+      actual: { role: 'actual', path: 'artifacts/legacy-react.png' },
+      proof: { structural: 'passed', visual: 'passed' },
+      verdict: { status: 'pass', severity: 'review' }
+    }
+  };
+  const checkout = {
+    requirement: { id: 'checkout.pay', label: 'pay', subject: { kind: 'page', id: 'checkout', state: 'pay' }, requiredProofs: ['visual'], enrolled: true },
+    comparison: {
+      id: 'checkout.pay/chrome',
+      requirementId: 'checkout.pay',
+      subject: { kind: 'page', id: 'checkout', adapter: 'chrome' },
+      snapshotId: 'design-sync',
+      runId: 'run-1',
+      reference: { artifact: { role: 'reference', path: 'artifacts/checkout-reference.png' }, approval: { state: 'none' } },
+      actual: { role: 'actual', path: 'artifacts/checkout-chrome.png' },
+      proof: { visual: 'passed' },
+      verdict: { status: 'pass', severity: 'review' }
+    }
+  };
+  const keep = (id: string | undefined): boolean => id !== 'button.secondary.hover.light';
+  const previousProjection = projectionSchema.parse({
+    ...current,
+    requirements: [...current.requirements.filter((entry) => keep(entry.id)), legacy.requirement, checkout.requirement],
+    comparisons: [...current.comparisons.filter((entry) => keep(entry.requirementId)), legacy.comparison, checkout.comparison]
+  });
+
+  const previousRelease = { release: '2.3.0', state: 'released' as const, build: 1, bundleId: 'components-2.3.0-1', previousRelease: null };
+  return {
+    previous: {
+      id: 'previous',
+      projection: previousProjection,
+      release: previousRelease,
+      // The reference of button primary default light was a different picture in 2.3.0.
+      imageContent: (path) => (path === 'artifacts/button.primary.default.light-reference.png' ? new Uint8Array([9, 9, 9, 9]) : new Uint8Array([137, 80, 78, 71, path.length]))
+    },
+    current: { id: 'current', projection: currentProjection, release: { release: '2.4.0', state: 'candidate', build: 1, bundleId: 'components-2.4.0-1', previousRelease: '2.3.0' } }
+  };
 }

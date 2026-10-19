@@ -6,6 +6,7 @@ export type AttentionKind = 'failures' | 'unusable-evidence' | 'needs-design' | 
 
 export interface AttentionSubject {
   id: string;
+  label: string;
   kind: SubjectGroup['kind'];
 }
 
@@ -34,7 +35,7 @@ export function buildAttention({ projection, subjects, unusableComparisonIds }: 
     const affected = subjects.filter((subject) => countFor(subject) > 0);
     const count = affected.reduce((sum, subject) => sum + countFor(subject), 0);
     if (count > 0) {
-      items.push({ kind, count, outcome, subjects: affected.map(({ id, kind: subjectKind }) => ({ id, kind: subjectKind })) });
+      items.push({ kind, count, outcome, subjects: affected.map(({ id, label, kind: subjectKind }) => ({ id, label, kind: subjectKind })) });
     }
   };
 

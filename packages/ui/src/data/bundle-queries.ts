@@ -1,5 +1,5 @@
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { openBundle, verifyBundleFile, type BundleManifest, type OpenBundleResult } from 'reflection-projection';
+import { openBundle, verifyBundleFile, type BundleManifest, type BundleProblemCode, type OpenBundleResult } from 'reflection-projection';
 import { useBundleCatalog, type BundleListEntry } from './bundle-catalog';
 
 export function useBundleList(): UseQueryResult<BundleListEntry[]> {
@@ -31,7 +31,7 @@ export function useOpenedBundles(entries: BundleListEntry[]): Array<UseQueryResu
   });
 }
 
-export type ArtifactState = { status: 'ready'; url: string } | { status: 'unusable'; reason: string };
+export type ArtifactState = { status: 'ready'; url: string } | { status: 'unusable'; reason: string; code: BundleProblemCode };
 
 /** A verified image as an object URL. A file that is missing or does not match its hash is never returned. */
 export function useArtifactUrl(bundleId: string, manifest: BundleManifest, path: string, enabled: boolean): UseQueryResult<ArtifactState> {
@@ -43,7 +43,7 @@ export function useArtifactUrl(bundleId: string, manifest: BundleManifest, path:
     queryFn: async (): Promise<ArtifactState> => {
       const verified = await verifyBundleFile(catalog.source(bundleId), manifest, path);
       if (!verified.ok) {
-        return { status: 'unusable', reason: verified.problem.message };
+        return { status: 'unusable', reason: verified.problem.message, code: verified.problem.code };
       }
       const bytes = new Uint8Array(verified.bytes);
       return { status: 'ready', url: URL.createObjectURL(new Blob([bytes], { type: mimeOf(path) })) };

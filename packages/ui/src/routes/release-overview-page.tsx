@@ -9,7 +9,10 @@ import { CoverageBar } from '../components/molecules/coverage-bar';
 import { SubjectCard } from '../components/molecules/subject-card';
 import { SummaryGroups } from '../components/molecules/summary-groups';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
-import { AttentionCard, ChangesCard } from '../components/organisms/release-cards';
+import { AttentionCard, ChangesCard, DesignChangesCard } from '../components/organisms/release-cards';
+import { useReleaseDiff } from '../data/release-diff';
+import { ExternalLink } from '../components/atoms/external-link';
+import type { ChangeKind } from 'reflection-projection';
 import { buildAttention, sortByAttention } from '../model/attention';
 import { countComparisons } from '../model/comparison-outcome';
 import { formatDate } from '../model/format';
@@ -73,6 +76,7 @@ export function ReleaseOverviewPage(): ReactNode {
   const comparisons = useMemo(() => countComparisons(projection.comparisons), [projection]);
   const attention = useMemo(() => buildAttention({ projection, subjects, unusableComparisonIds: prepared.unusableComparisonIds }), [projection, subjects, prepared]);
   const { release, project } = manifest;
+  const diffState = useReleaseDiff();
   const delta = projection.delta;
   // Only a delta against a known previous release says anything; the first release has nothing to compare with.
   const comparableDelta = delta && delta.against !== null ? (delta as Delta & { against: string }) : undefined;
@@ -104,6 +108,7 @@ export function ReleaseOverviewPage(): ReactNode {
             <dt>{snapshot.role}</dt>
             <dd>
               {snapshot.label ?? snapshot.kind}, captured {formatDate(snapshot.capturedAt)}
+              {snapshot.sourceUrl ? <> · <ExternalLink href={snapshot.sourceUrl}>Open</ExternalLink></> : null}
             </dd>
           </div>
         ))}
@@ -123,16 +128,17 @@ export function ReleaseOverviewPage(): ReactNode {
       <Spacer />
       <Cards aria-label="Release highlights">
         {comparableDelta ? <ChangesCard delta={comparableDelta} /> : null}
+        {diffState.status === 'ready' ? <DesignChangesCard bundleId={bundleId} diff={diffState.diff} previousRelease={diffState.previousRelease} /> : null}
         <AttentionCard bundleId={bundleId} items={attention} />
       </Cards>
       {(['components', 'pages'] as const).map((section) => (
-        <SubjectCards key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} />
+        <SubjectCards key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} changes={diffState.status === 'ready' ? new Map(diffState.diff.subjects.map((change) => [`${change.kind}/${change.id}`, change.change])) : undefined} />
       ))}
     </>
   );
 }
 
-function SubjectCards({ bundleId, section, subjects }: { bundleId: string; section: Section; subjects: SubjectGroup[] }): ReactNode {
+function SubjectCards({ bundleId, section, subjects, changes }: { bundleId: string; section: Section; subjects: SubjectGroup[]; changes: Map<string, ChangeKind> | undefined }): ReactNode {
   const [showAll, setShowAll] = useState(false);
   if (subjects.length === 0) {
     return null;
@@ -147,7 +153,7 @@ function SubjectCards({ bundleId, section, subjects }: { bundleId: string; secti
       </SectionHeading>
       <Cards>
         {shown.map((subject) => (
-          <SubjectCard key={subject.id} subject={subject} href={paths.subject(bundleId, subject.kind, subject.id)} />
+          <SubjectCard key={subject.id} subject={subject} href={paths.subject(bundleId, subject.kind, subject.id)} change={changes?.get(`${subject.kind}/${subject.id}`)} />
         ))}
       </Cards>
       {subjects.length > SHOWN_AT_FIRST ? (

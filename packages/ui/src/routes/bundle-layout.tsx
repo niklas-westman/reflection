@@ -83,7 +83,8 @@ function OpenLayout({ bundleId, result, verifying }: { bundleId: string; result:
   const location: NavLocation = isSection(section) && subjectId ? { page: 'subject', section, subjectId } : pathname.endsWith('/changes') ? { page: 'changes' } : { page: 'overview' };
   const crumbs: Crumb[] = [{ label: `${project.name} ${release.release}`, href: paths.bundle(bundleId) }];
   if (location.page === 'subject') {
-    crumbs.push({ label: SECTION_TITLES[location.section] }, { label: location.subjectId });
+    const current = subjects.find((subject) => subject.id === location.subjectId);
+    crumbs.push({ label: SECTION_TITLES[location.section] }, { label: current?.label ?? location.subjectId });
   } else if (location.page === 'changes') {
     crumbs.push({ label: 'Changes' });
   }

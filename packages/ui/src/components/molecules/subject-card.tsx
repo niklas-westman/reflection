@@ -1,7 +1,16 @@
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
+import type { ChangeKind } from 'reflection-projection';
 import type { SubjectGroup } from '../../model/subject-model';
+import { Pill } from '../atoms/pill';
 import { CoverageBar } from './coverage-bar';
+
+const BADGE_TEXT: Record<ChangeKind, string> = { added: 'Added', updated: 'Updated', removed: 'Removed', unchanged: 'Unchanged' };
+
+// Whether the catalog changed since the previous release. Not a verification result, and never coloured as one.
+export function ChangeBadge({ change }: { change: ChangeKind }): ReactNode {
+  return <Pill $tone="idle">{BADGE_TEXT[change]}</Pill>;
+}
 
 const Card = styled.a`
   display: flex;
@@ -16,6 +25,12 @@ const Card = styled.a`
 
   &:hover {
     border-color: var(--border-strong);
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: ${({ theme }) => theme.space.xs};
   }
   h3 {
     margin: 0;
@@ -39,7 +54,7 @@ const Card = styled.a`
  * One line of coverage, in required items only: proven of required, then failing and unresolved. Comparison
  * totals are not repeated here. A bucket the provider does not report is left out, never shown as zero.
  */
-export function SubjectCard({ subject, href }: { subject: SubjectGroup; href: string }): ReactNode {
+export function SubjectCard({ subject, href, change }: { subject: SubjectGroup; href: string; change?: ChangeKind | undefined }): ReactNode {
   const { summary } = subject;
   const unresolved = summary.required - summary.proven - summary.failing;
   const breakdown = [
@@ -50,7 +65,11 @@ export function SubjectCard({ subject, href }: { subject: SubjectGroup; href: st
 
   return (
     <Card href={href}>
-      <h3>{subject.id}</h3>
+      <header>
+        <h3>{subject.label}</h3>
+        {change ? <ChangeBadge change={change} /> : null}
+      </header>
+      {subject.description ? <div className="detail">{subject.description}</div> : null}
       <div className="coverage">
         <strong>{summary.proven}</strong> proven of <strong>{summary.required}</strong> required
       </div>

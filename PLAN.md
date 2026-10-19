@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (v5 steps 1 to 4 done)
+Last updated: 2026-10-19 (v5 steps 1 to 5 done)
 
 ## How to keep this alive
 
@@ -42,11 +42,12 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **v5 step 5: Changes screen** (see "Viewer" below). Not started. Unblocked by the three decisions of 2026-10-19.
+- [ ] **v5 step 6: release and history picker, Design references page, remaining error states** (see "Viewer" below). Not started.
 
 ## Next (in order)
 
-1. v5 step 6: release and history picker, Design references page, remaining error states.
+1. Decide how a missing implementation counts toward Proven (required implementations), then build it.
+2. Viewer quality: dogfood Reflection on the viewer, keyboard and screen-reader pass, dark parity.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -97,10 +98,10 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [x] Generated JSON Schema with a drift test, and fixtures for four shapes (native, Marwes Button, Sourcer Login, independent docs-site).
 - [x] N0: provider guide. (`6a5a2de`)
 - [ ] Keep the provider guide current whenever a schema addition below lands.
-- [ ] **Subject catalog**: optional label, description and links per subject.
-- [ ] **Source links**: provider-supplied http(s) URLs for "open in design source" and "open page source". Never a hardcoded tool name.
-- [ ] **`diffProjections(previous, current)`**: pure; requirements added or removed, reference hash changed (= updated), regressed, fixed.
-- [ ] Optional per-change note supplied by a provider.
+- [x] **Subject catalog**: optional label, description, link and change note per subject (`subjects[]`).
+- [x] **Source links**: provider-supplied http(s) URLs (`subject.sourceUrl`, `snapshot.sourceUrl`). Never a hardcoded tool name.
+- [x] **`diffProjections(previous, current)`**: pure; requirements added or removed, reference hash changed (= updated), regressed, fixed.
+- [x] Optional per-change note supplied by a provider (`subjects[].changeNote`).
 - [ ] Approver-list configuration schema (N3).
 - [ ] Discord message formatters for Approve and Require changes (N3).
 - [ ] Decide whether a requirement can declare **required implementations**. Today only recorded comparisons count, so an item compared in one of three implementations can read Proven (the gallery says "Not compared in: ..." beside it). The v5 text says a missing mandatory implementation must block Proven.
@@ -167,12 +168,14 @@ Built so far:
 - [x] 163 tests (29 inspector UI, 16 inspector model), mutation-checked; browser check with real images (modes by key, zoom, synced scroll, next by key, reduced motion, dark), no console errors; the `docs-site` demo carries an illustrative diff, measurements and a size mismatch.
 - [ ] Not built: a `Related` list distinguishing confirmed from suggested design mappings (no such data exists yet); a legend for ignored regions and antialiasing (not in the schema); previous failure / next failure as separate controls.
 
-**Step 5: Changes screen** (decisions made 2026-10-19: reference image, previous release only, no percentages)
-- [ ] `diffProjections` and schema additions (area 2).
-- [ ] Changes screen: Added, Updated, Removed, before and after reference images from the previous retained bundle, "no longer retained" when pruned.
-- [ ] Baseline is the previous release only.
-- [ ] Per-subject change type badge (Added, Updated, Removed, Unchanged) on the overview cards, separate from verification.
-- [ ] Overview card for references changed and new items awaiting review, derived from `diffProjections` (replaces the dropped "Designer review" card).
+**Step 5: Changes screen** (done 2026-10-19; decisions: reference image, previous release only, no percentages)
+- [x] `diffProjections(previous, current)` in the projection package: subjects and required items added, removed or updated (a reference is updated only when both releases hashed it and the hashes differ, or one had a reference and the other none), plus regressed, fixed, still failing and newly enrolled comparisons. Pure, deterministic, from recorded data only.
+- [x] Subject catalog (`subjects[]`: label, description, sourceUrl, changeNote) and `snapshot.sourceUrl`, http(s) only, all optional; used for labels, descriptions, the design-source link and the provider's change note. `comparisonOutcome` moved into the projection package.
+- [x] Changes screen: summary in required items (added, updated, removed) with subject counts, filter by kind, search, a card per changed subject with the reference before and after, the changed items, and the provider's change note. A removed subject has no link. "Image no longer retained" when a previous image is gone.
+- [x] Baseline is the previous release named in the manifest (released over candidate, later build over earlier). When it is not available the page says so and still shows the stored delta; a first release says there is nothing to compare with.
+- [x] Per-subject change badge on the overview cards (apart from verification) and a "Design changes since" card replacing the dropped "Designer review" card; the subject Changes view lists the changed items with before and after.
+- [x] 189 viewer tests and 130 projection tests, mutation-checked; browser check of the changes page, overview badges, the subject Changes view and a pruned image (the one 404 in the console was that deliberate removal). The demo set has a `docs-site-previous` release.
+- [ ] Not built: the overview "Designer review" wording from v5 stays dropped; a change filter by item inside a subject; a link from a Changes card to its filtered inventory.
 
 **Step 6: the rest**
 - [ ] Release and history picker: current, previous, and archive summaries (summary-only view).
@@ -241,7 +244,7 @@ Viewer quality:
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (109 tests), then ui (163 tests, build)
+pnpm check:packages                            # projection (130 tests), then ui (189 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -252,6 +255,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: v5 step 5: `diffProjections`, subject catalog and source links in the projection; Changes screen, overview badges and design-changes card, per-subject Changes view in the viewer. Projection tests 109 to 130, UI tests 163 to 189.
 - 2026-10-19: v5 step 4: comparison inspector (three-up and single-stage modes, zoom with synced scroll, measurements rail, provenance, gaps, related, honest states, keyboard). UI tests 119 to 163.
 - 2026-10-19: v5 step 3: component gallery (dimension selectors, reference and implementation cards, verification details, inline compare), page overview with recorded checks, view switcher, subject banner for unconfirmed reference approvals. UI tests 73 to 119.
 - 2026-10-19: v5 step 2: designed Release Overview (header facts, panels, needs-attention and changes-since cards, subject cards with view-all). UI tests 57 to 73.

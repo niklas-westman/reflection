@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import type { Projection } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
+import { ExternalLink } from '../components/atoms/external-link';
 import { Pill } from '../components/atoms/pill';
 import { Spacer } from '../components/atoms/spacer';
 import { CoverageBar } from '../components/molecules/coverage-bar';
@@ -13,6 +14,8 @@ import { MatrixTable } from '../components/organisms/matrix-table';
 import { PageChecks } from '../components/organisms/page-checks';
 import { Banner } from '../components/molecules/banner';
 import { ViewSwitcher } from '../components/molecules/view-switcher';
+import { SubjectChanges } from '../components/organisms/subject-changes';
+import { useReleaseDiff, type ReleaseDiffState } from '../data/release-diff';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
 import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters } from '../model/filters';
 import { formatDate } from '../model/format';
@@ -62,6 +65,11 @@ const Provenance = styled.dl`
   }
 `;
 
+const Description = styled.p`
+  margin: ${({ theme }) => theme.space.xxs} 0 0;
+  color: var(--muted);
+`;
+
 const Empty = styled.div`
   padding: ${({ theme }) => theme.space.xl};
   text-align: center;
@@ -97,6 +105,7 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
   const navigate = useNavigate();
   const view = parseSubjectSearch(useSearch({ strict: false }) as Record<string, unknown>);
 
+  const diffState = useReleaseDiff();
   const matrix = useMemo(() => buildMatrix({ projection, subject, unusableComparisonIds: prepared.unusableComparisonIds }), [projection, subject, prepared]);
   const filtered = useMemo(() => filterMatrix(matrix, view.filters), [matrix, view.filters]);
   const dimensions = useMemo(() => availableDimensions(matrix), [matrix]);
@@ -128,10 +137,14 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
   return (
     <>
       <Title>
-        <h1>{subject.id}</h1>
-        <span className="kind">{subject.kind === 'component' ? 'Component' : 'Page'}</span>
+        <h1>{subject.label}</h1>
+        <span className="kind">
+          {subject.kind === 'component' ? 'Component' : 'Page'}
+          {subject.label !== subject.id ? ` · ${subject.id}` : ''}
+        </span>
         <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{manifest.release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
       </Title>
+      {subject.description ? <Description>{subject.description}</Description> : null}
       <Provenance aria-label="Provenance">
         {describeSources(projection, subject).map((fact) => (
           <div key={fact.label}>
@@ -139,6 +152,14 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
             <dd>{fact.value}</dd>
           </div>
         ))}
+        {subject.sourceUrl ? (
+          <div>
+            <dt>Design source</dt>
+            <dd>
+              <ExternalLink href={subject.sourceUrl}>Open the design source</ExternalLink>
+            </dd>
+          </div>
+        ) : null}
       </Provenance>
       <Spacer />
       <EvidenceNotice subject={subject} />
@@ -147,7 +168,7 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
       <Spacer $size="sm" />
       <CoverageBar summary={subject.summary} />
       <Spacer />
-      <ViewSwitcher mode={view.mode} onChange={(mode) => update({ mode })} />
+      <ViewSwitcher mode={view.mode} onChange={(mode) => update({ mode })} changesUnavailable={changesUnavailableReason(diffState)} />
       <Spacer $size="sm" />
       {total === 0 ? (
         <Empty>This subject has comparisons but no required items. They are listed in the data but not counted against anything.</Empty>
@@ -169,9 +190,18 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
           <PageChecks bundleId={bundleId} subject={{ id: subject.id, kind: subject.kind }} rows={rows} columns={matrix.columns} onShowAll={() => update({ mode: 'items' })} />
         )
       ) : view.mode === 'changes' ? (
-        <Banner tone="idle" title="Changes are not available yet">
-          <p style={{ margin: '0.25rem 0 0' }}>Changes compare this subject with the previous release. That comparison is not built yet.</p>
-        </Banner>
+        diffState.status === 'ready' ? (
+          <SubjectChanges
+            change={diffState.diff.subjects.find((entry) => entry.kind === subject.kind && entry.id === subject.id) ?? { id: subject.id, kind: subject.kind, change: 'unchanged', items: [], counts: { added: 0, removed: 0, referenceChanged: 0, unchanged: 0 } }}
+            previousRelease={diffState.previousRelease}
+            currentRelease={manifest.release.release}
+            previousSource={diffState.previousSource}
+          />
+        ) : (
+          <Banner tone="idle" title="Changes are not available">
+            <p style={{ margin: '0.25rem 0 0' }}>{changesUnavailableReason(diffState)}</p>
+          </Banner>
+        )
       ) : (
         <>
           <FilterBar
@@ -225,4 +255,11 @@ function describeSources(projection: Projection, subject: SubjectGroup): Fact[] 
     facts.push({ label: 'Runs', value: `${runs.length} runs` });
   }
   return facts.length > 0 ? facts : [{ label: 'Proof based on', value: 'No source or run is recorded for this subject' }];
+}
+
+function changesUnavailableReason(state: ReleaseDiffState): string | undefined {
+  if (state.status === 'ready') return undefined;
+  if (state.status === 'first-release') return 'This is the first release, so there is nothing to compare with.';
+  if (state.status === 'loading') return 'Loading the previous release.';
+  return `The previous release (${state.previousRelease}) is not available here.`;
 }
