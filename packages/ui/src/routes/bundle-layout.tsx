@@ -1,11 +1,13 @@
 import { Outlet, useParams, useRouterState } from '@tanstack/react-router';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { BundleViewProvider } from '../data/bundle-context';
 import { useBundle, useVerifiedBundle } from '../data/bundle-queries';
 import { Banner } from '../components/molecules/banner';
 import { AppShell, type Crumb } from '../components/organisms/app-shell';
-import { ReleaseSidebar, type NavLocation } from '../components/organisms/release-sidebar';
+import { RELEASE_NAVIGATION_ID, ReleaseSidebar, type NavLocation } from '../components/organisms/release-sidebar';
+import { NARROW_QUERY } from '../components/organisms/app-shell';
+import { useMediaQuery } from '../components/atoms/use-media-query';
 import { ValidityPill } from '../components/organisms/validity-pill';
 import { prepareBundle } from '../model/bundle-state';
 import { groupBySubject } from '../model/subject-model';
@@ -16,6 +18,10 @@ const Content = styled.main`
   min-width: 0;
   overflow: auto;
   padding: ${({ theme }) => theme.space.lg} ${({ theme }) => theme.space.xl} ${({ theme }) => theme.space.xl};
+
+  @media ${NARROW_QUERY} {
+    padding: ${({ theme }) => theme.space.md};
+  }
 `;
 
 export function BundleLayout(): ReactNode {
@@ -74,6 +80,11 @@ type OpenedResult = Extract<NonNullable<ReturnType<typeof useBundle>['data']>, {
 function OpenLayout({ bundleId, result, verifying, verificationFailed }: { bundleId: string; result: OpenedResult; verifying: boolean; verificationFailed: string | undefined }): ReactNode {
   const { section, subjectId, comparisonId } = useParams({ strict: false });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const narrow = useMediaQuery(NARROW_QUERY);
+  // The navigation is open by default, except on a comparison (the images need the width) and on a narrow
+  // screen. A reader's choice holds until they move to another page.
+  const [navigationChoice, setNavigationChoice] = useState<{ path: string; open: boolean }>();
+  const navigationOpen = navigationChoice?.path === pathname ? navigationChoice.open : !(comparisonId || narrow);
   const view = useMemo(
     () => ({ bundleId, manifest: result.bundle.manifest, unusablePaths: result.bundle.unusablePaths, prepared: prepareBundle(result.bundle, result.problems), verifying, verificationFailed }),
     [bundleId, result, verifying, verificationFailed]
@@ -99,8 +110,12 @@ function OpenLayout({ bundleId, result, verifying, verificationFailed }: { bundl
 
   return (
     <BundleViewProvider value={view}>
-      <AppShell crumbs={crumbs} status={<ValidityPill validity={view.prepared.validity} verifying={verifying} verificationFailed={verificationFailed !== undefined} />}>
-        <ReleaseSidebar bundleId={bundleId} manifest={result.bundle.manifest} subjects={subjects} location={location} />
+      <AppShell
+        crumbs={crumbs}
+        status={<ValidityPill validity={view.prepared.validity} verifying={verifying} verificationFailed={verificationFailed !== undefined} />}
+        navigation={{ open: navigationOpen, controls: RELEASE_NAVIGATION_ID, onToggle: () => setNavigationChoice({ path: pathname, open: !navigationOpen }) }}
+      >
+        {navigationOpen ? <ReleaseSidebar bundleId={bundleId} manifest={result.bundle.manifest} subjects={subjects} location={location} /> : null}
         <Content>
           <Outlet />
         </Content>

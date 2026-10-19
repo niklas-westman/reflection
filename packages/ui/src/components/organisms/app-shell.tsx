@@ -6,10 +6,17 @@ import { paths } from '../../routes/paths';
 import { Button } from '../atoms/button';
 import { Grow } from '../atoms/spacer';
 
+// Below this width the top bar wraps and the navigation sits above the content instead of beside it.
+export const NARROW_QUERY = '(max-width: 760px)';
+
 const Frame = styled.div`
   display: grid;
   grid-template-rows: 3.25rem 1fr;
   height: 100vh;
+
+  @media ${NARROW_QUERY} {
+    grid-template-rows: auto 1fr;
+  }
 `;
 
 const Top = styled.header`
@@ -19,6 +26,12 @@ const Top = styled.header`
   padding: 0 ${({ theme }) => theme.space.lg};
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+
+  @media ${NARROW_QUERY} {
+    flex-wrap: wrap;
+    padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.md};
+    row-gap: ${({ theme }) => theme.space.xs};
+  }
 `;
 
 const Brand = styled.a`
@@ -35,6 +48,7 @@ const Crumbs = styled.nav`
   gap: ${({ theme }) => theme.space.xs};
   color: var(--muted);
   min-width: 0;
+  flex-wrap: wrap;
 
   a {
     color: var(--text);
@@ -51,6 +65,10 @@ const Body = styled.div`
   min-height: 0;
   min-width: 0;
   display: flex;
+
+  @media ${NARROW_QUERY} {
+    flex-direction: column;
+  }
 `;
 
 export interface Crumb {
@@ -62,10 +80,12 @@ export interface AppShellProps {
   crumbs: Crumb[];
   // Always visible on the right of the top bar, for facts that must show on every route (the evidence state).
   status?: ReactNode;
+  // A button that shows or hides the navigation beside the content, when the page has one.
+  navigation?: { open: boolean; controls: string; onToggle: () => void };
   children: ReactNode;
 }
 
-export function AppShell({ crumbs, status, children }: AppShellProps): ReactNode {
+export function AppShell({ crumbs, status, navigation, children }: AppShellProps): ReactNode {
   const [scheme, setScheme] = useState<ColorScheme>(() => document.documentElement.dataset.theme === 'dark' ? 'dark' : readColorScheme());
 
   // The page is titled by where the reader is, newest crumb first, so a tab, a history entry and a screen reader
@@ -96,6 +116,11 @@ export function AppShell({ crumbs, status, children }: AppShellProps): ReactNode
   return (
     <Frame>
       <Top>
+        {navigation ? (
+          <Button type="button" $quiet aria-expanded={navigation.open} aria-controls={navigation.controls} onClick={navigation.onToggle}>
+            {navigation.open ? 'Hide navigation' : 'Navigation'}
+          </Button>
+        ) : null}
         <Brand href={paths.bundles()}>Reflection</Brand>
         <Crumbs aria-label="Breadcrumb">
           {crumbs.map((crumb, index) => (

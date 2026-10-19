@@ -17,10 +17,16 @@ const Checker = `
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 `;
 
-const Surface = styled.div<{ $checker: boolean; $tall: boolean }>`
+// At Fit, a surface takes the image's own shape at the full width it is given, never taller than the window
+// leaves room for, so there is no empty box around the evidence. At a zoom it is a fixed window that scrolls.
+const Surface = styled.div<{ $checker: boolean; $tall: boolean; $aspect?: string | undefined }>`
   display: grid;
+  grid-template: 100% / 100%;
   overflow: auto;
-  height: ${({ $tall }) => ($tall ? '34rem' : '28rem')};
+  ${({ $aspect, $tall }) =>
+    $aspect
+      ? `aspect-ratio: ${$aspect}; max-height: calc(100vh - ${$tall ? '13rem' : '15rem'}); min-height: 8rem;`
+      : `height: ${$tall ? '34rem' : '28rem'};`}
   border: 1px solid var(--border);
   border-radius: ${({ theme }) => theme.radius.md};
   background-color: var(--thumb-light);
@@ -77,6 +83,29 @@ const ThreeUp = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${({ theme }) => theme.space.sm};
+  align-items: start;
+
+  @media (max-width: 760px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+`;
+
+// The recorded difference large on the left, the reference and the implementation stacked beside it.
+const DifferenceLarge = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-areas: 'diff reference' 'diff actual';
+  gap: ${({ theme }) => theme.space.sm};
+  align-items: start;
+
+  > .diff {
+    grid-area: diff;
+  }
+
+  @media (max-width: 760px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'diff' 'reference' 'actual';
+  }
 `;
 
 export interface SyncedScroll {
@@ -147,11 +176,14 @@ function EvidenceImage(props: EvidenceImageProps & { checker: boolean; tall: boo
   const { artifact, alt, zoom, emptyTitle, emptyDetail, checker, tall, sync, syncId } = props;
   const image = useEvidenceImage(props);
   const scale = zoom === 'fit' ? undefined : zoom / 100;
+  const size = image.natural ?? (artifact?.width && artifact.height ? { width: artifact.width, height: artifact.height } : undefined);
+  const aspect = scale === undefined && image.state === 'ready' && size ? `${size.width} / ${size.height}` : undefined;
 
   return (
     <Surface
       $checker={checker}
       $tall={tall}
+      $aspect={aspect}
       ref={(element) => sync.register(syncId, element)}
       onScroll={(event) => sync.onScroll(syncId, event.currentTarget)}
       tabIndex={0}
@@ -222,6 +254,37 @@ export function EvidenceStage(props: EvidenceStageProps): ReactNode {
     return size ? `${size.width} × ${size.height}` : 'Size not recorded';
   };
 
+  const referencePanel = (
+    <Panel>
+      <figcaption>
+        <strong>Reference</strong>
+        <DownloadLink artifact={reference} label="reference" />
+      </figcaption>
+      <EvidenceImage {...shared} syncId="reference" tall={false} artifact={reference} alt="Reference" emptyTitle="No reference image" emptyDetail={props.referenceMissingReason} onSize={(size) => props.onSizes('reference', size)} />
+      <span className="meta">{labelFor(reference, 'reference')}</span>
+    </Panel>
+  );
+  const actualPanel = (
+    <Panel>
+      <figcaption>
+        <strong>{props.implementationLabel}</strong>
+        <DownloadLink artifact={actual} label="implementation" />
+      </figcaption>
+      <EvidenceImage {...shared} syncId="actual" tall={false} artifact={actual} alt="Implementation" emptyTitle="No implementation image" emptyDetail="Nothing was captured for this comparison." onSize={(size) => props.onSizes('actual', size)} />
+      <span className="meta">{labelFor(actual, 'actual')}</span>
+    </Panel>
+  );
+  const diffPanel = (
+    <Panel className="diff">
+      <figcaption>
+        <strong>Difference</strong>
+        <DownloadLink artifact={diff} label="difference" />
+      </figcaption>
+      <EvidenceImage {...shared} syncId="diff" tall={false} artifact={diff} alt="Difference" emptyTitle="No diff recorded" emptyDetail={props.diffMetricText ?? 'This comparison recorded no difference image and no pixel metric.'} onSize={(size) => props.onSizes('diff', size)} />
+      <span className="meta">{diff ? labelFor(diff, 'diff') : (props.diffMetricText ?? 'Not recorded')}</span>
+    </Panel>
+  );
+
   return (
     <div>
       {mismatch ? (
@@ -231,31 +294,17 @@ export function EvidenceStage(props: EvidenceStageProps): ReactNode {
       ) : null}
       {mode === 'side-by-side' ? (
         <ThreeUp role="group" aria-label="Reference, implementation and difference">
-          <Panel>
-            <figcaption>
-              <strong>Reference</strong>
-              <DownloadLink artifact={reference} label="reference" />
-            </figcaption>
-            <EvidenceImage {...shared} syncId="reference" tall={false} artifact={reference} alt="Reference" emptyTitle="No reference image" emptyDetail={props.referenceMissingReason} onSize={(size) => props.onSizes('reference', size)} />
-            <span className="meta">{labelFor(reference, 'reference')}</span>
-          </Panel>
-          <Panel>
-            <figcaption>
-              <strong>{props.implementationLabel}</strong>
-              <DownloadLink artifact={actual} label="implementation" />
-            </figcaption>
-            <EvidenceImage {...shared} syncId="actual" tall={false} artifact={actual} alt="Implementation" emptyTitle="No implementation image" emptyDetail="Nothing was captured for this comparison." onSize={(size) => props.onSizes('actual', size)} />
-            <span className="meta">{labelFor(actual, 'actual')}</span>
-          </Panel>
-          <Panel>
-            <figcaption>
-              <strong>Difference</strong>
-              <DownloadLink artifact={diff} label="difference" />
-            </figcaption>
-            <EvidenceImage {...shared} syncId="diff" tall={false} artifact={diff} alt="Difference" emptyTitle="No diff recorded" emptyDetail={props.diffMetricText ?? 'This comparison recorded no difference image and no pixel metric.'} onSize={(size) => props.onSizes('diff', size)} />
-            <span className="meta">{diff ? labelFor(diff, 'diff') : (props.diffMetricText ?? 'Not recorded')}</span>
-          </Panel>
+          {referencePanel}
+          {actualPanel}
+          {diffPanel}
         </ThreeUp>
+      ) : null}
+      {mode === 'difference-large' ? (
+        <DifferenceLarge role="group" aria-label="Difference, with the reference and implementation beside it">
+          {diffPanel}
+          {referencePanel}
+          {actualPanel}
+        </DifferenceLarge>
       ) : null}
       {mode === 'overlay' || mode === 'wipe' ? (
         <Panel>

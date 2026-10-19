@@ -1,11 +1,13 @@
-export type InspectorMode = 'side-by-side' | 'overlay' | 'wipe' | 'diff';
+export type InspectorMode = 'side-by-side' | 'difference-large' | 'overlay' | 'wipe' | 'diff';
 export type Zoom = 'fit' | 100 | 200 | 400;
 
 export const INSPECTOR_MODES: ReadonlyArray<{ mode: InspectorMode; label: string }> = [
   { mode: 'side-by-side', label: 'Side by side' },
   { mode: 'overlay', label: 'Overlay' },
   { mode: 'wipe', label: 'Wipe' },
-  { mode: 'diff', label: 'Diff' }
+  { mode: 'diff', label: 'Diff' },
+  // Last, so the keys 1 to 4 keep their modes.
+  { mode: 'difference-large', label: 'Difference large' }
 ];
 
 export const ZOOMS: readonly Zoom[] = ['fit', 100, 200, 400];

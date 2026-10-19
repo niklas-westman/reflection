@@ -5,11 +5,22 @@ import { releaseStateLabel } from '../../model/format';
 import type { SubjectGroup } from '../../model/subject-model';
 import { paths, SECTION_TITLES, sectionOf, type Section } from '../../routes/paths';
 import { Pill } from '../atoms/pill';
+import { NARROW_QUERY } from './app-shell';
 import { ReleasePicker } from './release-picker';
+
+export const RELEASE_NAVIGATION_ID = 'release-navigation';
 
 const Side = styled.nav`
   width: 15.5rem;
   flex: none;
+
+  @media ${NARROW_QUERY} {
+    width: auto;
+    max-height: 55vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space.md};
@@ -150,7 +161,7 @@ export interface ReleaseSidebarProps {
  */
 export function ReleaseSidebar({ bundleId, manifest, subjects, location }: ReleaseSidebarProps): ReactNode {
   return (
-    <Side aria-label="Release navigation">
+    <Side id={RELEASE_NAVIGATION_ID} aria-label="Release navigation">
       <ReleaseCardWithPicker bundleId={bundleId} manifest={manifest} />
       <Group>
         <NavItem href={paths.bundle(bundleId)} aria-current={location.page === 'overview' ? 'page' : undefined}>

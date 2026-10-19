@@ -106,21 +106,30 @@ const Controls = styled.div`
   }
 `;
 
+// The images are the evidence, so they take the width. The rail sits beside them only on a very wide screen;
+// otherwise its cards line up below the images.
+const WIDE_ENOUGH_FOR_RAIL = '(min-width: 1700px)';
+
 const Workspace = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 17.5rem;
+  grid-template-columns: minmax(0, 1fr);
   gap: ${({ theme }) => theme.space.md};
   align-items: start;
 
-  @media (max-width: 1100px) {
-    grid-template-columns: minmax(0, 1fr);
+  @media ${WIDE_ENOUGH_FOR_RAIL} {
+    grid-template-columns: minmax(0, 1fr) 17.5rem;
   }
 `;
 
 const Rail = styled.aside`
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
   gap: ${({ theme }) => theme.space.sm};
+  align-items: start;
+
+  @media ${WIDE_ENOUGH_FOR_RAIL} {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 const Card = styled.section<{ $caution?: boolean }>`
@@ -131,6 +140,18 @@ const Card = styled.section<{ $caution?: boolean }>`
   color: ${({ $caution }) => ($caution ? 'var(--gap)' : 'inherit')};
   min-width: 0;
 
+  summary {
+    cursor: pointer;
+  }
+  summary h2 {
+    display: inline;
+  }
+  summary .muted {
+    display: block;
+  }
+  details[open] summary {
+    margin-bottom: ${({ theme }) => theme.space.xs};
+  }
   h2 {
     margin: 0 0 ${({ theme }) => theme.space.xs};
     font-size: ${({ theme }) => theme.font.md};
@@ -210,14 +231,14 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
   const setMode = (mode: InspectorMode): void => onViewChange({ ...view, mode });
   const setZoom = (zoom: Zoom): void => onViewChange({ ...view, zoom });
 
-  // Keyboard: j and k (or the arrow keys) move between comparisons, 1 to 4 switch the mode. Never while typing or in a control.
+  // Keyboard: j and k (or the arrow keys) move between comparisons, 1 to 5 switch the mode. Never while typing or in a control.
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement | null;
       if (event.metaKey || event.ctrlKey || event.altKey || (target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) return;
       if ((event.key === 'j' || event.key === 'ArrowRight') && hrefs.next) onNavigate(hrefs.next);
       else if ((event.key === 'k' || event.key === 'ArrowLeft') && hrefs.previous) onNavigate(hrefs.previous);
-      else if (['1', '2', '3', '4'].includes(event.key)) setMode(INSPECTOR_MODES[Number(event.key) - 1]?.mode ?? view.mode);
+      else if (['1', '2', '3', '4', '5'].includes(event.key)) setMode(INSPECTOR_MODES[Number(event.key) - 1]?.mode ?? view.mode);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -294,7 +315,7 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
             <input type="range" min={0} max={100} value={wipe} onChange={(event) => setWipe(Number(event.target.value))} />
           </label>
         ) : null}
-        <span className="hint">Keys: j and k move between comparisons, 1 to 4 switch the mode.</span>
+        <span className="hint">Keys: j and k move between comparisons, 1 to 5 switch the mode.</span>
       </Controls>
       <Workspace>
         <EvidenceStage
@@ -314,8 +335,8 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
         />
         <Rail>
           <ResultCard model={model} offline={offline} />
-          <Card aria-label="Freshness of this proof">
-            <FreshnessFacts lines={model.freshness} />
+          <Card>
+            <FreshnessFacts lines={model.freshness} inCard />
           </Card>
           <MeasurementsCard model={model} />
           {model.caution || model.approvalFacts.length > 0 ? (
@@ -335,12 +356,17 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
       </Workspace>
       <Lower>
         <Card aria-label="Provenance">
-          <h2>Provenance</h2>
-          <dl>
-            {model.provenance.map((fact) => (
-              <FactRow key={fact.label} fact={fact} />
-            ))}
-          </dl>
+          <details>
+            <summary>
+              <h2>Provenance</h2>
+              <span className="muted">Run, environment, design source and file hashes</span>
+            </summary>
+            <dl>
+              {model.provenance.map((fact) => (
+                <FactRow key={fact.label} fact={fact} />
+              ))}
+            </dl>
+          </details>
         </Card>
         <Card aria-label="Gaps">
           <h2>Gaps</h2>

@@ -72,7 +72,7 @@ describe('the comparison inspector', () => {
 describe('modes, zoom and the address', () => {
   const pressed = (name: string): string | null => screen.getByRole('button', { name }).getAttribute('aria-pressed');
 
-  it('switches mode with the buttons and with the keys 1 to 4', async () => {
+  it('switches mode with the buttons and with the keys 1 to 5', async () => {
     await openInspector();
     expect(pressed('Side by side')).toBe('true');
 
@@ -87,6 +87,10 @@ describe('modes, zoom and the address', () => {
     await userEvent.keyboard('4');
     await waitFor(() => expect(pressed('Diff')).toBe('true'));
     expect(within(screen.getByRole('group', { name: 'Difference' })).queryByText('No diff recorded')).not.toBeInTheDocument();
+
+    await userEvent.keyboard('5');
+    await waitFor(() => expect(pressed('Difference large')).toBe('true'));
+    expect(screen.getByRole('group', { name: 'Difference, with the reference and implementation beside it' })).toBeInTheDocument();
 
     await userEvent.keyboard('1');
     await waitFor(() => expect(pressed('Side by side')).toBe('true'));
