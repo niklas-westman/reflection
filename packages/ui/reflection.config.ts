@@ -8,6 +8,27 @@ const baseUrl = `http://127.0.0.1:${port}`;
 const viewports = ['desktop', { name: 'desktop-narrow', width: 1100, height: 800 }];
 const quiet = [{ noConsoleErrors: true }, { noHorizontalOverflow: true }, { screenshot: 'final' }] as const;
 
+// Baselines are made on one platform, and font rendering differs between platforms, so the file name says which.
+// A run on another platform finds no baseline and reports a review item instead of a false difference.
+const platform = 'chromium-darwin';
+const baselineRoot = 'packages/ui/tests/visual-baselines';
+const baselined: Array<[route: string, viewport: string]> = [
+  ['releases', 'desktop'],
+  ['overview', 'desktop'],
+  ['overview', 'desktop-narrow'],
+  ['page-checks', 'desktop'],
+  ['inventory', 'desktop'],
+  ['component-gallery', 'desktop'],
+  ['component-gallery', 'desktop-narrow'],
+  ['comparison', 'desktop'],
+  ['comparison', 'desktop-narrow'],
+  ['changes', 'desktop'],
+  ['design-references', 'desktop'],
+  ['summary-only', 'desktop'],
+  ['invalid-evidence', 'desktop'],
+  ['rejected-bundle', 'desktop']
+];
+
 export default defineReflection({
   project: 'reflection-ui',
   run: { defaultMode: 'smoke', ciMode: 'smoke' },
@@ -43,7 +64,16 @@ export default defineReflection({
         { id: 'summary-only', name: 'A release that is only a summary', path: '/#/archive/docs-site/demo-older', viewports, expects: [{ text: 'Historical release: its evidence was removed' }, { text: 'Decision' }, ...quiet] },
         { id: 'invalid-evidence', name: 'A bundle with an image that does not match its hash', path: '/#/bundles/docs-site-tampered-image/pages/pricing', viewports, expects: [{ text: 'Some evidence in this bundle is unusable' }, ...quiet] },
         { id: 'rejected-bundle', name: 'A bundle that cannot be trusted', path: '/#/bundles/docs-site-rejected', viewports, expects: [{ text: 'This bundle is invalid and cannot be shown' }, ...quiet] }
-      ]
+      ],
+      // Review-only: a difference is shown for a person to judge, and never blocks a run. The viewer is mostly empty space, so a ratio would let a real change through; 50 pixels is slack for anti-aliasing (the measured noise on one machine is 0).
+      visualSmoke: baselined.map(([route, viewport]) => ({
+        id: `${route}-${viewport}`,
+        route,
+        viewport,
+        baselineRoot,
+        baseline: `${route}/${viewport}.${platform}.light.webp`,
+        threshold: { maxDiffPixels: 50 }
+      }))
     }
   }
 });

@@ -190,9 +190,10 @@ Built so far:
 
 Viewer quality:
 - [x] Reflection smoke over the viewer's routes against the demo bundles (dogfooding): `packages/ui/reflection.config.ts`, 11 routes in two desktop widths (1440 and 1100), expecting a heading, no console error, no sideways page scroll, with a screenshot each; `pnpm --filter reflection-ui reflect`. The first run found two real gaps (no visible "Recorded page checks" and "Changes to inspect" headings), now fixed.
-- [ ] The gate's overflow check looks at the document only. The viewer scrolls inside its content pane, so sideways overflow in the pane is not caught (proved by a mutation that widened the inventory by 3000px and still passed). Closing it needs either visual baselines or an engine expectation for a scroll container; the second is an engine change and needs approval.
-- [ ] Visual baselines for the viewer's stable routes (`visualSmoke`). Needs the owner's approval, because creating a baseline is a baseline update.
-- [ ] Run the gate in CI (the generated demo bundles and a Vite dev server are the only needs).
+- [x] The page-level overflow check cannot see sideways overflow inside the content pane (a 3000px mutation passed it). The visual baselines close that gap: the same mutation now produces a review item.
+- [x] Visual baselines for 14 stable routes (`visualSmoke`), approved by the owner on 2026-10-19: lossless WebP, 568 KB, in `packages/ui/tests/visual-baselines`, named `chromium-darwin` because they were made on macOS. Run-to-run noise on that machine is 0 pixels, so the threshold is `maxDiffPixels: 50` (a ratio would hide real changes in a mostly empty screen). Mutations (a 3000px table, a changed colour) are caught. A difference is review-only.
+- [ ] Linux baselines for CI: a run on another platform finds no baseline and reports a review item. Make them on Linux (a container) and approve them the same way.
+- [ ] Run the gate in CI (the generated demo bundles, a Vite dev server and Linux baselines are the needs).
 - [ ] Keyboard, focus and screen-reader pass.
 - [ ] Virtualization, only if measured as needed.
 - [ ] Dark theme parity for every screen.
@@ -265,6 +266,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: visual baselines for the viewer (14 routes, approved by the owner); threshold `maxDiffPixels: 50`; the overflow gap is closed by the baselines.
 - 2026-10-19: proved the viewer gate with two mutations: a console error is caught on both widths; sideways overflow inside the content pane is not (recorded as a gap).
 - 2026-10-19: dogfooding: Reflection smoke gate on the viewer (`packages/ui/reflection.config.ts`, `pnpm --filter reflection-ui reflect`); visible headings added to the page checks and the changes list; AGENTS.md documents the viewer gate.
 - 2026-10-19: v5 step 6: release and history picker, summary-only release page, design references page, never-run, stale and verification states, empty-bundle state; fixed month names in dates. UI tests 200 to 228. The v5 design is fully built.

@@ -77,7 +77,7 @@ pnpm --filter reflection-ui reflect     # smoke: every route, two desktop widths
 node dist/cli.js review --json
 ```
 
-`reflection.config.ts` lists the routes. It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. There are no visual baselines yet. The overflow check looks at the page, not at the scrolling content pane inside it, so sideways overflow within the pane is not caught.
+`reflection.config.ts` lists the routes. It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. 14 routes also have visual baselines (`tests/visual-baselines`, lossless WebP, named `chromium-darwin` for the platform they were made on). A difference is a review item, not a failure. The page-level overflow check cannot see overflow inside the scrolling content pane; the baselines do. On another platform there is no baseline, which is also a review item. To accept an intended change, inspect it, run `reflection update --config packages/ui/reflection.config.ts --all --from-run latest --dry-run`, and promote it only with approval.
 
 ## Layout
 

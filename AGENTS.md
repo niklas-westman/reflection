@@ -39,4 +39,4 @@ pnpm --filter reflection-ui reflect
 node dist/cli.js review --json
 ```
 
-It opens every viewer route against the generated demo bundles in two desktop widths and fails on a missing heading, a console error or sideways page scroll. When you add a route, add it to `packages/ui/reflection.config.ts`. Visual baselines for the viewer do not exist yet; creating them is a baseline update and needs the human's approval.
+It opens every viewer route against the generated demo bundles in two desktop widths and fails on a missing heading, a console error or sideways page scroll. When you add a route, add it to `packages/ui/reflection.config.ts`. The viewer has visual baselines (14 routes, lossless WebP, in `packages/ui/tests/visual-baselines`, named for the platform they were made on: `chromium-darwin`). A difference is a review item, not a failure. When a change to the viewer is intended, inspect the diff, propose it with `reflection update --config packages/ui/reflection.config.ts --all --from-run latest --dry-run`, and promote it only with the human's approval.
