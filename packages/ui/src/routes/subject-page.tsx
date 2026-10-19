@@ -185,7 +185,15 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
             onPickAdapters={(ids) => update({ adapters: ids.length === 0 ? undefined : ids })}
           />
         ) : (
-          <PageChecks bundleId={bundleId} subject={{ id: subject.id, kind: subject.kind }} rows={rows} columns={matrix.columns} onShowAll={() => update({ mode: 'items' })} />
+          <PageChecks
+            bundleId={bundleId}
+            subject={{ id: subject.id, kind: subject.kind }}
+            rows={rows}
+            providerOrder={subject.requirements.map((requirement) => requirement.id)}
+            presentation={subject.presentation}
+            columns={matrix.columns}
+            onShowAll={() => update({ mode: 'items' })}
+          />
         )
       ) : view.mode === 'changes' ? (
         diffState.status === 'ready' ? (

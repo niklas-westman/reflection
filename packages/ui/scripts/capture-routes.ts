@@ -25,6 +25,17 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.goto(`${baseUrl}/#${route}`);
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(800);
+      // The viewer scrolls inside its content pane; let the page grow instead so the capture holds all of it.
+      await page.addStyleTag({ content: '#root > div { height: auto !important; } main { overflow: visible !important; }' });
+      // Images load when they come into view, so walk down the page once before the capture.
+      const height = await page.evaluate(() => document.documentElement.scrollHeight);
+      for (let y = 0; y < height; y += 700) {
+        await page.evaluate((top) => window.scrollTo(0, top), y);
+        await page.waitForTimeout(120);
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(300);
       const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       const file = join(outDir, `${name}-${width}-${scheme}.png`);
       await page.screenshot({ path: file, fullPage: true });

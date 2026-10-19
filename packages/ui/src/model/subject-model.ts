@@ -1,4 +1,4 @@
-import { summarizeReadiness, type Comparison, type CoverageSummary, type Projection, type Requirement } from 'reflection-projection';
+import { summarizeReadiness, type Comparison, type CoverageSummary, type Presentation, type Projection, type Requirement } from 'reflection-projection';
 import { countComparisons, type ComparisonCounts } from './comparison-outcome';
 
 /** What the rail lists. A subject is the unit a provider groups by: a component family, a page. */
@@ -9,6 +9,8 @@ export interface SubjectGroup {
   description: string | undefined;
   sourceUrl: string | undefined;
   changeNote: string | undefined;
+  // The provider's layout hint for the subject's items; undefined keeps the default layout.
+  presentation: Presentation | undefined;
   kind: 'component' | 'page';
   requirements: Requirement[];
   comparisons: Comparison[];
@@ -49,6 +51,7 @@ export function groupBySubject(projection: Projection): SubjectGroup[] {
         description: info?.description,
         sourceUrl: info?.sourceUrl,
         changeNote: info?.changeNote,
+        presentation: info?.presentation,
         kind: group.kind,
         requirements: group.requirements,
         comparisons: group.comparisons,

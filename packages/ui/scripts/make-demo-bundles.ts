@@ -8,6 +8,7 @@ import { PNG } from 'pngjs';
 import { buildArchiveSummary, projectFromReflectionReport, projectionSchema, collectArtifactRefs, summarizeReadiness, type Projection, type ReleaseManifest } from 'reflection-projection';
 import { writeBundle, type BundleFileInput } from 'reflection-projection/node';
 import { buildFromSample, readFixture } from '../../projection/tests/helpers/builders';
+import { screensDemo } from './demo-screens';
 
 const DEFAULT_OUTPUT = '.demo-bundles';
 const output = resolve(process.argv[2] ?? DEFAULT_OUTPUT);
@@ -31,7 +32,10 @@ const demos: Demo[] = [
   // release added, one it removed, and a page that no longer exists.
   // The same site, but every item must pass in Chrome, Firefox and Safari. Nothing was ever compared in Safari.
   { id: 'docs-site-strict', projection: strictOf(docsSite) },
-  { id: 'docs-site-previous', projection: previousOf(docsSite), release: { release: 'demo-0', state: 'released', previousRelease: null }, oldLook: 'hero.tablet' }
+  { id: 'docs-site-previous', projection: previousOf(docsSite), release: { release: 'demo-0', state: 'released', previousRelease: null }, oldLook: 'hero.tablet' },
+  // A page of 200 required items with a presentation hint and every outcome, and one where every check fails.
+  { id: 'checkout-200', projection: screensDemo({ pageId: 'checkout', label: 'Checkout', appStates: 60, appDevices: ['desktop', 'tablet', 'mobile'], emailStates: 10, emailDevices: ['desktop', 'phone'] }) },
+  { id: 'signup-all-failing', projection: screensDemo({ pageId: 'signup', label: 'Sign-up', appStates: 15, appDevices: ['desktop', 'mobile'], emailStates: 0, emailDevices: [], allFailing: true }) }
 ];
 
 // The sample's placeholder requirements stand in for items that were counted but not itemised. Give them the
