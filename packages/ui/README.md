@@ -68,6 +68,17 @@ A subject opened under the wrong section is redirected to its own.
 - **Files are verified.** The bundle opens at once; in the background every file is read and hashed ("Verifying files…"), and each image is hash-checked before it is shown.
 - **URLs carry the view:** search, outcome and dimension filters and density are in the address, so a link reproduces what you were looking at.
 
+## Checking the viewer with Reflection
+
+Reflection runs on its own viewer. From the repository root, after `pnpm build`:
+
+```bash
+pnpm --filter reflection-ui reflect     # smoke: every route, two desktop widths
+node dist/cli.js review --json
+```
+
+`reflection.config.ts` lists the routes. It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. There are no visual baselines yet.
+
 ## Layout
 
 ```text

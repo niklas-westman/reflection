@@ -168,6 +168,7 @@ function Changes({ diff }: { diff: ProjectionDiff }): ReactNode {
         {diff.totals.subjects.unchanged} {diff.totals.subjects.unchanged === 1 ? 'subject is' : 'subjects are'} unchanged. A change here is a change to what must be proven or to its design; it is not a pass or a fail.
       </p>
       <Spacer />
+      <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.0625rem' }}>Changes to inspect</h2>
       <Tools>
         <Segmented role="group" aria-label="Kind of change">
           {FILTERS.map((filter) => (

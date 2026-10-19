@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm test && pnpm build",
-    "demo-bundles": "vite-node scripts/make-demo-bundles.ts"
+    "demo-bundles": "vite-node scripts/make-demo-bundles.ts",
+    "reflect": "pnpm --dir ../.. exec node dist/cli.js run --config packages/ui/reflection.config.ts --mode smoke"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",

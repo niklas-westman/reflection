@@ -29,3 +29,14 @@ Rules:
 - Never run `reflection update` in CI.
 
 Full protocol: `docs/validation-process.md`.
+
+### The viewer (`packages/ui`)
+
+Reflection runs on its own viewer. After changing the viewer, also run its smoke gate from the repository root (build the engine first with `pnpm build`):
+
+```bash
+pnpm --filter reflection-ui reflect
+node dist/cli.js review --json
+```
+
+It opens every viewer route against the generated demo bundles in two desktop widths and fails on a missing heading, a console error or sideways page scroll. When you add a route, add it to `packages/ui/reflection.config.ts`. Visual baselines for the viewer do not exist yet; creating them is a baseline update and needs the human's approval.

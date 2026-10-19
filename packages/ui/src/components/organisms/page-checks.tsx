@@ -49,6 +49,11 @@ const Check = styled.article<{ $failed: boolean }>`
   }
 `;
 
+const Heading = styled.h2`
+  margin: 0 0 ${({ theme }) => theme.space.xxs};
+  font-size: ${({ theme }) => theme.font.lg};
+`;
+
 const Note = styled.p`
   color: var(--muted);
   font-size: ${({ theme }) => theme.font.sm};
@@ -75,6 +80,8 @@ export function PageChecks({ bundleId, subject, rows, columns, onShowAll }: Page
 
   return (
     <>
+      <Heading>Recorded page checks</Heading>
+      <Note style={{ marginTop: 0 }}>Whole-page captures of each recorded state and viewport, not checks of the elements inside them.</Note>
       <Grid aria-label="Recorded page checks">
         {shown.map((row) => {
           const primary = [...row.cells.values()].find((cell) => cell.outcome === 'failed')?.primary ?? [...row.cells.values()].find((cell) => cell.primary)?.primary;

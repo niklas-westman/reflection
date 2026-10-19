@@ -42,7 +42,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Viewer quality: dogfood Reflection on the viewer** (a visual smoke over its routes against the demo bundles), then the keyboard and screen-reader pass and dark-theme parity. Not started. The v5 build order is finished.
+- [ ] **Viewer quality: keyboard and screen-reader pass, then dark-theme parity for every screen.** Not started. The v5 build order is finished and the smoke gate on the viewer is in place.
 
 ## Next (in order)
 
@@ -189,7 +189,9 @@ Built so far:
 - [ ] Not applicable: "runner unavailable" (the viewer has no run control, so there is nothing to disable).
 
 Viewer quality:
-- [ ] Reflection visual smoke over the viewer's routes against the demo bundles (dogfooding).
+- [x] Reflection smoke over the viewer's routes against the demo bundles (dogfooding): `packages/ui/reflection.config.ts`, 11 routes in two desktop widths (1440 and 1100), expecting a heading, no console error, no sideways page scroll, with a screenshot each; `pnpm --filter reflection-ui reflect`. The first run found two real gaps (no visible "Recorded page checks" and "Changes to inspect" headings), now fixed.
+- [ ] Visual baselines for the viewer's stable routes (`visualSmoke`). Needs the owner's approval, because creating a baseline is a baseline update.
+- [ ] Run the gate in CI (the generated demo bundles and a Vite dev server are the only needs).
 - [ ] Keyboard, focus and screen-reader pass.
 - [ ] Virtualization, only if measured as needed.
 - [ ] Dark theme parity for every screen.
@@ -227,7 +229,7 @@ Viewer quality:
 - [x] This plan in the repository and pointed to from `AGENTS.md`.
 - [ ] Decide whether and where the private briefs and mockup live long term.
 - [ ] Package scripts and CI for the workspace (`check:packages` exists locally; no CI wiring yet).
-- [ ] AGENTS.md gate also run against the viewer once it is dogfooded.
+- [x] AGENTS.md gate also run against the viewer (documented in `AGENTS.md`).
 
 ---
 
@@ -262,6 +264,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: dogfooding: Reflection smoke gate on the viewer (`packages/ui/reflection.config.ts`, `pnpm --filter reflection-ui reflect`); visible headings added to the page checks and the changes list; AGENTS.md documents the viewer gate.
 - 2026-10-19: v5 step 6: release and history picker, summary-only release page, design references page, never-run, stale and verification states, empty-bundle state; fixed month names in dates. UI tests 200 to 228. The v5 design is fully built.
 - 2026-10-19: required implementations: `requiredImplementations` on a requirement, `missingImplementations`, the readiness rule, columns and cards for implementations nobody compared, a needs-attention item, inspector gaps, a `docs-site-strict` demo. Projection tests 130 to 139, UI tests 189 to 200.
 - 2026-10-19: v5 step 5: `diffProjections`, subject catalog and source links in the projection; Changes screen, overview badges and design-changes card, per-subject Changes view in the viewer. Projection tests 109 to 130, UI tests 163 to 189.
