@@ -75,6 +75,8 @@ export const release: ReleaseManifest = {
 export interface TestBundle {
   id: string;
   projection: Projection;
+  // Overrides for the release record, for example a branch and commit.
+  release?: Partial<ReleaseManifest>;
   // Runs after the bundle is written, to break it on purpose.
   damage?: (directory: string) => Promise<void>;
 }
@@ -91,7 +93,7 @@ export async function makeCatalog(bundles: TestBundle[]): Promise<BundleCatalog>
 
   for (const bundle of bundles) {
     const files: BundleFileInput[] = [...new Set(collectArtifactRefs(bundle.projection).map((artifact) => artifact.path))].map((path) => ({ path, kind: 'artifact', content: png(path) }));
-    await writeBundle({ directory: join(root, bundle.id), projection: bundle.projection, release, generator: { name: 'ui-tests' }, files });
+    await writeBundle({ directory: join(root, bundle.id), projection: bundle.projection, release: { ...release, ...bundle.release }, generator: { name: 'ui-tests' }, files });
     await bundle.damage?.(join(root, bundle.id));
   }
 

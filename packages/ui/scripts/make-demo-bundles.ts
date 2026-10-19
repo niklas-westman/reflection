@@ -5,7 +5,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { PNG } from 'pngjs';
-import { projectFromReflectionReport, projectionSchema, collectArtifactRefs, type Projection, type ReleaseManifest } from 'reflection-projection';
+import { projectFromReflectionReport, projectionSchema, collectArtifactRefs, summarizeReadiness, type Projection, type ReleaseManifest } from 'reflection-projection';
 import { writeBundle, type BundleFileInput } from 'reflection-projection/node';
 import { buildFromSample, readFixture } from '../../projection/tests/helpers/builders';
 
@@ -21,7 +21,7 @@ const demos: Demo[] = [
   { id: 'marwes-button', projection: withRealSubject(buildFromSample('marwes-button.sample.json'), 'button') },
   { id: 'sourcer-login', projection: withRealSubject(buildFromSample('sourcer-login.sample.json'), 'login') },
   { id: 'native-basic-react', projection: projectFromReflectionReport(readFixture('native-basic-react.report.json') as never, { projectName: 'basic-react example' }) },
-  { id: 'docs-site', projection: projectionSchema.parse(readFixture('independent-docs-site.json')) }
+  { id: 'docs-site', projection: withDemoDelta(projectionSchema.parse(readFixture('independent-docs-site.json'))) }
 ];
 
 // The sample's placeholder requirements stand in for items that were counted but not itemised. Give them the
@@ -32,6 +32,27 @@ function withRealSubject(projection: Projection, subjectId: string): Projection 
     requirements: projection.requirements.map((requirement) => (requirement.subject.id === 'placeholder' ? { ...requirement, subject: { ...requirement.subject, id: subjectId } } : requirement)),
     comparisons: projection.comparisons.map((comparison) => (comparison.subject.id === 'placeholder' ? { ...comparison, subject: { ...comparison.subject, id: subjectId } } : comparison))
   };
+}
+
+// The only demo with a delta against a previous release, so the viewer's "changes since" card can be seen.
+// The entries are illustrative; the other demos have no delta and show no such card.
+function withDemoDelta(projection: Projection): Projection {
+  const firstFailing = projection.comparisons.find((comparison) => Object.values(comparison.proof).includes('failed'));
+  return projectionSchema.parse({
+    ...projection,
+    delta: {
+      against: 'demo-0',
+      sameSnapshot: true,
+      regressed: firstFailing ? [{ comparisonId: firstFailing.id }] : [],
+      fixed: [],
+      stillFailing: [],
+      newlyEnrolled: [],
+      newInDesign: [],
+      stillProposed: [],
+      removedInDesign: [],
+      coverage: { before: null, after: summarizeReadiness(projection.requirements, projection.comparisons, projection.provider.readinessConcepts) }
+    }
+  });
 }
 
 if (output === resolve(DEFAULT_OUTPUT)) {
@@ -87,7 +108,7 @@ async function writeDemo(id: string, projection: Projection): Promise<void> {
     bundleId: `${id}-demo-1`,
     state: 'candidate',
     builtAt: '2026-10-18T12:00:00.000Z',
-    previousRelease: null,
+    previousRelease: projection.delta?.against ?? null,
     snapshotIds: projection.snapshots.map((snapshot) => snapshot.id)
   };
   await writeBundle({ directory: join(output, id), projection, release, generator: { name: 'make-demo-bundles' }, files });

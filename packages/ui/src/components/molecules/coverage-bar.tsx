@@ -44,7 +44,7 @@ interface Part {
 }
 
 /** The required items as scope, with the required count as the denominator. It is not a compliance percentage. */
-export function CoverageBar({ summary }: { summary: CoverageSummary }): ReactNode {
+export function CoverageBar({ summary, compact = false }: { summary: CoverageSummary; compact?: boolean }): ReactNode {
   const parts: Part[] = [
     { label: 'Proven', value: summary.proven, fill: 'var(--bar-pass)' },
     { label: 'Failing', value: summary.failing, fill: 'var(--bar-fail)' },
@@ -59,13 +59,13 @@ export function CoverageBar({ summary }: { summary: CoverageSummary }): ReactNod
           <Segment key={part.label} $fill={part.fill} $grow={part.value} />
         ))}
       </Track>
-      <Legend>
+      {compact ? null : <Legend>
         {parts.map((part) => (
           <li key={part.label} style={{ ['--swatch' as string]: part.fill }}>
             {part.label} {part.value}
           </li>
         ))}
-      </Legend>
+      </Legend>}
     </div>
   );
 }

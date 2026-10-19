@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (v5 step 1 done)
+Last updated: 2026-10-19 (v5 steps 1 and 2 done)
 
 ## How to keep this alive
 
@@ -42,14 +42,13 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **v5 step 2: Release Overview** (see "Viewer" below). Not started. The overview route exists with a seed (release identity, the two summary panels, subject links); step 2 replaces it with the designed page.
+- [ ] **v5 step 3: family and page overview** (see "Viewer" below). Not started.
 
 ## Next (in order)
 
-1. v5 step 3: family and page overview (gallery plus all required items).
-2. v5 step 4: comparison inspector.
-3. v5 step 5: Changes screen (needs three decisions, see "Open questions").
-4. v5 step 6: release and history picker, Design references, error states.
+1. v5 step 4: comparison inspector.
+2. v5 step 5: Changes screen (needs three decisions, see "Open questions").
+3. v5 step 6: release and history picker, Design references, error states.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -136,12 +135,14 @@ Built so far:
 - [x] Overview and Changes exist as honest stubs: the overview shows release identity, both summary panels and subject links; Changes says it is not available yet.
 - [x] 57 tests, mutation-checked; browser check in light and dark; keyboard order top bar, sidebar, content.
 
-**Step 2: Release Overview**
-- [~] Release header with all source dates (not one), run, offline fact. Seeded in step 1 (every snapshot with its date and the run); not yet the designed header.
-- [~] Required-items panel and comparisons panel, no percentages. Seeded in step 1; no percentages anywhere.
-- [ ] "Needs attention" card derived from the data.
-- [ ] Family and page cards: one coverage line each, no repeated comparison totals, change type separate from verification.
-- [ ] "What changed" and "Designer review" cards only when a delta exists; derived counts, no process copy.
+**Step 2: Release Overview** (done 2026-10-19)
+- [x] Release header: build, branch and commit when recorded, every design source with its own date, the run. The offline fact is in the top bar on every route.
+- [x] Required-items panel and comparisons panel with a scope bar; no percentages anywhere (tested).
+- [x] "Needs attention" card derived from recorded data: failures (in comparisons), unusable evidence, needs design, not enrolled, not proven, reference approvals not confirmed by a person. Each item names its subjects and opens them filtered to the right outcome group. A count a provider has no concept of is left out, never zero.
+- [x] Component and page cards: one coverage line in required items (proven of required, failing, unresolved, breakdown, bar); no comparison totals; ordered failing first; first twelve with "View all N".
+- [x] "What changed" card only when a delta against a previous release exists (regressed, fixed, still failing, newly enrolled, new and removed in the design source, same or newer snapshot); absent for no delta and for a first release.
+- [x] "Designer review" card dropped: it was process copy, and the data it would need (changed references) does not exist until `diffProjections`.
+- [x] 73 tests, mutation-checked; browser check light and dark; demo `docs-site` bundle carries an illustrative delta.
 
 **Step 3: family and page overview**
 - [ ] Dimension selectors that pick one required item (generic over subject dimensions).
@@ -164,6 +165,8 @@ Built so far:
 - [ ] `diffProjections` and schema additions (area 2).
 - [ ] Changes screen: Added, Updated, Removed, before and after reference images from the previous retained bundle, "no longer retained" when pruned.
 - [ ] Baseline is the previous release only.
+- [ ] Per-subject change type badge (Added, Updated, Removed, Unchanged) on the overview cards, separate from verification.
+- [ ] Overview card for references changed and new items awaiting review, derived from `diffProjections` (replaces the dropped "Designer review" card).
 
 **Step 6: the rest**
 - [ ] Release and history picker: current, previous, and archive summaries (summary-only view).
@@ -231,7 +234,7 @@ Viewer quality:
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (109 tests), then ui (57 tests, build)
+pnpm check:packages                            # projection (109 tests), then ui (73 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -242,6 +245,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: v5 step 2: designed Release Overview (header facts, panels, needs-attention and changes-since cards, subject cards with view-all). UI tests 57 to 73.
 - 2026-10-19: v5 step 1: release-first shell and routes (sidebar, release picker, evidence state on every route, overview and changes stubs, section routes). UI tests 41 to 57.
 - 2026-10-19: plan created in the repository; v5 design set evaluated and added as the viewer's build order.
 - 2026-10-18: design pass 1 on the viewer (`2272e6e`); viewer scaffold and matrix (`1dd64b6`); bundle layout, notes, archive summary and provider guide (`6a5a2de`); workspace and projection contract (`eb25770`); engine exports (`b9cc37c`); E0 engine additions (`dc3c987`).

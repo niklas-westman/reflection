@@ -1,14 +1,19 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
+import type { Delta } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
+import { Button } from '../components/atoms/button';
 import { Pill } from '../components/atoms/pill';
 import { Spacer } from '../components/atoms/spacer';
 import { CoverageBar } from '../components/molecules/coverage-bar';
+import { SubjectCard } from '../components/molecules/subject-card';
 import { SummaryGroups } from '../components/molecules/summary-groups';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
+import { AttentionCard, ChangesCard } from '../components/organisms/release-cards';
+import { buildAttention, sortByAttention } from '../model/attention';
 import { countComparisons } from '../model/comparison-outcome';
 import { formatDate } from '../model/format';
-import { groupBySubject } from '../model/subject-model';
+import { groupBySubject, type SubjectGroup } from '../model/subject-model';
 import { paths, SECTION_TITLES, sectionOf, type Section } from './paths';
 
 const Title = styled.div`
@@ -23,6 +28,11 @@ const Title = styled.div`
     letter-spacing: -0.02em;
     font-weight: 650;
   }
+`;
+
+const Lead = styled.p`
+  margin: ${({ theme }) => theme.space.xxs} 0 0;
+  color: var(--muted);
 `;
 
 const Facts = styled.dl`
@@ -43,51 +53,29 @@ const Facts = styled.dl`
   }
 `;
 
-const List = styled.ul`
-  list-style: none;
-  margin: ${({ theme }) => theme.space.xs} 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  gap: ${({ theme }) => theme.space.sm};
-
-  a {
-    display: block;
-    padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: ${({ theme }) => theme.radius.lg};
-    color: inherit;
-    text-decoration: none;
-  }
-  a:hover {
-    border-color: var(--border-strong);
-  }
-  small {
-    display: block;
-    color: var(--muted);
-  }
-  .failing {
-    color: var(--fail);
-    font-weight: 600;
-  }
-`;
-
 const SectionHeading = styled.h2`
-  margin: ${({ theme }) => theme.space.lg} 0 0;
+  margin: ${({ theme }) => theme.space.lg} 0 ${({ theme }) => theme.space.sm};
   font-size: ${({ theme }) => theme.font.lg};
 `;
 
-/**
- * The release landing page. Step 2 of the design adds the attention and change cards; this is the release
- * identity, the two summary panels (one unit each) and a way into every subject.
- */
+const Cards = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: ${({ theme }) => theme.space.sm};
+`;
+
+const SHOWN_AT_FIRST = 12;
+
 export function ReleaseOverviewPage(): ReactNode {
   const { bundleId, manifest, prepared } = useBundleView();
   const { projection } = prepared;
   const subjects = useMemo(() => groupBySubject(projection), [projection]);
   const comparisons = useMemo(() => countComparisons(projection.comparisons), [projection]);
+  const attention = useMemo(() => buildAttention({ projection, subjects, unusableComparisonIds: prepared.unusableComparisonIds }), [projection, subjects, prepared]);
   const { release, project } = manifest;
+  const delta = projection.delta;
+  // Only a delta against a known previous release says anything; the first release has nothing to compare with.
+  const comparableDelta = delta && delta.against !== null ? (delta as Delta & { against: string }) : undefined;
 
   return (
     <>
@@ -97,6 +85,7 @@ export function ReleaseOverviewPage(): ReactNode {
         </h1>
         <Pill $tone={release.state === 'released' ? 'pass' : 'gap'}>{release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
       </Title>
+      <Lead>Review what this release proves and what still needs attention.</Lead>
       <Facts aria-label="Provenance">
         <div>
           <dt>Build</dt>
@@ -104,6 +93,12 @@ export function ReleaseOverviewPage(): ReactNode {
             {release.build} · {formatDate(release.builtAt)}
           </dd>
         </div>
+        {release.branch || release.commit ? (
+          <div>
+            <dt>Source</dt>
+            <dd>{[release.branch, release.commit?.slice(0, 7)].filter(Boolean).join(' · ')}</dd>
+          </div>
+        ) : null}
         {projection.snapshots.map((snapshot) => (
           <div key={snapshot.id}>
             <dt>{snapshot.role}</dt>
@@ -121,38 +116,48 @@ export function ReleaseOverviewPage(): ReactNode {
       </Facts>
       <Spacer />
       <EvidenceNotice />
-      <Spacer $size="sm" />
+      <SectionHeading>Release status</SectionHeading>
       <SummaryGroups items={prepared.summary} comparisons={comparisons} lowerBound={projection.inventory === 'executed-only'} />
       <Spacer $size="sm" />
       <CoverageBar summary={prepared.summary} />
+      <Spacer />
+      <Cards aria-label="Release highlights">
+        {comparableDelta ? <ChangesCard delta={comparableDelta} /> : null}
+        <AttentionCard bundleId={bundleId} items={attention} />
+      </Cards>
       {(['components', 'pages'] as const).map((section) => (
-        <SubjectList key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} />
+        <SubjectCards key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} />
       ))}
     </>
   );
 }
 
-function SubjectList({ bundleId, section, subjects }: { bundleId: string; section: Section; subjects: ReturnType<typeof groupBySubject> }): ReactNode {
+function SubjectCards({ bundleId, section, subjects }: { bundleId: string; section: Section; subjects: SubjectGroup[] }): ReactNode {
+  const [showAll, setShowAll] = useState(false);
   if (subjects.length === 0) {
     return null;
   }
+
+  const ordered = sortByAttention(subjects);
+  const shown = showAll ? ordered : ordered.slice(0, SHOWN_AT_FIRST);
   return (
     <section aria-label={SECTION_TITLES[section]}>
       <SectionHeading>
         {SECTION_TITLES[section]} ({subjects.length})
       </SectionHeading>
-      <List>
-        {subjects.map((subject) => (
-          <li key={subject.id}>
-            <a href={paths.subject(bundleId, subject.kind, subject.id)}>
-              <strong>{subject.id}</strong>
-              <small>
-                <span className={subject.summary.failing > 0 ? 'failing' : undefined}>{subject.summary.failing} failing</span> · {subject.summary.required} required
-              </small>
-            </a>
-          </li>
+      <Cards>
+        {shown.map((subject) => (
+          <SubjectCard key={subject.id} subject={subject} href={paths.subject(bundleId, subject.kind, subject.id)} />
         ))}
-      </List>
+      </Cards>
+      {subjects.length > SHOWN_AT_FIRST ? (
+        <>
+          <Spacer $size="sm" />
+          <Button type="button" onClick={() => setShowAll((value) => !value)}>
+            {showAll ? `Show the first ${SHOWN_AT_FIRST}` : `View all ${subjects.length} ${SECTION_TITLES[section].toLowerCase()}`}
+          </Button>
+        </>
+      ) : null}
     </section>
   );
 }

@@ -22,7 +22,7 @@ The demo bundles are written from the projection package's fixtures, with genera
 | `marwes-button` | A large family: 273 required, 203 proven, 14 needs design, 56 not enrolled |
 | `sourcer-login` | A provider with no "needs design" or "not enrolled" concept: those buckets read as unknown |
 | `native-basic-react` | A native Reflection report: only what ran is listed, so the count is a lower bound |
-| `docs-site` | A project unrelated to either, with a failure, two browsers and items that were never compared |
+| `docs-site` | A project unrelated to either, with a failure, two browsers and items that were never compared. The only demo with an (illustrative) delta, so the "Since" card shows |
 | `docs-site-tampered-image` | One image no longer matches its hash: evidence invalid, that comparison counted as unknown |
 | `docs-site-rejected` | A manifest edited after publishing: the bundle is refused |
 
@@ -40,6 +40,8 @@ One sidebar for every route in a release: the release picker (project, release, 
 ```
 
 A subject opened under the wrong section is redirected to its own.
+
+**The release overview** shows the release identity and every design source with its own date, the two summary panels, a "Needs attention" card derived from the recorded data (each item opens its subjects filtered to the right outcome group), a "Since <release>" card only when the bundle has a delta against a previous release, and one card per component or page with a single coverage line in required items. It shows no percentages and no comparison totals on cards.
 
 ## How it behaves
 

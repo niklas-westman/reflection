@@ -19,7 +19,9 @@ export const paths = {
   bundles: (): string => '#/',
   bundle: (bundleId: string): string => `#/bundles/${encode(bundleId)}`,
   changes: (bundleId: string): string => `#/bundles/${encode(bundleId)}/changes`,
-  subject: (bundleId: string, kind: SubjectKind, subjectId: string): string => `#/bundles/${encode(bundleId)}/${sectionOf(kind)}/${encode(subjectId)}`,
+  // `outcome` opens the subject already filtered to one outcome group (failed, not-proven, passed, missing).
+  subject: (bundleId: string, kind: SubjectKind, subjectId: string, options: { outcome?: string } = {}): string =>
+    `#/bundles/${encode(bundleId)}/${sectionOf(kind)}/${encode(subjectId)}${options.outcome ? `?outcome=${options.outcome}` : ''}`,
   comparison: (bundleId: string, kind: SubjectKind, subjectId: string, comparisonId: string): string =>
-    `${paths.subject(bundleId, kind, subjectId)}/comparisons/${encode(comparisonId)}`
+    `${paths.subject(bundleId, kind, subjectId).split('?')[0]}/comparisons/${encode(comparisonId)}`
 };

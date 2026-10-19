@@ -132,7 +132,7 @@ describe('the release overview', () => {
     expect(required.getByText('Required', { selector: 'dt' }).parentElement).toHaveTextContent('8');
     expect(screen.getByRole('heading', { name: 'Components (2)' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pages (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /pricing/ })).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing');
+    expect(within(screen.getByLabelText('Pages')).getByRole('link', { name: /pricing/ })).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing');
   });
 
   it('lists each design source with its own date', async () => {
