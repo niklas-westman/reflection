@@ -89,7 +89,7 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [x] Export `hashReportInputs` and `computeResultHash` from the package entry. (`b9cc37c`)
 - [x] Docs for the additions in `docs/configuration.md` and `docs/upgrading.md`.
 - [ ] Export `listCaseBaselineFiles` from the engine (only if a consumer needs it).
-- [~] Release `reflection-check` 0.7.0 for E0. Prepared 2026-10-19 (version bumped, upgrade notes named, package and install smoke pass, input hashing moved after the setup hooks); not published. Needs `npm login` by the owner and a go-ahead.
+- [x] Released `reflection-check` 0.7.0 for E0 (2026-10-19): version bumped, upgrade notes, package and install smoke, input hashing moved after the setup hooks. Published by the owner and verified.
 - [ ] Run ids have one-second resolution, so two runs into the same report directory within a second would collide. Rare; make ids unique when a provider runs several configs in parallel.
 - [ ] Push the local commits. Needs go-ahead.
 
@@ -106,7 +106,7 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [ ] Approver-list configuration schema (N3).
 - [ ] Discord message formatters for Approve and Require changes (N3).
 - [x] **Required implementations**: a requirement can name them (`requiredImplementations`); each must have a comparison and pass, a missing one leaves the item not proven, a failure still reads failing. Without it, only recorded comparisons count. Built 2026-10-19.
-- [~] `reflection-projection` 0.1.0 prepared for publishing on 2026-10-19 (unscoped name, free on npm; public docs made project-neutral; install smoke passes). Not published: the owner publishes (`docs/releasing.md`). `reflection-ui` stays a private app.
+- [x] `reflection-projection` 0.1.0 published 2026-10-19 under the unscoped name; public docs are project-neutral. `reflection-ui` stays a private app.
 
 ### 3. Bundles (`packages/projection`)
 
@@ -211,7 +211,7 @@ Viewer quality:
 - [ ] Run the provider checklist (builds twice identical; `openBundle` returns opened with no problems).
 
 **Adapter trials** (decided 2026-10-19: publish, try on one adapter, collect feedback, fix, repeat two or three times; Sourcer first, Marwes next). Feedback lives in the Eagle's Eye handoff folder `handoff/reflection-feedback/` (brief, template, one feedback file per round).
-- [ ] Owner publishes `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 (`docs/releasing.md`).
+- [x] Published 2026-10-19: `reflection-check` 0.7.0 and `reflection-projection` 0.1.0. Verified by installing both into an empty folder and running a provider flow (write a bundle, open it, count it).
 - [ ] Sourcer round 1: the Sourcer session builds the Login provider (step 1: show Sourcer in the viewer, no behaviour change) and writes `sourcer-feedback-01.md`.
 - [ ] Reflection session reads the feedback, fixes the toolkit or viewer, publishes a new version.
 - [ ] Sourcer round 2 (and 3 if needed).
@@ -275,6 +275,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 published and verified from the registry.
 - 2026-10-19: pushed `main`; prepared `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 for the owner to publish; added `docs/releasing.md`; brief for the Sourcer adapter trial.
 - 2026-10-19: accessibility pass: audit script, fixes (decorative glyphs, label, button contrast, page titles, focus after navigation, live regions, group roles), dark variants of every route in the gate; the two comparison baselines were updated for the new breadcrumb (intended, approved). UI tests 228 to 238.
 - 2026-10-19: visual baselines for the viewer (14 routes, approved by the owner); threshold `maxDiffPixels: 50`; the overflow gap is closed by the baselines.
