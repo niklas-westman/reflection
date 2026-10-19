@@ -50,14 +50,14 @@ describe('the subject page', () => {
     expect(screen.getByText('No design has been selected for the promo banner')).toBeInTheDocument();
   });
 
-  it('says what the shared reference is once, in the column header, and not on every row', async () => {
+  it('names the shared reference source once, in the column header, and each row\'s own approval', async () => {
     await openSubject();
 
     const header = screen.getByRole('columnheader', { name: /Reference/ });
-    expect(header).toHaveTextContent('Reference screenshots · approved by a person');
+    expect(header).toHaveTextContent('Reference screenshots, for every item');
     const row = screen.getByRole('row', { name: /hero\.desktop/ });
     expect(within(row).queryByText('Reference screenshots')).not.toBeInTheDocument();
-    expect(within(row).getByLabelText('Reference screenshots · approved by a person')).toBeInTheDocument();
+    expect(within(row).getByText('Approved and recorded by a person')).toBeInTheDocument();
   });
 
   it('spells out a row whose reference differs from the shared one', async () => {
@@ -143,7 +143,7 @@ describe('the subject page', () => {
 });
 
 describe('a reference nobody confirmed', () => {
-  it('warns in the header when every approval was recorded by an agent', async () => {
+  it('warns on each row whose approval was only recorded by an agent, not in the header', async () => {
     const projection = makeProjection();
     for (const entry of projection.comparisons) {
       if (entry.reference) entry.reference.approval = { state: 'holds', attestation: 'agent', by: 'import-script', at: '2026-10-14T09:00:00.000Z' };
@@ -152,7 +152,9 @@ describe('a reference nobody confirmed', () => {
     renderApp(catalog, subjectPath);
 
     const header = await screen.findByRole('columnheader', { name: /Reference/ });
-    expect(header).toHaveTextContent('▲ Reference screenshots · recorded by an agent');
+    expect(header).not.toHaveTextContent('▲');
+    const row = screen.getByRole('row', { name: /hero\.desktop/ });
+    expect(within(row).getByText(/Recorded by an agent, no person's words/)).toHaveTextContent("▲ Recorded by an agent, no person's words");
   });
 });
 

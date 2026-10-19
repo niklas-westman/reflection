@@ -44,7 +44,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 - [ ] **Sourcer UX brief, 0.3.0** (rounds 1 and 2 feedback plus the UX brief; scope accepted 2026-10-19). Build, gate, screenshot, then the owner publishes `reflection-projection` 0.3.0 and Sourcer retries.
   - [x] Projection: optional `label`, `unit`, `direction`, `passAt` on `diff.metric`; optional presentation hint per subject (`subjects[].presentation`: `groupBy`, `columns`, `sections`); guide; tests; JSON Schema. `subjectDimension` reads a dimension by key. 145 tests.
-  - [ ] Approvals: a neutral overview line when approvals are delegated, linking to the notes; Design references buckets renamed and sorted strongest first, zero rows kept and greyed; approval per row in All required items.
+  - [x] Approvals: a neutral overview line when approvals are delegated, linking to the notes; Design references buckets renamed and sorted strongest first, zero rows kept and greyed; approval per row in All required items (the header names the source once). Design references lists each delegated record with the comparisons it covers.
   - [ ] Comparison page: Fit uses the width (at least 400px per pane at 1400px); a Side by side variant with the Difference large; Provenance behind a disclosure.
   - [ ] Gallery and table grouped by the presentation hint (rows by state, devices side by side, sections by surface); failures and unproven first; default unchanged without a hint.
   - [ ] Metric row from label, unit, direction and passAt; long keys break at word or camelCase boundaries.

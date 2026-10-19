@@ -182,7 +182,7 @@ describe('the rail and the panels below', () => {
     expect(measurements.getByText('Recorded metric')).toBeInTheDocument();
     expect(measurements.queryByText('Pixel difference')).not.toBeInTheDocument();
     const provenance = within(screen.getByLabelText('Reference provenance'));
-    expect(provenance.getByText('Approved by a person in conversation, recorded by an agent')).toBeInTheDocument();
+    expect(provenance.getByText('Approved by a person, written down by an agent')).toBeInTheDocument();
     expect(provenance.getByText('Assistant')).toBeInTheDocument();
     expect(provenance.getByText('Approved in review.')).toBeInTheDocument();
   });

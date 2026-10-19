@@ -110,7 +110,7 @@ describe('what the inspector shows of a provider\'s own record', () => {
     expect(model.caution).toBeUndefined();
     expect(model.gaps).not.toContain('The reference approval is not confirmed by a person.');
     expect(model.approvalFacts).toEqual([
-      { label: 'Approval', value: 'Approved by a person in conversation, recorded by an agent' },
+      { label: 'Approval', value: 'Approved by a person, written down by an agent' },
       { label: 'Approved by', value: 'Owner' },
       { label: 'Recorded by', value: 'Assistant' },
       { label: 'Approved on', value: '13 Oct 2026' },
@@ -122,7 +122,7 @@ describe('what the inspector shows of a provider\'s own record', () => {
     first.reference!.approval = { state: 'holds', attestation: 'agent', by: 'Assistant', boundTo: 'd'.repeat(64) };
     const agent = modelFor(delegated, 'btn.primary/react');
     expect(agent.caution).toContain('recorded by an agent');
-    expect(agent.approvalFacts).toContainEqual({ label: 'Approval', value: 'Recorded by an agent, not confirmed by a person' });
+    expect(agent.approvalFacts).toContainEqual({ label: 'Approval', value: "Recorded by an agent, no person's words" });
     expect(agent.approvalFacts).toContainEqual({ label: 'Design source', value: 'Differs from the design source this comparison read' });
   });
 
@@ -133,7 +133,7 @@ describe('what the inspector shows of a provider\'s own record', () => {
 
     expect(facts.slice(0, 2)).toEqual([
       { label: 'Approval', value: 'No longer matches the current reference' },
-      { label: 'It was', value: 'Approved by a person' }
+      { label: 'It was', value: 'Approved and recorded by a person' }
     ]);
     expect(facts).toContainEqual({ label: 'Changed since', value: 'the reference manifest changed' });
   });

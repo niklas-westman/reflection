@@ -211,3 +211,29 @@ describe('a release with many subjects', () => {
     expect(components.getAllByRole('link')).toHaveLength(14);
   });
 });
+
+describe('approvals a person gave in conversation', () => {
+  const delegate = (projection: Projection): Projection => {
+    for (const comparison of projection.comparisons) {
+      if (comparison.reference) comparison.reference.approval = { state: 'holds', attestation: 'delegated', by: 'Owner', recordedBy: 'Assistant', at: '2026-10-13T20:56:08.000Z', note: 'Looks right.' };
+    }
+    return projection;
+  };
+
+  it('points to the notes in a neutral line, without counting them as something wrong', async () => {
+    const projection = delegate(makeProjection());
+    const delegated = projection.comparisons.filter((comparison) => comparison.reference).length;
+    await openOverview(projection);
+
+    const note = attention().getByText(new RegExp(`^${delegated} reference approvals were written down by an agent`));
+    expect(note).not.toHaveTextContent('▲');
+    expect(within(note).getByRole('link', { name: 'Read the notes' })).toHaveAttribute('href', '#/bundles/docs-site/design-references');
+    expect(attention().queryByText(/not confirmed by a person/)).not.toBeInTheDocument();
+  });
+
+  it('says nothing when every approval was recorded by a person', async () => {
+    await openOverview(makeProjection());
+
+    expect(attention().queryByText(/written down by an agent/)).not.toBeInTheDocument();
+  });
+});

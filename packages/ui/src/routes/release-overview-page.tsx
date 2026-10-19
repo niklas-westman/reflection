@@ -14,7 +14,7 @@ import { AttentionCard, ChangesCard, DesignChangesCard } from '../components/org
 import { useReleaseDiff } from '../data/release-diff';
 import { ExternalLink } from '../components/atoms/external-link';
 import type { ChangeKind } from 'reflection-projection';
-import { buildAttention, sortByAttention } from '../model/attention';
+import { buildAttention, countDelegatedApprovals, sortByAttention } from '../model/attention';
 import { countComparisons } from '../model/comparison-outcome';
 import { describeRun, describeRuns, formatDate, releaseStateLabel } from '../model/format';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
@@ -76,6 +76,7 @@ export function ReleaseOverviewPage(): ReactNode {
   const subjects = useMemo(() => groupBySubject(projection), [projection]);
   const comparisons = useMemo(() => countComparisons(projection.comparisons), [projection]);
   const attention = useMemo(() => buildAttention({ projection, subjects, unusableComparisonIds: prepared.unusableComparisonIds }), [projection, subjects, prepared]);
+  const delegatedApprovals = countDelegatedApprovals(projection);
   const { release, project } = manifest;
   const diffState = useReleaseDiff();
   const delta = projection.delta;
@@ -146,7 +147,7 @@ export function ReleaseOverviewPage(): ReactNode {
       <Cards role="group" aria-label="Release highlights">
         {comparableDelta ? <ChangesCard delta={comparableDelta} /> : null}
         {diffState.status === 'ready' ? <DesignChangesCard bundleId={bundleId} diff={diffState.diff} previousRelease={diffState.previousRelease} /> : null}
-        <AttentionCard bundleId={bundleId} items={attention} />
+        <AttentionCard bundleId={bundleId} items={attention} delegatedApprovals={delegatedApprovals} />
       </Cards>
       {(['components', 'pages'] as const).map((section) => (
         <SubjectCards key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} changes={diffState.status === 'ready' ? new Map(diffState.diff.subjects.map((change) => [`${change.kind}/${change.id}`, change.change])) : undefined} />

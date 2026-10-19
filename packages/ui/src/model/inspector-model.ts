@@ -154,9 +154,9 @@ function approvalCaution(approval: { state: string; attestation?: string | undef
 }
 
 const ATTESTATION_TEXT: Record<string, string> = {
-  human: 'Approved by a person',
-  delegated: 'Approved by a person in conversation, recorded by an agent',
-  agent: 'Recorded by an agent, not confirmed by a person'
+  human: 'Approved and recorded by a person',
+  delegated: 'Approved by a person, written down by an agent',
+  agent: "Recorded by an agent, no person's words"
 };
 
 /** The reference approval as recorded: who, through whom, when, and whether it is bound to the design source it names. */

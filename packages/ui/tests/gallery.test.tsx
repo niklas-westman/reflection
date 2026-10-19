@@ -47,7 +47,7 @@ describe('the component gallery', () => {
     const reference = within(card);
     expect(reference.getByText('Available')).toBeInTheDocument();
     expect(reference.getByText(/Design file, captured 12 Oct 2026/)).toBeInTheDocument();
-    expect(reference.getByText('Approved by a person')).toBeInTheDocument();
+    expect(reference.getByText('Approved and recorded by a person')).toBeInTheDocument();
     expect(card).not.toHaveTextContent(/passed|failed/i);
   });
 
@@ -58,7 +58,7 @@ describe('the component gallery', () => {
     }
     await openButton(buttonPath, projection);
 
-    expect(within(cards().getByLabelText('Reference')).getByText('▲ Recorded by an agent, not confirmed by a person')).toBeInTheDocument();
+    expect(within(cards().getByLabelText('Reference')).getByText("▲ Recorded by an agent, no person's words")).toBeInTheDocument();
     expect(await screen.findByText('Reference approval is not confirmed by a person')).toBeInTheDocument();
   });
 

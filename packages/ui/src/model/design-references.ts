@@ -19,9 +19,19 @@ export interface ApprovalCounts {
   noReference: number;
 }
 
+// One delegated approval record as the provider wrote it, with how many comparisons it covers.
+export interface DelegatedNote {
+  by: string | undefined;
+  recordedBy: string | undefined;
+  at: string | undefined;
+  note: string;
+  comparisons: number;
+}
+
 export interface DesignReferences {
   snapshots: SnapshotUse[];
   approvals: ApprovalCounts;
+  delegatedNotes: DelegatedNote[];
 }
 
 /**
@@ -49,5 +59,19 @@ export function summarizeDesignReferences(projection: Projection): DesignReferen
     else if (approval.attestation === 'delegated') approvals.byPersonThroughAgent += 1;
     else approvals.byPerson += 1;
   }
-  return { snapshots, approvals };
+  return { snapshots, approvals, delegatedNotes: collectDelegatedNotes(projection) };
+}
+
+/** Delegated approvals that hold, one entry per distinct record, oldest first, so a person can re-read what was written for them. */
+function collectDelegatedNotes(projection: Projection): DelegatedNote[] {
+  const notes = new Map<string, DelegatedNote>();
+  for (const comparison of projection.comparisons) {
+    const approval = comparison.reference?.approval;
+    if (approval?.state !== 'holds' || approval.attestation !== 'delegated') continue;
+    const key = JSON.stringify([approval.by, approval.recordedBy, approval.at, approval.note]);
+    const existing = notes.get(key);
+    if (existing) existing.comparisons += 1;
+    else notes.set(key, { by: approval.by, recordedBy: approval.recordedBy, at: approval.at, note: approval.note ?? '', comparisons: 1 });
+  }
+  return [...notes.values()].sort((a, b) => (a.at ?? '').localeCompare(b.at ?? '') || a.note.localeCompare(b.note));
 }

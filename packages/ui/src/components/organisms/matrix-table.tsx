@@ -146,8 +146,9 @@ const CommonReference = styled.div<{ $caution: boolean }>`
   color: ${({ $caution }) => ($caution ? 'var(--gap)' : 'var(--text)')};
 `;
 
-const Small = styled.div`
-  color: var(--muted);
+const Small = styled.div<{ $caution?: boolean }>`
+  color: ${({ $caution }) => ($caution ? 'var(--gap)' : 'var(--muted)')};
+  font-weight: ${({ $caution }) => ($caution ? 600 : 400)};
   font-size: ${({ theme }) => theme.font.xs};
 `;
 
@@ -204,10 +205,7 @@ export function MatrixTable({ matrix, comparisonHref, density, filtersActive }: 
             <th className="reference" scope="col">
               Reference
               {matrix.commonReference ? (
-                <CommonReference $caution={isCaution(matrix.commonReference)}>
-                  {isCaution(matrix.commonReference) ? '▲ ' : ''}
-                  {describeReferenceSource(matrix.commonReference)}
-                </CommonReference>
+                <CommonReference $caution={false}>{matrix.commonReference.source ?? 'One reference source'}, for every item</CommonReference>
               ) : null}
             </th>
             {matrix.columns.map((column) => (
@@ -296,12 +294,8 @@ function isCaution(reference: ReferenceSummary): boolean {
   return reference.attestation === 'agent' || reference.approval === 'lapsed';
 }
 
-function describeReferenceSource(reference: ReferenceSummary): string {
-  return [reference.source ?? 'Reference', describeApproval(reference).toLowerCase()].filter(Boolean).join(' · ');
-}
-
-// The reference has availability and a source, never a verdict. A row that shares the header's reference only
-// says its approval; a row that differs says everything.
+// The reference has availability and a source, never a verdict. Every row says its own approval, so one that
+// lapsed or was only recorded by an agent stands out; a row whose source differs from the header also names it.
 function ReferenceCell({ row }: { row: MatrixRow }): ReactNode {
   const { reference } = row;
   if (reference.availability === 'missing') {
@@ -310,28 +304,30 @@ function ReferenceCell({ row }: { row: MatrixRow }): ReactNode {
   if (reference.availability === 'unmapped') {
     return <Dashed>Not mapped</Dashed>;
   }
+  const approval = (
+    <Small $caution={isCaution(reference)}>
+      {isCaution(reference) ? '▲ ' : ''}
+      {describeApproval(reference) || 'Approval not recorded'}
+    </Small>
+  );
   if (row.referenceIsCommon) {
-    return (
-      <Small aria-label={describeReferenceSource(reference)} title={describeReferenceSource(reference)}>
-        —
-      </Small>
-    );
+    return approval;
   }
   return (
     <div>
       <div>{reference.source ?? (reference.availability === 'available' ? 'Available' : 'Unknown')}</div>
-      <Small>{describeApproval(reference)}</Small>
+      {approval}
     </div>
   );
 }
 
 function describeApproval(reference: ReferenceSummary): string {
   if (reference.approval === 'holds') {
-    if (reference.attestation === 'agent') return 'Recorded by an agent';
-    return reference.attestation === 'delegated' ? 'Approved by a person, recorded by an agent' : 'Approved by a person';
+    if (reference.attestation === 'agent') return "Recorded by an agent, no person's words";
+    return reference.attestation === 'delegated' ? 'Approved by a person, written down by an agent' : 'Approved and recorded by a person';
   }
   if (reference.approval === 'lapsed') {
-    return 'Approval lapsed';
+    return 'Approval no longer matches the reference';
   }
   return reference.approval === 'none' ? 'Not approved' : '';
 }

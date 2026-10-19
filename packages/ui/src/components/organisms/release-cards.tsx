@@ -33,6 +33,13 @@ const Card = styled.section`
   .in a {
     margin-right: ${({ theme }) => theme.space.xs};
   }
+  /* Information, not a warning: set apart by a rule, in the ordinary text colour. */
+  .note {
+    margin: ${({ theme }) => theme.space.sm} 0 0;
+    padding-top: ${({ theme }) => theme.space.sm};
+    border-top: 1px solid var(--border);
+    font-size: ${({ theme }) => theme.font.sm};
+  }
 `;
 
 const Row = styled.div`
@@ -65,7 +72,7 @@ const ATTENTION_TEXT: Record<AttentionKind, { title: (count: number) => string; 
 
 const SHOWN_SUBJECTS = 4;
 
-export function AttentionCard({ bundleId, items }: { bundleId: string; items: AttentionItem[] }): ReactNode {
+export function AttentionCard({ bundleId, items, delegatedApprovals = 0 }: { bundleId: string; items: AttentionItem[]; delegatedApprovals?: number }): ReactNode {
   return (
     <Card aria-label="Needs attention">
       <h2>Needs attention</h2>
@@ -90,6 +97,11 @@ export function AttentionCard({ bundleId, items }: { bundleId: string; items: At
           ))}
         </ul>
       )}
+      {delegatedApprovals > 0 ? (
+        <p className="note">
+          {delegatedApprovals} reference {delegatedApprovals === 1 ? 'approval was' : 'approvals were'} written down by an agent on a person's words. <a href={paths.designReferences(bundleId)}>Read the notes</a>
+        </p>
+      ) : null}
     </Card>
   );
 }

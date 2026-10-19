@@ -178,7 +178,7 @@ describe('the design references page', () => {
     expect(source.getByText('Yes')).toBeInTheDocument();
     expect(source.getByText(/comparisons in 2 subjects|comparison in 1 subject|comparisons in 1 subject/)).toBeInTheDocument();
     const approvals = within(screen.getByLabelText('Reference approvals'));
-    expect(approvals.getByText('Approved by a person').nextSibling).toHaveTextContent(/^\d+$/);
+    expect(approvals.getByText('Approved and recorded by a person').nextSibling).toHaveTextContent(/^\d+$/);
     expect(screen.getByRole('link', { name: 'Design references' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -206,6 +206,23 @@ describe('the design references page', () => {
     if (third?.reference) delete (third as { reference?: unknown }).reference;
 
     expect(summarizeDesignReferences(projection).approvals).toEqual({ byPerson: 3, byPersonThroughAgent: 0, byAgent: 1, lapsed: 1, none: 0, noReference: 1 });
+  });
+
+  it('lists each delegated record once with the comparisons it covers, and greys the buckets that are empty', async () => {
+    const projection = makeProjection();
+    const delegated = { state: 'holds', attestation: 'delegated', by: 'Owner', recordedBy: 'Assistant', at: '2026-10-13T20:56:08.000Z', note: 'Looks solid.' } as const;
+    for (const comparison of projection.comparisons) {
+      if (comparison.reference) comparison.reference.approval = { ...delegated };
+    }
+    const covered = projection.comparisons.filter((comparison) => comparison.reference).length;
+    expect(summarizeDesignReferences(projection).delegatedNotes).toEqual([{ by: 'Owner', recordedBy: 'Assistant', at: '2026-10-13T20:56:08.000Z', note: 'Looks solid.', comparisons: covered }]);
+
+    renderApp(await makeCatalog([{ id: 'x', projection }]), '/bundles/x/design-references');
+    const approvals = within(await screen.findByLabelText('Reference approvals'));
+    expect(approvals.getByText(`Owner, written down by Assistant, 13 Oct 2026 · ${covered} comparisons`)).toBeInTheDocument();
+    expect(approvals.getByText('Looks solid.')).toBeInTheDocument();
+    expect(approvals.getByText('Approved and recorded by a person').closest('li')).toHaveClass('zero');
+    expect(approvals.getByText('Approved by a person, written down by an agent').closest('li')).not.toHaveClass('zero');
   });
 });
 

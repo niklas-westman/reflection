@@ -309,8 +309,8 @@ function ReferencePreview({ reference, itemLabel }: { reference: ReferenceCard; 
 
 function describeApproval(reference: ReferenceCard): string {
   if (reference.approval === 'holds') {
-    if (reference.attestation === 'agent') return '▲ Recorded by an agent, not confirmed by a person';
-    return reference.attestation === 'delegated' ? 'Approved by a person, recorded by an agent' : 'Approved by a person';
+    if (reference.attestation === 'agent') return "▲ Recorded by an agent, no person's words";
+    return reference.attestation === 'delegated' ? 'Approved by a person, written down by an agent' : 'Approved and recorded by a person';
   }
   if (reference.approval === 'lapsed') {
     return '▲ Approval lapsed';
