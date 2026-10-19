@@ -47,8 +47,8 @@ The briefs are untracked because they hold local paths. If a brief and this file
   - [x] Approvals: a neutral overview line when approvals are delegated, linking to the notes; Design references buckets renamed and sorted strongest first, zero rows kept and greyed; approval per row in All required items (the header names the source once). Design references lists each delegated record with the comparisons it covers.
   - [ ] Comparison page: Fit uses the width (at least 400px per pane at 1400px); a Side by side variant with the Difference large; Provenance behind a disclosure.
   - [ ] Gallery and table grouped by the presentation hint (rows by state, devices side by side, sections by surface); failures and unproven first; default unchanged without a hint.
-  - [ ] Metric row from label, unit, direction and passAt; long keys break at word or camelCase boundaries.
-  - [ ] One Freshness group (design export, run and its age, what could not be verified) on overview, page and comparison.
+  - [x] Metric row from label, unit, direction and passAt; long keys break at word or camelCase boundaries.
+  - [x] One Freshness group (design export, run and its age, what could not be verified) on overview, page and comparison.
   - [x] Wording: "Unreleased" for state candidate; page tab "Changes on this page" (or component); theme button "Switch to light/dark"; a plain `/bundles/<id>` path redirects to the hash route.
   - [ ] Narrow width (390px) in the gate: no sideways scroll, readable content; fix what breaks. A designed mobile layout is a separate item.
   - [ ] Demo fixtures: all failing, 200 mixed items with a presentation hint, a very long state name.

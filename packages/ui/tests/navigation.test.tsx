@@ -138,7 +138,7 @@ describe('the release overview', () => {
   it('lists each design source with its own date', async () => {
     await openRelease('/bundles/docs-site');
 
-    expect(within(screen.getByLabelText('Provenance')).getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Freshness')).getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
   });
 });
 

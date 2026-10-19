@@ -22,7 +22,9 @@ describe('the comparison inspector', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'primary default · react' })).toBeInTheDocument();
     const facts = within(screen.getByLabelText('Recorded facts'));
     expect(facts.getByText('1440x900')).toBeInTheDocument();
-    expect(facts.getByText('16 Oct 2026 · reflection-check 0.6.0')).toBeInTheDocument();
+    const freshness = within(screen.getByLabelText('Freshness'));
+    expect(freshness.getByText('Design file, captured 14 Oct 2026')).toBeInTheDocument();
+    expect(freshness.getByText('16 Oct 2026 · reflection-check 0.6.0 · 2 days before this build')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '← Back to button' })).toHaveAttribute('href', '#/bundles/inspect/components/button');
   });
 
@@ -136,7 +138,7 @@ describe('modes, zoom and the address', () => {
     await openInspector(`${failing}?mode=overlay`);
 
     expect(screen.queryByLabelText(/threshold/i, { selector: 'input' })).not.toBeInTheDocument();
-    expect(within(screen.getByLabelText('Measurements')).getByText('ratio 0.001')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Measurements')).getByText((_, element) => element?.tagName === 'DIV' && element.textContent === 'ratio 0.001')).toBeInTheDocument();
   });
 });
 
@@ -181,6 +183,8 @@ describe('the rail and the panels below', () => {
     const measurements = within(screen.getByLabelText('Measurements'));
     expect(measurements.getByText('Recorded metric')).toBeInTheDocument();
     expect(measurements.queryByText('Pixel difference')).not.toBeInTheDocument();
+    // A long id may wrap only between its words.
+    expect(measurements.getByText('diff-').closest('.key')?.querySelectorAll('wbr').length).toBeGreaterThan(0);
     const provenance = within(screen.getByLabelText('Reference provenance'));
     expect(provenance.getByText('Approved by a person, written down by an agent')).toBeInTheDocument();
     expect(provenance.getByText('Assistant')).toBeInTheDocument();

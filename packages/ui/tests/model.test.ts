@@ -7,6 +7,7 @@ import { buildMatrix } from '../src/model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch } from '../src/model/search';
 import { describeRuns, releaseStateLabel, runAgeAtBuild } from '../src/model/format';
 import { hashRouteForPlainPath } from '../src/router';
+import { buildFreshness } from '../src/model/freshness';
 import { groupBySubject } from '../src/model/subject-model';
 import { makeProjection } from './helpers/test-bundles';
 
@@ -220,5 +221,26 @@ describe('a plain path pasted without the hash', () => {
     expect(hashRouteForPlainPath('/', '', '/')).toBeUndefined();
     expect(hashRouteForPlainPath('/index.html', '', '/')).toBeUndefined();
     expect(hashRouteForPlainPath('/bundles/login-1', '#/bundles/x', '/')).toBeUndefined();
+  });
+});
+
+describe('freshness', () => {
+  const snapshot = { id: 's', kind: 'penpot', role: 'proof-source', label: 'Login frames', capturedAt: '2026-10-13T08:00:00Z' };
+  const run = { id: 'r', finishedAt: '2026-10-14T08:00:00Z', engine: { name: 'pixelmatch', version: '7.2.0' }, nativeValidity: 'current' };
+
+  it('reads as design date, run and its age, what was not verified, and the tool\'s own word marked untrusted', () => {
+    expect(buildFreshness({ snapshots: [snapshot], runs: [run], builtAt: '2026-10-19T09:00:00Z', validity: { state: 'offline' } })).toEqual([
+      { label: 'Design', value: 'Login frames, captured 13 Oct 2026' },
+      { label: 'Run', value: '14 Oct 2026 · pixelmatch 7.2.0 · 5 days before this build' },
+      { label: 'Not verified', value: 'Whether the design or code changed after the run: this bundle is offline' },
+      { label: "Tool's own check", value: 'current (not trusted)' }
+    ]);
+  });
+
+  it('warns when the inputs changed, the evidence is unusable or nothing ran', () => {
+    const stale = buildFreshness({ snapshots: [], runs: [], builtAt: '2026-10-19T09:00:00Z', validity: { state: 'stale', causes: [{ role: 'app-code', key: 'app:src', change: 'changed' }] } });
+    expect(stale).toEqual([{ label: 'Changed since the run', value: 'app:src (changed)', caution: true }]);
+    expect(buildFreshness({ snapshots: [], runs: [], builtAt: '2026-10-19T09:00:00Z', validity: { state: 'never-run' } })[0]).toMatchObject({ label: 'Not run', caution: true });
+    expect(buildFreshness({ snapshots: [], runs: [], builtAt: '2026-10-19T09:00:00Z', validity: { state: 'invalid', reasons: ['a.png does not match'] } })[0]).toMatchObject({ label: 'Unusable evidence', caution: true });
   });
 });

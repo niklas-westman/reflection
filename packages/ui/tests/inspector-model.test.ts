@@ -10,14 +10,14 @@ const subject = groupBySubject(projection)[0] as SubjectGroup;
 const matrix = buildMatrix({ projection, subject, unusableComparisonIds: new Set() });
 
 function modelOf(id: string, filters = NO_FILTERS, unusable: ReadonlySet<string> = new Set()): InspectorModel {
-  const model = buildInspectorModel({ projection, matrix: unusable.size > 0 ? buildMatrix({ projection, subject, unusableComparisonIds: unusable }) : matrix, filters, comparisonId: id, unusableComparisonIds: unusable, bundleHash: 'f'.repeat(64) });
+  const model = buildInspectorModel({ projection, matrix: unusable.size > 0 ? buildMatrix({ projection, subject, unusableComparisonIds: unusable }) : matrix, filters, comparisonId: id, unusableComparisonIds: unusable, bundleHash: 'f'.repeat(64), builtAt: '2026-10-18T10:00:00.000Z', validity: { state: 'offline' } });
   if (!model) throw new Error(`no model for ${id}`);
   return model;
 }
 
 describe('the inspector model', () => {
   it('has nothing for a comparison that does not exist', () => {
-    expect(buildInspectorModel({ projection, matrix, filters: NO_FILTERS, comparisonId: 'nope', unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64) })).toBeUndefined();
+    expect(buildInspectorModel({ projection, matrix, filters: NO_FILTERS, comparisonId: 'nope', unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64), builtAt: '2026-10-18T10:00:00.000Z', validity: { state: 'offline' } })).toBeUndefined();
   });
 
   it('labels the comparison by its item and implementation and reads its outcome from the proof layers', () => {
@@ -42,7 +42,7 @@ describe('the inspector model', () => {
   });
 
   it('summarizes the recorded diff and threshold, and has none when none was recorded', () => {
-    expect(modelOf('btn.primary/react').diffSummary).toEqual({ metric: 'diff-pixels', value: 120, ratio: 0.0015, threshold: [{ name: 'ratio', value: 0.001 }] });
+    expect(modelOf('btn.primary/react').diffSummary).toEqual({ metric: 'diff-pixels', label: 'diff-pixels', valueText: '120', meaning: undefined, value: 120, ratio: 0.0015, threshold: [{ name: 'ratio', value: 0.001 }] });
     expect(modelOf('btn.primary/vue').diffSummary).toBeUndefined();
   });
 
@@ -70,7 +70,7 @@ describe('the inspector model', () => {
     const first = agent.comparisons[0];
     if (first?.reference) first.reference.approval = { state: 'holds', attestation: 'agent', by: 'script', at: '2026-10-14T09:00:00.000Z' };
     const [agentSubject] = groupBySubject(agent);
-    const model = buildInspectorModel({ projection: agent, matrix: buildMatrix({ projection: agent, subject: agentSubject!, unusableComparisonIds: new Set() }), filters: NO_FILTERS, comparisonId: 'btn.primary/react', unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64) });
+    const model = buildInspectorModel({ projection: agent, matrix: buildMatrix({ projection: agent, subject: agentSubject!, unusableComparisonIds: new Set() }), filters: NO_FILTERS, comparisonId: 'btn.primary/react', unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64), builtAt: '2026-10-18T10:00:00.000Z', validity: { state: 'offline' } });
 
     expect(model?.caution).toContain('recorded by an agent');
     expect(model?.gaps).toContain('The reference approval is not confirmed by a person.');
@@ -93,12 +93,21 @@ describe('the inspector model', () => {
 
 function modelFor(changed: typeof projection, id: string): InspectorModel {
   const [changedSubject] = groupBySubject(changed);
-  const model = buildInspectorModel({ projection: changed, matrix: buildMatrix({ projection: changed, subject: changedSubject!, unusableComparisonIds: new Set() }), filters: NO_FILTERS, comparisonId: id, unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64) });
+  const model = buildInspectorModel({ projection: changed, matrix: buildMatrix({ projection: changed, subject: changedSubject!, unusableComparisonIds: new Set() }), filters: NO_FILTERS, comparisonId: id, unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64), builtAt: '2026-10-18T10:00:00.000Z', validity: { state: 'offline' } });
   if (!model) throw new Error(`no model for ${id}`);
   return model;
 }
 
 describe('what the inspector shows of a provider\'s own record', () => {
+  it('says what a metric means when the provider gave its label, unit, direction and passing line', () => {
+    const described = structuredClone(projection);
+    described.comparisons[0]!.diff!.metric = { name: 'pixelmatch-match-percent', value: 99.75, label: 'Match', unit: '%', direction: 'higher-is-better', passAt: 95 };
+    expect(modelFor(described, 'btn.primary/react').diffSummary).toMatchObject({ label: 'Match', valueText: '99.75 %', meaning: 'Passes at 95 % or more' });
+
+    described.comparisons[0]!.diff!.metric = { name: 'diff-pixels', value: 120, direction: 'lower-is-better' };
+    expect(modelFor(described, 'btn.primary/react').diffSummary).toMatchObject({ label: 'diff-pixels', valueText: '120', meaning: 'Lower is better' });
+  });
+
   it('shows who approved the reference, who wrote it down, when, the words, and whether it is bound to the design source read', () => {
     const delegated = structuredClone(projection);
     const bound = 'c'.repeat(64);
@@ -151,7 +160,7 @@ describe('what the inspector shows of a provider\'s own record', () => {
     const model = modelFor(native, 'btn.primary/react');
 
     expect(model.nativeOutcome).toBe('passed');
-    expect(model.provenance).toContainEqual({ label: 'Native validity (not trusted)', value: 'current' });
+    expect(model.freshness).toContainEqual({ label: "Tool's own check", value: 'current (not trusted)' });
     expect(modelOf('btn.primary/react').nativeOutcome).toBeUndefined();
   });
 

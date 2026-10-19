@@ -165,10 +165,11 @@ describe('the release overview', () => {
   it('shows every source with its own date and the run, and the branch and commit when recorded', async () => {
     await openOverview(makeProjection(), { release: { branch: 'release/2.4', commit: 'abcdef1234567' } });
 
-    const facts = within(screen.getByLabelText('Provenance'));
-    expect(facts.getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
-    expect(facts.getByText('15 Oct 2026 · screenshot-compare 2.1.0 · 3 days before this build')).toBeInTheDocument();
-    expect(facts.getByText('release/2.4 · abcdef1')).toBeInTheDocument();
+    const freshness = within(screen.getByLabelText('Freshness'));
+    expect(freshness.getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
+    expect(freshness.getByText('15 Oct 2026 · screenshot-compare 2.1.0 · 3 days before this build')).toBeInTheDocument();
+    expect(freshness.getByText('Not verified')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Provenance')).getByText('release/2.4 · abcdef1')).toBeInTheDocument();
   });
 });
 

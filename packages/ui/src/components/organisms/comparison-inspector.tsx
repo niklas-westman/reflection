@@ -6,6 +6,7 @@ import { Segmented } from '../atoms/segmented';
 import { cellDisplay, StatusLabel } from '../atoms/outcome-status';
 import { StatusGlyph } from '../atoms/status-glyph';
 import { EvidenceStage, useBlink, type Size } from './evidence-stage';
+import { FreshnessFacts } from '../molecules/freshness-facts';
 
 const Header = styled.header`
   display: flex;
@@ -149,6 +150,10 @@ const Card = styled.section<{ $caution?: boolean }>`
     text-align: right;
     overflow-wrap: anywhere;
   }
+  /* A tool's id breaks only where BreakableKey allows, between its words. */
+  dd .key {
+    overflow-wrap: normal;
+  }
   dd.mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: ${({ theme }) => theme.font.xs};
@@ -219,7 +224,7 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
   });
 
   const display = cellDisplay(model.unusable ? 'not-run' : model.outcome, model.unusable);
-  const diffMetricText = model.diffSummary ? `${model.diffSummary.metric}: ${model.diffSummary.value}${model.diffSummary.ratio !== undefined ? ` (ratio ${model.diffSummary.ratio})` : ''}` : undefined;
+  const diffMetricText = model.diffSummary ? `${model.diffSummary.label}: ${model.diffSummary.valueText}${model.diffSummary.ratio !== undefined ? ` (ratio ${model.diffSummary.ratio})` : ''}` : undefined;
   const { sequence } = model;
 
   return (
@@ -309,6 +314,9 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
         />
         <Rail>
           <ResultCard model={model} offline={offline} />
+          <Card aria-label="Freshness of this proof">
+            <FreshnessFacts lines={model.freshness} />
+          </Card>
           <MeasurementsCard model={model} />
           {model.caution || model.approvalFacts.length > 0 ? (
             <Card $caution={model.caution !== undefined} aria-label="Reference provenance">
@@ -367,6 +375,21 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
   );
 }
 
+/** A tool's id with line breaks allowed only between its words (at a hyphen, an underscore or a capital), never inside one. */
+function BreakableKey({ text }: { text: string }): ReactNode {
+  const parts = text.split(/(?<=[-_.])|(?=[A-Z])/);
+  return (
+    <span className="key">
+      {parts.map((part, index) => (
+        <span key={`${part}-${index}`}>
+          {index > 0 ? <wbr /> : null}
+          {part}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function FactRow({ fact }: { fact: { label: string; value: string; mono?: boolean } }): ReactNode {
   return (
     <>
@@ -414,13 +437,27 @@ function MeasurementsCard({ model }: { model: InspectorModel }): ReactNode {
       <h2>Measurements</h2>
       {diffSummary ? (
         <dl>
-          <dt>Recorded metric</dt>
+          <dt>{diffSummary.label === diffSummary.metric ? 'Recorded metric' : diffSummary.label}</dt>
           <dd>
-            {diffSummary.metric} {diffSummary.value}
+            {diffSummary.label === diffSummary.metric ? <BreakableKey text={diffSummary.metric} /> : null} {diffSummary.valueText}
             {diffSummary.ratio !== undefined ? <span className="muted"> (ratio {diffSummary.ratio})</span> : null}
+            {diffSummary.meaning ? <div className="muted">{diffSummary.meaning}</div> : null}
+            {diffSummary.label !== diffSummary.metric ? (
+              <div className="muted">
+                <BreakableKey text={diffSummary.metric} />
+              </div>
+            ) : null}
           </dd>
           <dt>Recorded threshold</dt>
-          <dd>{diffSummary.threshold.length > 0 ? diffSummary.threshold.map((entry) => `${entry.name} ${entry.value}`).join(', ') : 'Not recorded'}</dd>
+          <dd>
+            {diffSummary.threshold.length > 0
+              ? diffSummary.threshold.map((entry) => (
+                  <div key={entry.name}>
+                    <BreakableKey text={entry.name} /> {entry.value}
+                  </div>
+                ))
+              : 'Not recorded'}
+          </dd>
         </dl>
       ) : null}
       {measurements ? (

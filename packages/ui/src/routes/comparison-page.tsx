@@ -27,7 +27,7 @@ export function ComparisonPage(): ReactNode {
   const owner = comparison ? subjects.find((subject) => subject.comparisons.some((entry) => entry.id === comparison.id)) : undefined;
   const matrix = useMemo(() => (owner ? buildMatrix({ projection, subject: owner, unusableComparisonIds: prepared.unusableComparisonIds }) : undefined), [projection, owner, prepared]);
   const model = useMemo(
-    () => (matrix ? buildInspectorModel({ projection, matrix, filters, comparisonId, unusableComparisonIds: prepared.unusableComparisonIds, bundleHash: manifest.bundleHash }) : undefined),
+    () => (matrix ? buildInspectorModel({ projection, matrix, filters, comparisonId, unusableComparisonIds: prepared.unusableComparisonIds, bundleHash: manifest.bundleHash, builtAt: manifest.release.builtAt, validity: prepared.validity }) : undefined),
     // The filters object is rebuilt on every render; its content is what matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [projection, matrix, JSON.stringify(filters), comparisonId, prepared, manifest.bundleHash]

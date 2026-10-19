@@ -1,7 +1,7 @@
 import { Navigate, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
-import type { Projection } from 'reflection-projection';
+import type { Projection, Validity } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
 import { Button } from '../components/atoms/button';
 import { ExternalLink } from '../components/atoms/external-link';
@@ -19,7 +19,9 @@ import { SubjectChanges } from '../components/organisms/subject-changes';
 import { useReleaseDiff, type ReleaseDiffState } from '../data/release-diff';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
 import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters } from '../model/filters';
-import { describeRun, describeRuns, formatDate, releaseStateLabel } from '../model/format';
+import { releaseStateLabel } from '../model/format';
+import { buildFreshness, type FreshnessLine } from '../model/freshness';
+import { FreshnessFacts } from '../components/molecules/freshness-facts';
 import { buildItemDetail, currentRow, dimensionChoices, orderedRows, pickRow, selectedColumns } from '../model/gallery-model';
 import { buildMatrix } from '../model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch, type SubjectView as SubjectViewState } from '../model/search';
@@ -146,22 +148,17 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
         <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{releaseStateLabel(manifest.release.state)}</Pill>
       </Title>
       {subject.description ? <Description>{subject.description}</Description> : null}
-      <Provenance aria-label="Provenance">
-        {describeSources(projection, subject, manifest.release.builtAt).map((fact) => (
-          <div key={fact.label}>
-            <dt>{fact.label}</dt>
-            <dd>{fact.value}</dd>
-          </div>
-        ))}
-        {subject.sourceUrl ? (
+      <FreshnessFacts lines={subjectFreshness(projection, subject, manifest.release.builtAt, prepared.validity)} />
+      {subject.sourceUrl ? (
+        <Provenance aria-label="Provenance">
           <div>
             <dt>Design source</dt>
             <dd>
               <ExternalLink href={subject.sourceUrl}>Open the design source</ExternalLink>
             </dd>
           </div>
-        ) : null}
-      </Provenance>
+        </Provenance>
+      ) : null}
       <Spacer />
       <EvidenceNotice subject={subject} />
       <Spacer $size="sm" />
@@ -234,29 +231,11 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
   );
 }
 
-interface Fact {
-  label: string;
-  value: string;
-}
-
-// Which design data the proof actually read, with its own date, and the run that produced it.
-function describeSources(projection: Projection, subject: SubjectGroup, builtAt: string): Fact[] {
+// The design data and runs this subject's proof actually read, each with its own date.
+function subjectFreshness(projection: Projection, subject: SubjectGroup, builtAt: string, validity: Validity): FreshnessLine[] {
   const snapshotIds = new Set(subject.comparisons.flatMap((comparison) => (comparison.snapshotId ? [comparison.snapshotId] : [])));
-  const snapshots = projection.snapshots.filter((snapshot) => snapshotIds.has(snapshot.id));
   const runIds = new Set(subject.comparisons.flatMap((comparison) => (comparison.runId ? [comparison.runId] : [])));
-  const runs = projection.runs.filter((run) => runIds.has(run.id));
-
-  const facts: Fact[] = [];
-  if (snapshots.length > 0) {
-    facts.push({ label: 'Proof based on', value: snapshots.map((snapshot) => `${snapshot.label ?? snapshot.role}, captured ${formatDate(snapshot.capturedAt)}`).join('; ') });
-  }
-  if (runs.length === 1 && runs[0]) {
-    facts.push({ label: 'Run', value: describeRun(runs[0], builtAt) });
-    if (runs[0].nativeValidity) facts.push({ label: 'Native validity', value: `${runs[0].nativeValidity} (the tool's own word, not trusted)` });
-  } else if (runs.length > 1) {
-    facts.push({ label: 'Runs', value: describeRuns(runs, builtAt) });
-  }
-  return facts.length > 0 ? facts : [{ label: 'Proof based on', value: 'No source or run is recorded for this subject' }];
+  return buildFreshness({ snapshots: projection.snapshots.filter((snapshot) => snapshotIds.has(snapshot.id)), runs: projection.runs.filter((run) => runIds.has(run.id)), builtAt, validity });
 }
 
 function changesUnavailableReason(state: ReleaseDiffState): string | undefined {

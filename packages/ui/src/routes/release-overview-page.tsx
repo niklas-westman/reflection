@@ -16,7 +16,9 @@ import { ExternalLink } from '../components/atoms/external-link';
 import type { ChangeKind } from 'reflection-projection';
 import { buildAttention, countDelegatedApprovals, sortByAttention } from '../model/attention';
 import { countComparisons } from '../model/comparison-outcome';
-import { describeRun, describeRuns, formatDate, releaseStateLabel } from '../model/format';
+import { formatDate, releaseStateLabel } from '../model/format';
+import { buildFreshness } from '../model/freshness';
+import { FreshnessFacts } from '../components/molecules/freshness-facts';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
 import { paths, SECTION_TITLES, sectionOf, type Section } from './paths';
 
@@ -105,30 +107,18 @@ export function ReleaseOverviewPage(): ReactNode {
             <dd>{[release.branch, release.commit?.slice(0, 7)].filter(Boolean).join(' · ')}</dd>
           </div>
         ) : null}
-        {projection.snapshots.map((snapshot) => (
-          <div key={snapshot.id}>
-            <dt>{snapshot.role}</dt>
-            <dd>
-              {snapshot.label ?? snapshot.kind}, captured {formatDate(snapshot.capturedAt)}
-              {snapshot.sourceUrl ? <> · <ExternalLink href={snapshot.sourceUrl}>Open</ExternalLink></> : null}
-            </dd>
-          </div>
-        ))}
-        {projection.runs.length > 0 ? (
-          <div>
-            <dt>{projection.runs.length === 1 ? 'Run' : 'Runs'}</dt>
-            <dd>{projection.runs.length === 1 && projection.runs[0] ? describeRun(projection.runs[0], release.builtAt) : describeRuns(projection.runs, release.builtAt)}</dd>
-          </div>
-        ) : null}
-        {projection.runs.length === 1 && projection.runs[0]?.nativeValidity ? (
-          <div>
-            <dt>Native validity</dt>
-            <dd>
-              {projection.runs[0].nativeValidity} <span className="muted">(the tool's own word, not trusted)</span>
-            </dd>
-          </div>
-        ) : null}
+        {projection.snapshots
+          .filter((snapshot) => snapshot.sourceUrl)
+          .map((snapshot) => (
+            <div key={snapshot.id}>
+              <dt>{snapshot.role}</dt>
+              <dd>
+                <ExternalLink href={snapshot.sourceUrl ?? ''}>Open {snapshot.label ?? snapshot.kind}</ExternalLink>
+              </dd>
+            </div>
+          ))}
       </Facts>
+      <FreshnessFacts lines={buildFreshness({ snapshots: projection.snapshots, runs: projection.runs, builtAt: release.builtAt, validity: prepared.validity })} />
       <Spacer />
       <EvidenceNotice />
       {subjects.length === 0 && projection.requirements.length === 0 ? (

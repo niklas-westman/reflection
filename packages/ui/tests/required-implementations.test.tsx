@@ -61,7 +61,7 @@ describe('required implementations in the model', () => {
     const projection = withRequired(makeComponentProjection(), ['react', 'vue']);
     const [subject] = groupBySubject(projection);
     const matrix = buildMatrix({ projection, subject: subject!, unusableComparisonIds: new Set() });
-    const gaps = buildInspectorModel({ projection, matrix, filters: NO_FILTERS, comparisonId: 'button.secondary.default.light/react', unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64) })?.gaps ?? [];
+    const gaps = buildInspectorModel({ projection, matrix, filters: NO_FILTERS, comparisonId: 'button.secondary.default.light/react', unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64), builtAt: '2026-10-18T10:00:00.000Z', validity: { state: 'offline' } })?.gaps ?? [];
 
     expect(gaps).toContain('A required implementation was not compared, so the item is not proven: vue.');
     expect(gaps).toContain('This item was not compared in: svelte.');

@@ -86,10 +86,10 @@ describe('the subject page', () => {
   it('says where the proof came from, with its own date', async () => {
     await openSubject();
 
-    const provenance = screen.getByLabelText('Provenance');
-    expect(within(provenance).getByText('Proof based on')).toBeInTheDocument();
-    expect(within(provenance).getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
-    expect(within(provenance).getByText('15 Oct 2026 · screenshot-compare 2.1.0 · 3 days before this build')).toBeInTheDocument();
+    const freshness = within(screen.getByLabelText('Freshness'));
+    expect(freshness.getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
+    expect(freshness.getByText('15 Oct 2026 · screenshot-compare 2.1.0 · 3 days before this build')).toBeInTheDocument();
+    expect(freshness.getByText('Not verified')).toBeInTheDocument();
   });
 
   it('reads a sound bundle as offline and never as current', async () => {

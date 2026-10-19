@@ -1,6 +1,7 @@
-import { missingImplementations, type Artifact, type Comparison, type Projection, type ProofLayer } from 'reflection-projection';
+import { missingImplementations, type Artifact, type Comparison, type Projection, type ProofLayer, type Validity } from 'reflection-projection';
 import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
 import { formatDate } from './format';
+import { buildFreshness, type FreshnessLine } from './freshness';
 import { rowMatches, type MatrixFilters } from './filters';
 import type { Matrix, MatrixRow } from './matrix-model';
 
@@ -36,6 +37,19 @@ export interface Sibling {
   outcome: ComparisonOutcome;
 }
 
+export interface DiffSummary {
+  // The tool's id for the metric, always shown so it can be looked up.
+  metric: string;
+  // What it is called and its value with its unit, for example "Match" and "99.75 %"; the id and the bare value without a label.
+  label: string;
+  valueText: string;
+  // "Passes at 95 % or more" when the provider gave the passing line and direction; "Higher is better" with a direction only.
+  meaning: string | undefined;
+  value: number;
+  ratio: number | undefined;
+  threshold: Array<{ name: string; value: number }>;
+}
+
 export interface InspectorModel {
   comparison: Comparison;
   row: MatrixRow | undefined;
@@ -55,8 +69,10 @@ export interface InspectorModel {
   // The producing tool's own word, shown as "native" and never counted.
   nativeOutcome: string | undefined;
   measurements: { total: number; passedCount: number; failing: MeasurementSample[]; passing: MeasurementSample[]; sentence: string | undefined } | undefined;
-  diffSummary: { metric: string; value: number; ratio: number | undefined; threshold: Array<{ name: string; value: number }> } | undefined;
+  diffSummary: DiffSummary | undefined;
   facts: Fact[];
+  // Whether this comparison's proof is still about the current design and code; the same lines as on the overview.
+  freshness: FreshnessLine[];
   provenance: Fact[];
   gaps: string[];
   limitations: string[];
@@ -76,6 +92,8 @@ export interface BuildInspectorOptions {
   comparisonId: string;
   unusableComparisonIds: ReadonlySet<string>;
   bundleHash: string;
+  builtAt: string;
+  validity: Validity;
 }
 
 /** Everything the inspector shows, derived from one recorded comparison. Pure; nothing here is invented. */
@@ -119,15 +137,14 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
           sentence: failing[0] ? describeSample(failing[0]) : undefined
         }
       : undefined,
-    diffSummary: comparison.diff
-      ? {
-          metric: comparison.diff.metric.name,
-          value: comparison.diff.metric.value,
-          ratio: comparison.diff.metric.ratio,
-          threshold: Object.entries(comparison.diff.threshold ?? {}).map(([name, value]) => ({ name, value }))
-        }
-      : undefined,
-    facts: buildFacts(comparison, projection),
+    diffSummary: comparison.diff ? summarizeDiff(comparison.diff) : undefined,
+    facts: buildFacts(comparison),
+    freshness: buildFreshness({
+      snapshots: projection.snapshots.filter((snapshot) => snapshot.id === comparison.snapshotId),
+      runs: projection.runs.filter((run) => run.id === comparison.runId),
+      builtAt: options.builtAt,
+      validity: options.validity
+    }),
     provenance: buildProvenance(comparison, projection, options.bundleHash),
     gaps: buildGaps(comparison, row, unusable, bundleRecordsMeasurements),
     bundleRecordsMeasurements,
@@ -136,6 +153,26 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
     implementationsRecorded: projection.comparisons.some((entry) => entry.subject.adapter !== undefined) || projection.requirements.some((entry) => (entry.requiredImplementations ?? []).length > 0),
     sequence: buildSequence(options, rows)
   };
+}
+
+function summarizeDiff(diff: NonNullable<Comparison['diff']>): DiffSummary {
+  const { metric } = diff;
+  const withUnit = (value: number): string => (metric.unit ? `${value} ${metric.unit}` : String(value));
+  return {
+    metric: metric.name,
+    label: metric.label ?? metric.name,
+    valueText: withUnit(metric.value),
+    meaning: describeMetricMeaning(metric.direction, metric.passAt === undefined ? undefined : withUnit(metric.passAt)),
+    value: metric.value,
+    ratio: metric.ratio,
+    threshold: Object.entries(diff.threshold ?? {}).map(([name, value]) => ({ name, value }))
+  };
+}
+
+function describeMetricMeaning(direction: 'higher-is-better' | 'lower-is-better' | undefined, passAt: string | undefined): string | undefined {
+  if (!direction) return undefined;
+  if (passAt === undefined) return direction === 'higher-is-better' ? 'Higher is better' : 'Lower is better';
+  return `Passes at ${passAt} or ${direction === 'higher-is-better' ? 'more' : 'less'}`;
 }
 
 function toSample(sample: { part: string; property: string; expected: string; actual: string; delta?: string | undefined; tolerance?: string | undefined; passed: boolean }): MeasurementSample {
@@ -179,14 +216,12 @@ function buildApprovalFacts(comparison: Comparison, projection: Projection): Fac
   return facts;
 }
 
-function buildFacts(comparison: Comparison, projection: Projection): Fact[] {
-  const run = projection.runs.find((entry) => entry.id === comparison.runId);
+function buildFacts(comparison: Comparison): Fact[] {
   const { subject } = comparison;
   const facts: Fact[] = [];
   if (subject.viewport) facts.push({ label: 'Viewport', value: subject.viewport });
   if (subject.state) facts.push({ label: 'State', value: subject.state });
   if (subject.mode) facts.push({ label: 'Mode', value: subject.mode });
-  if (run) facts.push({ label: 'Run', value: `${formatDate(run.finishedAt)} · ${run.engine.name}${run.engine.version ? ` ${run.engine.version}` : ''}` });
   return facts;
 }
 
@@ -196,7 +231,6 @@ function buildProvenance(comparison: Comparison, projection: Projection, bundleH
   const facts: Fact[] = [];
   if (run) {
     facts.push({ label: 'Run', value: run.id, mono: true });
-    if (run.nativeValidity) facts.push({ label: 'Native validity (not trusted)', value: run.nativeValidity });
     for (const [key, value] of Object.entries(run.runner ?? {})) {
       if (typeof value === 'string' || typeof value === 'number') facts.push({ label: key, value: String(value) });
     }
