@@ -1,6 +1,6 @@
 {
   "name": "reflection-projection",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Neutral evidence projection and immutable bundles for Reflection: schemas, readiness, validity, decisions, release diffs, and a bundle reader and writer.",
   "license": "MIT",
   "type": "module",
