@@ -25,6 +25,7 @@ export function BundleLayout(): ReactNode {
   // The quick open shows the bundle at once; the full check replaces it when it finishes.
   const bundle = verified.data ? { ...initial, data: verified.data, isPending: false as const, isError: false as const } : initial;
   const verifying = initial.data?.status === 'opened' && verified.isPending;
+  const verificationFailed = verified.isError ? verified.error.message : undefined;
 
   if (bundle.isPending) {
     return (
@@ -65,33 +66,35 @@ export function BundleLayout(): ReactNode {
     );
   }
 
-  return <OpenLayout bundleId={bundleId} result={bundle.data} verifying={verifying} />;
+  return <OpenLayout bundleId={bundleId} result={bundle.data} verifying={verifying} verificationFailed={verificationFailed} />;
 }
 
 type OpenedResult = Extract<NonNullable<ReturnType<typeof useBundle>['data']>, { status: 'opened' }>;
 
-function OpenLayout({ bundleId, result, verifying }: { bundleId: string; result: OpenedResult; verifying: boolean }): ReactNode {
+function OpenLayout({ bundleId, result, verifying, verificationFailed }: { bundleId: string; result: OpenedResult; verifying: boolean; verificationFailed: string | undefined }): ReactNode {
   const { section, subjectId } = useParams({ strict: false });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const view = useMemo(
-    () => ({ bundleId, manifest: result.bundle.manifest, unusablePaths: result.bundle.unusablePaths, prepared: prepareBundle(result.bundle, result.problems), verifying }),
-    [bundleId, result, verifying]
+    () => ({ bundleId, manifest: result.bundle.manifest, unusablePaths: result.bundle.unusablePaths, prepared: prepareBundle(result.bundle, result.problems), verifying, verificationFailed }),
+    [bundleId, result, verifying, verificationFailed]
   );
   const subjects = useMemo(() => groupBySubject(view.prepared.projection), [view]);
   const { project, release } = result.bundle.manifest;
 
-  const location: NavLocation = isSection(section) && subjectId ? { page: 'subject', section, subjectId } : pathname.endsWith('/changes') ? { page: 'changes' } : { page: 'overview' };
+  const location: NavLocation = isSection(section) && subjectId ? { page: 'subject', section, subjectId } : pathname.endsWith('/changes') ? { page: 'changes' } : pathname.endsWith('/design-references') ? { page: 'design-references' } : { page: 'overview' };
   const crumbs: Crumb[] = [{ label: `${project.name} ${release.release}`, href: paths.bundle(bundleId) }];
   if (location.page === 'subject') {
     const current = subjects.find((subject) => subject.id === location.subjectId);
     crumbs.push({ label: SECTION_TITLES[location.section] }, { label: current?.label ?? location.subjectId });
   } else if (location.page === 'changes') {
     crumbs.push({ label: 'Changes' });
+  } else if (location.page === 'design-references') {
+    crumbs.push({ label: 'Design references' });
   }
 
   return (
     <BundleViewProvider value={view}>
-      <AppShell crumbs={crumbs} status={<ValidityPill validity={view.prepared.validity} verifying={verifying} />}>
+      <AppShell crumbs={crumbs} status={<ValidityPill validity={view.prepared.validity} verifying={verifying} verificationFailed={verificationFailed !== undefined} />}>
         <ReleaseSidebar bundleId={bundleId} manifest={result.bundle.manifest} subjects={subjects} location={location} />
         <Content>
           <Outlet />

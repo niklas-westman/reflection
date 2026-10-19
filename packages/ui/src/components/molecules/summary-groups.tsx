@@ -79,10 +79,32 @@ function Tile({ label, value, tone = 'neutral', major = false }: TileProps): Rea
   );
 }
 
+export interface RequiredItemsPanelProps {
+  items: CoverageSummary;
+  // True when the provider lists only what ran, so the required count is a lower bound.
+  lowerBound: boolean;
+}
+
+/** The required items in one unit. A bucket the provider has no concept of reads "Unknown". */
+export function RequiredItemsPanel({ items, lowerBound }: RequiredItemsPanelProps): ReactNode {
+  return (
+    <Panel aria-label="Required items">
+      <h2>Required items</h2>
+      <dl>
+        <Tile label={lowerBound ? 'Listed (lower bound)' : 'Required'} value={items.required} major />
+        <Tile label="Proven" value={items.proven} tone="pass" />
+        <Tile label="Failing" value={items.failing} tone={items.failing > 0 ? 'fail' : 'neutral'} />
+        <Tile label="Needs design" value={items.needsDesign} />
+        <Tile label="Not enrolled" value={items.notEnrolled} />
+        {items.unknown > 0 ? <Tile label="Not proven" value={items.unknown} /> : null}
+      </dl>
+    </Panel>
+  );
+}
+
 export interface SummaryGroupsProps {
   items: CoverageSummary;
   comparisons: ComparisonCounts;
-  // True when the provider lists only what ran, so the required count is a lower bound.
   lowerBound: boolean;
 }
 
@@ -90,17 +112,7 @@ export interface SummaryGroupsProps {
 export function SummaryGroups({ items, comparisons, lowerBound }: SummaryGroupsProps): ReactNode {
   return (
     <Panels aria-label="Summary">
-      <Panel aria-label="Required items">
-        <h2>Required items</h2>
-        <dl>
-          <Tile label={lowerBound ? 'Listed (lower bound)' : 'Required'} value={items.required} major />
-          <Tile label="Proven" value={items.proven} tone="pass" />
-          <Tile label="Failing" value={items.failing} tone={items.failing > 0 ? 'fail' : 'neutral'} />
-          <Tile label="Needs design" value={items.needsDesign} />
-          <Tile label="Not enrolled" value={items.notEnrolled} />
-          {items.unknown > 0 ? <Tile label="Not proven" value={items.unknown} /> : null}
-        </dl>
-      </Panel>
+      <RequiredItemsPanel items={items} lowerBound={lowerBound} />
       <Panel aria-label="Comparisons">
         <h2>Comparisons</h2>
         <dl>

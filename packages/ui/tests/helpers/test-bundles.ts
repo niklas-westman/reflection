@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll } from 'vitest';
 import { collectArtifactRefs, projectionSchema, type Projection, type ReleaseManifest } from 'reflection-projection';
 import { createDirectorySource, writeBundle, type BundleFileInput } from 'reflection-projection/node';
+import type { ArchiveSummary } from 'reflection-projection';
 import type { BundleCatalog } from '../../src/data/bundle-catalog';
 
 type RequirementInput = Projection['requirements'][number];
@@ -89,7 +90,7 @@ afterAll(async () => {
 });
 
 /** Writes real bundles to a temporary directory and serves them as a catalog, so tests read what the writer wrote. */
-export async function makeCatalog(bundles: TestBundle[]): Promise<BundleCatalog> {
+export async function makeCatalog(bundles: TestBundle[], options: { archive?: ArchiveSummary[]; unreadableArchive?: number } = {}): Promise<BundleCatalog> {
   const root = await mkdtemp(join(tmpdir(), 'reflection-ui-'));
   created.push(root);
 
@@ -101,6 +102,7 @@ export async function makeCatalog(bundles: TestBundle[]): Promise<BundleCatalog>
 
   return {
     list: async () => bundles.map((bundle) => ({ id: bundle.id })),
+    archive: async () => ({ summaries: options.archive ?? [], unreadable: options.unreadableArchive ?? 0 }),
     source: (bundleId) => createDirectorySource(join(root, bundleId))
   };
 }
@@ -313,7 +315,7 @@ export function makeReleasePair(): { previous: TestBundle; current: TestBundle }
     comparisons: [...current.comparisons.filter((entry) => keep(entry.requirementId)), legacy.comparison, checkout.comparison]
   });
 
-  const previousRelease = { release: '2.3.0', state: 'released' as const, build: 1, bundleId: 'components-2.3.0-1', previousRelease: null };
+  const previousRelease = { release: '2.3.0', state: 'released' as const, build: 1, bundleId: 'components-2.3.0-1', previousRelease: null, builtAt: '2026-10-01T10:00:00.000Z' };
   return {
     previous: {
       id: 'previous',
@@ -323,5 +325,25 @@ export function makeReleasePair(): { previous: TestBundle; current: TestBundle }
       imageContent: (path) => (path === 'artifacts/button.primary.default.light-reference.png' ? new Uint8Array([9, 9, 9, 9]) : new Uint8Array([137, 80, 78, 71, path.length]))
     },
     current: { id: 'current', projection: currentProjection, release: { release: '2.4.0', state: 'candidate', build: 1, bundleId: 'components-2.4.0-1', previousRelease: '2.3.0' } }
+  };
+}
+
+/** A summary of a release whose evidence was removed. */
+export function makeArchiveSummary(overrides: Partial<ArchiveSummary> = {}): ArchiveSummary {
+  return {
+    schemaVersion: 1,
+    project: 'docs-site',
+    release: '2.2.0',
+    build: 1,
+    bundleHash: 'd'.repeat(64),
+    finalState: 'released',
+    decision: { kind: 'approve', by: 'designer@example.com', at: '2026-10-01T12:00:00.000Z', message: 'Looks right to me', acknowledged: { stillFailing: 2 }, standing: 'holds' },
+    snapshots: [{ id: 'references', kind: 'reference-set', role: 'reference-screenshots', label: 'Reference screenshots', capturedAt: '2026-09-20T08:00:00.000Z' }],
+    coverage: { required: 40, proven: 31, failing: 2, needsDesign: null, notEnrolled: 4, unknown: 3 },
+    change: { against: '2.1.0', sameSnapshot: false, regressed: 1, fixed: 3, stillFailing: 1, newInDesign: 2, removedInDesign: 0, newlyEnrolled: 1 },
+    notes: { open: 1, resolved: 4 },
+    summary: '2.2.0 build 1: 31 of 40 required proven, 2 failing. Approved by designer@example.com.',
+    removed: { at: '2026-11-01T00:00:00.000Z', reason: 'Left the previous-release slot when 2.4.0 was published' },
+    ...overrides
   };
 }

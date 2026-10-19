@@ -4,7 +4,15 @@ import { Pill } from '../atoms/pill';
 import { StatusGlyph } from '../atoms/status-glyph';
 
 /** The evidence state. A bundle is never "Current": it has no live inputs, so a sound one reads as offline. */
-export function ValidityPill({ validity, verifying = false }: { validity: Validity; verifying?: boolean }): ReactNode {
+export function ValidityPill({ validity, verifying = false, verificationFailed = false }: { validity: Validity; verifying?: boolean; verificationFailed?: boolean }): ReactNode {
+  if (verificationFailed && validity.state === 'offline') {
+    return (
+      <Pill $tone="gap">
+        <StatusGlyph kind="gap" label="" />
+        Verification incomplete
+      </Pill>
+    );
+  }
   if (verifying && validity.state === 'offline') {
     return <Pill $tone="idle">Verifying files…</Pill>;
   }

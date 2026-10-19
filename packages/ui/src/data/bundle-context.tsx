@@ -9,6 +9,8 @@ export interface OpenBundleView {
   unusablePaths: ReadonlySet<string>;
   // True while the files are still being checked, so the counts are not yet confirmed.
   verifying: boolean;
+  // Checking every file did not finish (for example the network failed). Each image is still checked when it is shown.
+  verificationFailed: string | undefined;
 }
 
 const BundleContext = createContext<OpenBundleView | undefined>(undefined);

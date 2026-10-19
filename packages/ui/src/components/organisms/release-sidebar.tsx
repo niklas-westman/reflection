@@ -1,11 +1,10 @@
-import { useNavigate } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import type { BundleManifest } from 'reflection-projection';
-import { useBundleList, useOpenedBundles } from '../../data/bundle-queries';
 import type { SubjectGroup } from '../../model/subject-model';
 import { paths, SECTION_TITLES, sectionOf, type Section } from '../../routes/paths';
 import { Pill } from '../atoms/pill';
+import { ReleasePicker } from './release-picker';
 
 const Side = styled.nav`
   width: 15.5rem;
@@ -135,7 +134,7 @@ const Foot = styled.div`
   font-size: ${({ theme }) => theme.font.xs};
 `;
 
-export type NavLocation = { page: 'overview' } | { page: 'changes' } | { page: 'subject'; section: Section; subjectId: string };
+export type NavLocation = { page: 'overview' } | { page: 'changes' } | { page: 'design-references' } | { page: 'subject'; section: Section; subjectId: string };
 
 export interface ReleaseSidebarProps {
   bundleId: string;
@@ -151,7 +150,7 @@ export interface ReleaseSidebarProps {
 export function ReleaseSidebar({ bundleId, manifest, subjects, location }: ReleaseSidebarProps): ReactNode {
   return (
     <Side aria-label="Release navigation">
-      <ReleasePicker bundleId={bundleId} manifest={manifest} />
+      <ReleaseCardWithPicker bundleId={bundleId} manifest={manifest} />
       <Group>
         <NavItem href={paths.bundle(bundleId)} aria-current={location.page === 'overview' ? 'page' : undefined}>
           Overview
@@ -164,7 +163,7 @@ export function ReleaseSidebar({ bundleId, manifest, subjects, location }: Relea
         <ExpandableSection key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} location={location} />
       ))}
       <Group>
-        <NavItem as="span" role="link" aria-disabled="true" title="The design references page is not built yet">
+        <NavItem href={paths.designReferences(bundleId)} aria-current={location.page === 'design-references' ? 'page' : undefined}>
           Design references
         </NavItem>
       </Group>
@@ -173,20 +172,7 @@ export function ReleaseSidebar({ bundleId, manifest, subjects, location }: Relea
   );
 }
 
-function ReleasePicker({ bundleId, manifest }: { bundleId: string; manifest: BundleManifest }): ReactNode {
-  const navigate = useNavigate();
-  const list = useBundleList();
-  const entries = list.data ?? [];
-  const opened = useOpenedBundles(entries);
-
-  const label = (id: string, index: number): string => {
-    const result = opened[index]?.data;
-    if (result?.status === 'opened') {
-      return `${result.bundle.manifest.project.name} ${result.bundle.manifest.release.release} · build ${result.bundle.manifest.release.build}`;
-    }
-    return result?.status === 'rejected' ? `${id} (rejected)` : id;
-  };
-
+function ReleaseCardWithPicker({ bundleId, manifest }: { bundleId: string; manifest: BundleManifest }): ReactNode {
   return (
     <ReleaseCard>
       <span className="label">Release</span>
@@ -195,15 +181,7 @@ function ReleasePicker({ bundleId, manifest }: { bundleId: string; manifest: Bun
         {manifest.release.release} · build {manifest.release.build}{' '}
         <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{manifest.release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
       </span>
-      {entries.length > 1 ? (
-        <select aria-label="Change release" value={bundleId} onChange={(event) => void navigate({ to: '/bundles/$bundleId', params: { bundleId: event.target.value } })}>
-          {entries.map((entry, index) => (
-            <option key={entry.id} value={entry.id}>
-              {label(entry.id, index)}
-            </option>
-          ))}
-        </select>
-      ) : null}
+      <ReleasePicker projectId={manifest.project.id} current={`bundle:${bundleId}`} />
     </ReleaseCard>
   );
 }

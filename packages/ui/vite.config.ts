@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import { BundleFileMissingError } from 'reflection-projection';
@@ -37,11 +37,22 @@ function localBundles(directory: string): Plugin {
     return ids;
   }
 
+  // Summaries of releases whose evidence was removed: every .json file in <folder>/archive. Not validated here;
+  // the viewer validates them and counts the ones it cannot read.
+  async function listArchive(): Promise<unknown[]> {
+    const names = await readdir(join(root, 'archive')).catch(() => [] as string[]);
+    const summaries: unknown[] = [];
+    for (const name of names.filter((entry) => entry.endsWith('.json')).sort()) {
+      summaries.push(await readFile(join(root, 'archive', name), 'utf8').then((text) => JSON.parse(text) as unknown, () => null));
+    }
+    return summaries;
+  }
+
   async function handle(request: IncomingMessage, response: ServerResponse, next: () => void): Promise<void> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (url.pathname === '/index.json') {
       response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify({ bundles: (await listBundleIds()).map((id) => ({ id })) }));
+      response.end(JSON.stringify({ bundles: (await listBundleIds()).map((id) => ({ id })), archive: await listArchive() }));
       return;
     }
 

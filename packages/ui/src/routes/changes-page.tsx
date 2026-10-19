@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import type { ProjectionDiff } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
 import { useReleaseDiff } from '../data/release-diff';
+import { useReleaseHistory } from '../data/release-history';
 import { Spacer } from '../components/atoms/spacer';
 import { Segmented } from '../components/atoms/segmented';
 import { Banner } from '../components/molecules/banner';
@@ -89,7 +90,9 @@ const FILTER_TEXT: Record<ChangeFilter, string> = { all: 'All changes', added: '
 export function ChangesPage(): ReactNode {
   const { manifest, prepared } = useBundleView();
   const state = useReleaseDiff();
+  const { history } = useReleaseHistory();
   const delta = prepared.projection.delta;
+  const archived = state.status === 'unavailable' ? history?.projects.find((project) => project.id === manifest.project.id)?.releases.find((entry) => entry.kind === 'archive' && entry.release === state.previousRelease) : undefined;
 
   return (
     <>
@@ -107,7 +110,10 @@ export function ChangesPage(): ReactNode {
       {state.status === 'unavailable' ? (
         <>
           <Banner tone="idle" title={`The previous release (${state.previousRelease}) is not available here`}>
-            <p style={{ margin: '0.25rem 0 0' }}>It may have been removed to save space, or it was never published to this viewer, so before and after images cannot be shown.</p>
+            <p style={{ margin: '0.25rem 0 0' }}>
+              {archived ? 'Its evidence was removed to save space, so before and after images cannot be shown. ' : 'It may have been removed to save space, or it was never published to this viewer, so before and after images cannot be shown. '}
+              {archived ? <a href={paths.archive(manifest.project.id, archived.release)}>See the summary of {archived.release}</a> : null}
+            </p>
           </Banner>
           {delta && delta.against !== null ? (
             <>

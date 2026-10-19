@@ -27,6 +27,9 @@ export const paths = {
   bundles: (): string => '#/',
   bundle: (bundleId: string): string => `#/bundles/${encode(bundleId)}`,
   changes: (bundleId: string): string => `#/bundles/${encode(bundleId)}/changes`,
+  designReferences: (bundleId: string): string => `#/bundles/${encode(bundleId)}/design-references`,
+  // A release that has left its slot: a summary page, not evidence.
+  archive: (project: string, release: string): string => `#/archive/${encode(project)}/${encode(release)}`,
   // `outcome` opens the subject already filtered to one outcome group (failed, not-proven, passed, missing).
   subject: (bundleId: string, kind: SubjectKind, subjectId: string, options: { outcome?: string } = {}): string =>
     `#/bundles/${encode(bundleId)}/${sectionOf(kind)}/${encode(subjectId)}${options.outcome ? `?view=items&outcome=${options.outcome}` : ''}`,

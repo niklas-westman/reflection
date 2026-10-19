@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (v5 steps 1 to 5 and the required-implementations rule done)
+Last updated: 2026-10-19 (the v5 design is built; steps 1 to 6 and the required-implementations rule are done)
 
 ## How to keep this alive
 
@@ -42,11 +42,12 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **v5 step 6: release and history picker, Design references page, remaining error states** (see "Viewer" below). Not started.
+- [ ] **Viewer quality: dogfood Reflection on the viewer** (a visual smoke over its routes against the demo bundles), then the keyboard and screen-reader pass and dark-theme parity. Not started. The v5 build order is finished.
 
 ## Next (in order)
 
-1. Viewer quality: dogfood Reflection on the viewer, keyboard and screen-reader pass, dark parity.
+1. Keyboard and screen-reader pass, dark-theme parity for every screen.
+2. Decide publishing: package names and npm scope, version bump, push.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -177,10 +178,15 @@ Built so far:
 - [x] 189 viewer tests and 130 projection tests, mutation-checked; browser check of the changes page, overview badges, the subject Changes view and a pruned image (the one 404 in the console was that deliberate removal). The demo set has a `docs-site-previous` release.
 - [ ] Not built: the overview "Designer review" wording from v5 stays dropped; a change filter by item inside a subject; a link from a Changes card to its filtered inventory.
 
-**Step 6: the rest**
-- [ ] Release and history picker: current, previous, and archive summaries (summary-only view).
-- [ ] Design references page (the snapshots list).
-- [ ] Remaining error states: stale, runner unavailable, never run, partial data, no results.
+**Step 6: the rest** (done 2026-10-19)
+- [x] Release and history picker: project and release as two choices from every release the viewer knows; a release that can be opened in full is a bundle, one that left its slot is a summary labelled "summary only"; identical labels are told apart by bundle id. The bundle list page also lists earlier releases (summary only) and says how many archive entries could not be read.
+- [x] Summary-only page for an archived release: an information bar (evidence removed on a date, with the reason, "not evidence"), required items in one unit with unknown kept unknown, the decision as it stood at exit and whether it still matched, design sources with their own dates, change since the previous release, notes at exit. No images, comparisons or percentages. The changes page links to it when the previous release exists only as a summary.
+- [x] Design references page: each recorded source with its own date, kind, file keys, hash, link and what reads it; reference approvals counted by who recorded them (person, agent, lapsed, none, no reference).
+- [x] States: never run (banner and pill), stale (banner with the changed inputs; reachable only when a runner supplies current inputs), files not fully verified (defensive; `openBundle` itself never throws), a bundle with no required items and no comparisons, and the one-banner priority (invalid, never run, stale, verification, only-what-ran, unconfirmed references).
+- [x] The catalog gained `archive()`; the dev server lists `archive/*.json` in `index.json`; summaries are validated and unreadable ones counted.
+- [x] A latent bug fixed: dates are formatted with fixed month names ("Sep", not the platform's "Sept").
+- [x] 228 viewer tests, mutation-checked; browser check of the picker, a summary page (light and dark), the bundle list and the design references page. The demo set has two archive summaries.
+- [ ] Not applicable: "runner unavailable" (the viewer has no run control, so there is nothing to disable).
 
 Viewer quality:
 - [ ] Reflection visual smoke over the viewer's routes against the demo bundles (dogfooding).
@@ -245,7 +251,7 @@ Viewer quality:
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (139 tests), then ui (200 tests, build)
+pnpm check:packages                            # projection (139 tests), then ui (228 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -256,6 +262,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: v5 step 6: release and history picker, summary-only release page, design references page, never-run, stale and verification states, empty-bundle state; fixed month names in dates. UI tests 200 to 228. The v5 design is fully built.
 - 2026-10-19: required implementations: `requiredImplementations` on a requirement, `missingImplementations`, the readiness rule, columns and cards for implementations nobody compared, a needs-attention item, inspector gaps, a `docs-site-strict` demo. Projection tests 130 to 139, UI tests 189 to 200.
 - 2026-10-19: v5 step 5: `diffProjections`, subject catalog and source links in the projection; Changes screen, overview badges and design-changes card, per-subject Changes view in the viewer. Projection tests 109 to 130, UI tests 163 to 189.
 - 2026-10-19: v5 step 4: comparison inspector (three-up and single-stage modes, zoom with synced scroll, measurements rail, provenance, gaps, related, honest states, keyboard). UI tests 119 to 163.

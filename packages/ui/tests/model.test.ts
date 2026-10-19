@@ -185,3 +185,13 @@ describe('preparing a bundle', () => {
     expect(prepared.summary).toMatchObject({ failing: 0, proven: 1, unknown: 3 });
   });
 });
+
+describe('formatting dates', () => {
+  it('reads the same everywhere, in UTC, with fixed month names', async () => {
+    const { formatDate } = await import('../src/model/format');
+
+    expect(formatDate('2026-09-20T23:30:00.000Z')).toBe('20 Sep 2026');
+    expect(formatDate('2026-01-01T00:00:00.000Z')).toBe('1 Jan 2026');
+    expect(formatDate('2026-12-31T23:59:59.000Z')).toBe('31 Dec 2026');
+  });
+});

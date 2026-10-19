@@ -5,7 +5,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { PNG } from 'pngjs';
-import { projectFromReflectionReport, projectionSchema, collectArtifactRefs, summarizeReadiness, type Projection, type ReleaseManifest } from 'reflection-projection';
+import { buildArchiveSummary, projectFromReflectionReport, projectionSchema, collectArtifactRefs, summarizeReadiness, type Projection, type ReleaseManifest } from 'reflection-projection';
 import { writeBundle, type BundleFileInput } from 'reflection-projection/node';
 import { buildFromSample, readFixture } from '../../projection/tests/helpers/builders';
 
@@ -166,7 +166,30 @@ const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { release: 
 manifest.release.release = 'edited-after-publishing';
 await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
-console.log(`Wrote ${demos.length + 2} demo bundles to ${output}`);
+// Summaries of releases whose evidence was removed, so the history and the summary-only page can be seen.
+await mkdir(join(output, 'archive'), { recursive: true });
+const archived = [
+  { projection: previousOf(docsSite), release: 'demo-older', decision: { kind: 'approve' as const, by: 'designer@example.com', at: '2026-10-02T12:00:00.000Z', message: 'Pricing reads right', standing: 'holds' as const } },
+  { projection: previousOf(docsSite), release: 'demo-oldest', decision: null }
+];
+for (const [index, entry] of archived.entries()) {
+  const projection = projectionSchema.parse({
+    ...entry.projection,
+    release: { release: entry.release, build: 1, bundleId: `docs-site-${entry.release}-1`, state: 'released', builtAt: '2026-09-20T12:00:00.000Z', previousRelease: index === 0 ? 'demo-oldest' : null, snapshotIds: entry.projection.snapshots.map((snapshot) => snapshot.id) },
+    delta: undefined
+  });
+  const summary = buildArchiveSummary({
+    projection,
+    bundleHash: 'a'.repeat(63) + String(index),
+    finalState: 'released',
+    decision: entry.decision,
+    notes: { open: index === 0 ? 1 : 0, resolved: index === 0 ? 3 : 0 },
+    removed: { at: `2026-10-0${index + 5}T00:00:00.000Z`, reason: 'Left the previous-release slot' }
+  });
+  await writeFile(join(output, 'archive', `docs-site-${entry.release}.json`), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+}
+
+console.log(`Wrote ${demos.length + 2} demo bundles and ${archived.length} archive summaries to ${output}`);
 
 async function writeDemo(id: string, projection: Projection, overrides: Partial<ReleaseManifest>, oldLook: string | undefined): Promise<void> {
   const artifacts = collectArtifactRefs(projection);

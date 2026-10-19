@@ -6,6 +6,7 @@ import { Button } from '../components/atoms/button';
 import { Pill } from '../components/atoms/pill';
 import { Spacer } from '../components/atoms/spacer';
 import { CoverageBar } from '../components/molecules/coverage-bar';
+import { Banner } from '../components/molecules/banner';
 import { SubjectCard } from '../components/molecules/subject-card';
 import { SummaryGroups } from '../components/molecules/summary-groups';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
@@ -121,6 +122,14 @@ export function ReleaseOverviewPage(): ReactNode {
       </Facts>
       <Spacer />
       <EvidenceNotice />
+      {subjects.length === 0 && projection.requirements.length === 0 ? (
+        <>
+          <Spacer $size="sm" />
+          <Banner tone="idle" title="This bundle has no required items and no comparisons">
+            <p style={{ margin: '0.25rem 0 0' }}>There is nothing to show yet. The provider recorded no required items and no comparison.</p>
+          </Banner>
+        </>
+      ) : null}
       <SectionHeading>Release status</SectionHeading>
       <SummaryGroups items={prepared.summary} comparisons={comparisons} lowerBound={projection.inventory === 'executed-only'} />
       <Spacer $size="sm" />

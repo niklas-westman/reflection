@@ -1,6 +1,11 @@
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { openBundle, verifyBundleFile, type BundleManifest, type BundleProblemCode, type OpenBundleResult } from 'reflection-projection';
-import { useBundleCatalog, type BundleListEntry } from './bundle-catalog';
+import { useBundleCatalog, type ArchiveListing, type BundleListEntry } from './bundle-catalog';
+
+export function useArchive(): UseQueryResult<ArchiveListing> {
+  const catalog = useBundleCatalog();
+  return useQuery({ queryKey: ['archive'], queryFn: () => catalog.archive() });
+}
 
 export function useBundleList(): UseQueryResult<BundleListEntry[]> {
   const catalog = useBundleCatalog();

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
 import type { OpenBundleResult } from 'reflection-projection';
-import { useBundleList, useOpenedBundles } from '../data/bundle-queries';
+import { useArchive, useBundleList, useOpenedBundles } from '../data/bundle-queries';
 import { Pill } from '../components/atoms/pill';
 import { ValidityPill } from '../components/organisms/validity-pill';
 import { AppShell } from '../components/organisms/app-shell';
@@ -48,6 +48,8 @@ const Page = styled.main`
 export function BundleListPage(): ReactNode {
   const list = useBundleList();
   const opened = useOpenedBundles(list.data ?? []);
+  const archive = useArchive();
+  const summaries = archive.data?.summaries ?? [];
 
   return (
     <AppShell crumbs={[{ label: 'Bundles' }]}>
@@ -76,6 +78,46 @@ export function BundleListPage(): ReactNode {
               ))}
             </tbody>
           </table>
+        ) : null}
+        {summaries.length > 0 || (archive.data?.unreadable ?? 0) > 0 ? (
+          <section aria-label="Earlier releases">
+            <h2 style={{ margin: '2rem 0 0.25rem', fontSize: '1.0625rem' }}>Earlier releases (summary only)</h2>
+            <p>Their evidence was removed to save space. What remains is a summary, not evidence.</p>
+            {(archive.data?.unreadable ?? 0) > 0 ? <p role="status">{archive.data?.unreadable} archive {archive.data?.unreadable === 1 ? 'entry' : 'entries'} could not be read and {archive.data?.unreadable === 1 ? 'is' : 'are'} not listed.</p> : null}
+            {summaries.length > 0 ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Project</th>
+                    <th scope="col">Release</th>
+                    <th scope="col">Decision</th>
+                    <th scope="col">Required</th>
+                    <th scope="col">Proven</th>
+                    <th scope="col">Failing</th>
+                    <th scope="col">Removed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summaries.map((summary) => (
+                    <tr key={`${summary.project}/${summary.release}/${summary.build}`}>
+                      <td>{summary.project}</td>
+                      <td>
+                        <a href={paths.archive(summary.project, summary.release)}>
+                          {summary.release} · build {summary.build}
+                        </a>{' '}
+                        <Pill $tone="idle">{summary.finalState === 'released' ? 'Released' : 'Superseded'}</Pill>
+                      </td>
+                      <td>{summary.decision ? (summary.decision.kind === 'approve' ? 'Approved' : 'Changes required') : 'None recorded'}</td>
+                      <td>{summary.coverage.required}</td>
+                      <td>{summary.coverage.proven}</td>
+                      <td>{summary.coverage.failing}</td>
+                      <td>{formatDate(summary.removed.at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </section>
         ) : null}
       </Page>
     </AppShell>

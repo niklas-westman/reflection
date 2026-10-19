@@ -49,7 +49,7 @@ describe('the release-first shell', () => {
   it('offers the other releases and moves to the one chosen', async () => {
     await openRelease('/bundles/docs-site');
 
-    await userEvent.selectOptions(await sidebar().findByLabelText('Change release'), 'other-release');
+    await userEvent.selectOptions(await sidebar().findByLabelText('Change release'), 'bundle:other-release');
 
     await waitFor(() => expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('href', '#/bundles/other-release'));
   });
@@ -61,7 +61,7 @@ describe('the release-first shell', () => {
     expect(sidebar().getByRole('link', { name: 'Changes' })).toBeInTheDocument();
     expect(sidebar().getByRole('button', { name: /Components/ })).toBeInTheDocument();
     expect(sidebar().getByRole('button', { name: /Pages/ })).toBeInTheDocument();
-    expect(sidebar().getByText('Design references')).toHaveAttribute('aria-disabled', 'true');
+    expect(sidebar().getByRole('link', { name: 'Design references' })).toHaveAttribute('href', '#/bundles/docs-site/design-references');
   });
 
   it('keeps both lists closed on the overview and opens the section of the current subject', async () => {

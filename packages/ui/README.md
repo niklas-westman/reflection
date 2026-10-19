@@ -23,6 +23,7 @@ The demo bundles are written from the projection package's fixtures, with genera
 | `sourcer-login` | A provider with no "needs design" or "not enrolled" concept: those buckets read as unknown |
 | `native-basic-react` | A native Reflection report: only what ran is listed, so the count is a lower bound |
 | `docs-site-strict` | The same site, but every item must pass in Chrome, Firefox and Safari. Nothing was compared in Safari, so no item is proven and Safari is an empty column |
+| `archive/` | Two summaries of releases whose evidence was removed, so the history and the summary-only page can be seen |
 | `docs-site-previous` | The release `docs-site` is compared with: one reference drawn differently, an item the current release added, one it removed and a page that no longer exists |
 | `docs-site` | A project unrelated to either, with a failure, two browsers and items that were never compared. The only demo with an (illustrative) delta, so the "Since" card shows |
 | `docs-site-tampered-image` | One image no longer matches its hash: evidence invalid, that comparison counted as unknown |
@@ -33,7 +34,9 @@ The demo bundles are written from the projection package's fixtures, with genera
 One sidebar for every route in a release: the release picker (project, release, state, and a selector for the other bundles), Overview, Changes, one expandable Components list and one expandable Pages list (each with its own search), and Design references (disabled until it exists). The evidence state sits in the top bar on every route. Routes:
 
 ```text
-#/                                              bundle list
+#/                                              all releases (bundles and earlier releases)
+#/archive/:project/:release                     a release whose evidence was removed: a summary, not evidence
+#/bundles/:bundle/design-references             the design sources and reference approvals
 #/bundles/:bundle                               release overview
 #/bundles/:bundle/changes                       what changed since the previous release
 #/bundles/:bundle/components/:subject           all required items for a component family
@@ -42,6 +45,10 @@ One sidebar for every route in a release: the release picker (project, release, 
 ```
 
 A subject opened under the wrong section is redirected to its own.
+
+**Releases:** the sidebar picks a project and a release from every release the viewer knows. One that can be opened in full is a bundle; one that left its slot is a summary (counts, the decision as it stood, design source dates, notes at exit) and says so. A summary is never shown as evidence. The catalog supplies summaries through `archive()`; the dev server reads every `.json` file in `<bundles folder>/archive` and lists it in `index.json`, and entries that are not valid summaries are counted, not hidden.
+
+**Design references** lists each recorded design source with its own date and what reads it, and counts reference approvals by who recorded them.
 
 **Changes** compare this release with the one its manifest names as the previous (found among the bundles the viewer can read; a released build wins over a candidate). They are changes to the catalog of required items and to their design references, computed by `diffProjections`, and are never a pass or a fail. The page shows added, updated and removed required items with subject counts, and a card per changed subject with the design reference before and after (from the previous bundle; "Image no longer retained" when it is gone). The overview marks each subject with the change to its catalog and adds a "Design changes since" card; a subject's Changes view lists its changed items. When the previous release is not available the page says so and falls back to the delta stored in the bundle; a first release says there is nothing to compare with.
 
@@ -81,4 +88,3 @@ tests/         model tests and viewer tests that read real bundles written by th
 - Only a provider that declares `requiredImplementations` gets the rule that every named implementation must pass. Without it, an item compared in only some implementations can read Proven, and the gallery says which were not compared.
 - The matrix renders all rows of an open group without virtualization. Measure before adding it.
 - Object URLs for loaded images are not revoked; fine for a viewing session.
-- Summary-only (archived) releases and the release overview are not built yet.

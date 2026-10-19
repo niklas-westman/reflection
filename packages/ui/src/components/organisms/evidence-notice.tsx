@@ -8,8 +8,9 @@ import { Banner } from '../molecules/banner';
  * reference approvals behind that subject were not confirmed by a person.
  */
 export function EvidenceNotice({ subject }: { subject?: SubjectGroup }): ReactNode {
-  const { prepared } = useBundleView();
-  if (prepared.validity.state === 'invalid') {
+  const { prepared, verificationFailed } = useBundleView();
+  const { validity } = prepared;
+  if (validity.state === 'invalid') {
     const shown = prepared.problems.slice(0, 3);
     return (
       <Banner tone="fail" title={`Some evidence in this bundle is unusable (${prepared.problems.length})`}>
@@ -22,6 +23,36 @@ export function EvidenceNotice({ subject }: { subject?: SubjectGroup }): ReactNo
           ))}
           {prepared.problems.length > shown.length ? <li>and {prepared.problems.length - shown.length} more</li> : null}
         </ul>
+      </Banner>
+    );
+  }
+  if (validity.state === 'never-run') {
+    return (
+      <Banner tone="idle" title="Nothing has been run for this bundle">
+        <p style={{ margin: '0.25rem 0 0' }}>No run is recorded, so there is no result to show. Required items are listed without an outcome.</p>
+      </Banner>
+    );
+  }
+  if (validity.state === 'stale') {
+    const shown = validity.causes.slice(0, 3);
+    return (
+      <Banner tone="gap" title="This evidence is stale">
+        <p style={{ margin: '0.25rem 0 0' }}>Something it was produced from has changed since it was recorded. Run it again before relying on it.</p>
+        <ul>
+          {shown.map((cause) => (
+            <li key={`${cause.role}/${cause.key}`}>
+              {cause.role} <code>{cause.key}</code> {cause.change}
+            </li>
+          ))}
+          {validity.causes.length > shown.length ? <li>and {validity.causes.length - shown.length} more</li> : null}
+        </ul>
+      </Banner>
+    );
+  }
+  if (verificationFailed !== undefined) {
+    return (
+      <Banner tone="gap" title="Files could not be fully verified">
+        <p style={{ margin: '0.25rem 0 0' }}>The bundle opened, but checking every file did not finish ({verificationFailed}). Each image is still checked when it is shown, and one that does not match is withheld.</p>
       </Banner>
     );
   }

@@ -1,13 +1,21 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { BundleFileMissingError, type BundleSource } from 'reflection-projection';
+import { archiveSummarySchema, BundleFileMissingError, type ArchiveSummary, type BundleSource } from 'reflection-projection';
 
 export interface BundleListEntry {
   id: string;
 }
 
+export interface ArchiveListing {
+  summaries: ArchiveSummary[];
+  // Entries the index named that are not valid archive summaries. They are counted, never silently dropped.
+  unreadable: number;
+}
+
 /** Where bundles come from. The viewer knows nothing else about hosting. */
 export interface BundleCatalog {
   list(): Promise<BundleListEntry[]>;
+  // Releases that left their slot: a small summary each, no evidence.
+  archive(): Promise<ArchiveListing>;
   source(bundleId: string): BundleSource;
 }
 
@@ -15,14 +23,21 @@ export interface BundleCatalog {
 export function createHttpCatalog(baseUrl: string): BundleCatalog {
   const base = baseUrl.replace(/\/+$/, '');
 
+  async function readIndex(): Promise<{ bundles?: BundleListEntry[]; archive?: unknown[] }> {
+    const response = await fetch(`${base}/index.json`);
+    if (!response.ok) {
+      throw new Error(`The bundle list could not be loaded (HTTP ${response.status}).`);
+    }
+    return (await response.json()) as { bundles?: BundleListEntry[]; archive?: unknown[] };
+  }
+
   return {
     async list(): Promise<BundleListEntry[]> {
-      const response = await fetch(`${base}/index.json`);
-      if (!response.ok) {
-        throw new Error(`The bundle list could not be loaded (HTTP ${response.status}).`);
-      }
-      const body = (await response.json()) as { bundles?: BundleListEntry[] };
-      return body.bundles ?? [];
+      return (await readIndex()).bundles ?? [];
+    },
+    async archive(): Promise<ArchiveListing> {
+      const parsed = ((await readIndex()).archive ?? []).map((entry) => archiveSummarySchema.safeParse(entry));
+      return { summaries: parsed.flatMap((result) => (result.success ? [result.data] : [])), unreadable: parsed.filter((result) => !result.success).length };
     },
     source(bundleId: string): BundleSource {
       return {
