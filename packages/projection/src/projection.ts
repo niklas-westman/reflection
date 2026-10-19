@@ -6,6 +6,7 @@ import { idSchema, timestampSchema } from './primitives.js';
 import { deltaSchema, releaseManifestSchema } from './release.js';
 import { requirementSchema, summarizeReadiness, type CoverageSummary } from './requirement.js';
 import { sourceSnapshotSchema } from './snapshot.js';
+import { subjectInfoSchema } from './subject-catalog.js';
 
 export const providerSchema = z.object({
   name: z.string().min(1),
@@ -25,6 +26,8 @@ export const projectionSchema = z
     // executed-only: only what ran is listed (the engine cannot declare required items), so coverage is a lower bound.
     inventory: z.enum(['full', 'executed-only']),
     scope: z.string().min(1).optional(),
+    // Optional facts about subjects (label, description, link, change note). A subject needs no entry.
+    subjects: z.array(subjectInfoSchema).default([]),
     snapshots: z.array(sourceSnapshotSchema).default([]),
     requirements: z.array(requirementSchema).default([]),
     comparisons: z.array(comparisonSchema).default([]),
@@ -41,6 +44,15 @@ export const projectionSchema = z
     const snapshotIds = collectUniqueIds(projection.snapshots, 'snapshots', context);
     const decisionIds = collectUniqueIds(projection.decisions, 'decisions', context);
     collectUniqueIds(projection.comparisons, 'comparisons', context);
+
+    const subjectKeys = new Set<string>();
+    projection.subjects.forEach((subject, index) => {
+      const key = `${subject.kind}/${subject.id}`;
+      if (subjectKeys.has(key)) {
+        context.addIssue({ code: 'custom', path: ['subjects', index, 'id'], message: `duplicate subject "${key}"` });
+      }
+      subjectKeys.add(key);
+    });
 
     projection.comparisons.forEach((comparison, index) => {
       requireKnown(comparison.requirementId, requirementIds, ['comparisons', index, 'requirementId'], 'requirement', context);

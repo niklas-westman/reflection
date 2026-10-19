@@ -71,6 +71,13 @@ A snapshot is the design data something was proven against. Reflection does not 
 - `release.snapshotIds` lists the snapshots a release used. It may equal the previous release's: not every release has a new sync.
 - If the design source has moved on and your proof still reads the old one, that is a validity problem, not a note. Report it through `run.inputs` or as an integrity failure (below).
 
+## Subjects, links and release changes
+
+- **`subjects[]` is optional.** A subject (a component family or a page, grouped by `subject.id` and `kind`) needs no entry. Add one to give it a `label`, a `description`, a `sourceUrl` and a `changeNote`. `changeNote` is what changed in this release in your own words; the viewer never derives it.
+- **Links** (`subject.sourceUrl`, `snapshot.sourceUrl`) must be `http` or `https`. A script or `file:` URL is rejected. The viewer shows them as links and never follows them. Never put a Figma or Penpot name in the label of the generic chrome; the link text comes from your data.
+- **Release changes are computed by `diffProjections(previous, current)`**, not by the provider. For it to say something true, keep **requirement ids stable** across releases and give every reference a **hash** (`writeBundle` fills it in). A requirement is "updated" when its reference hash changed; renaming a requirement id reads as one removed and one added.
+- The baseline is the previous release: set `release.previousRelease` to the latest released version before this build.
+
 ## Runs, inputs and validity
 
 A run records what produced the evidence and what it was produced from.
@@ -149,6 +156,7 @@ Read a bundle back, as the viewer will, with `openBundle(source, { verifyFiles: 
 - [ ] Each snapshot has its own date; comparisons name the snapshot that backed them.
 - [ ] No folded word in any `verdict` or `proof`.
 - [ ] `run.inputs[]` covers what the proof depends on, with relative keys.
+- [ ] Requirement ids and reference hashes are identical between two builds of unchanged design (so `diffProjections` reports no change).
 - [ ] Ids and verdicts are identical between two builds of identical evidence (build twice and compare the decision binding).
 - [ ] Reference approvals say who recorded them; no agent record is marked `human`.
 - [ ] `writeBundle` succeeds, and `openBundle(..., { verifyFiles: 'all' })` returns `opened` with no problems.

@@ -80,6 +80,47 @@
       "type": "string",
       "minLength": 1
     },
+    "subjects": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "component",
+              "page"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "changeNote": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ]
+      }
+    },
     "snapshots": {
       "default": [],
       "type": "array",
@@ -128,6 +169,10 @@
           "originalFileKey": {
             "type": "string",
             "minLength": 1
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
           },
           "note": {
             "type": "string"

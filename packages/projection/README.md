@@ -14,6 +14,7 @@ A provider turns its own evidence into a `Projection`. The reader never needs to
 | `runs` | Engine, runner, `inputs[]` and result hashes, so validity can be computed when the evidence is read |
 | `decisions` | Human decisions, bound to content (verdicts, reference hashes, capture policies, the required set), never to a run |
 | `release`, `delta` | The release manifest and what changed since the previous release |
+| `subjects` | Optional facts about a component family or page: label, description, link to the design source, a change note in the provider's words |
 
 ## Rules the schema enforces
 
@@ -29,6 +30,8 @@ A provider turns its own evidence into a `Projection`. The reader never needs to
 - `deriveReadiness`, `summarizeReadiness`, `summarizeProjection`: the one place readiness is counted.
 - `computeValidity(recorded, current)`: `current`, `stale` with the exact changed inputs, `invalid`, `never-run` or `offline`. Pure. The caller hashes the current inputs with the engine's `hashReportInputs`.
 - `buildDecisionBinding`, `evaluateDecision`: `holds`, `carried-forward` (identical results on a rebuilt bundle), `lapsed` with named causes, or `withdrawn`.
+- `diffProjections(previous, current)`: what differs between two releases. Subjects and required items added, removed or **updated** (a reference counts as updated only when both releases recorded a hash and the hashes differ, or one had a reference and the other none), plus regressed, fixed, still failing and newly enrolled comparisons. Pure, from recorded data only, separate from verification outcomes.
+- `comparisonOutcome`, `countComparisons`: the outcome of a comparison from its proof layers only, and comparison counts in their own unit.
 - `projectFromReflectionReport`: the native provider. The engine cannot declare required items, so its inventory is `executed-only` and coverage is a lower bound.
 
 ## Bundles
