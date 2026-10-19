@@ -193,7 +193,7 @@ describe('the changes view of one subject', () => {
     const { previous, current } = makeReleasePair();
     renderApp(await makeCatalog([previous, current]), '/bundles/current/components/button');
     await screen.findByRole('heading', { level: 1, name: 'button' });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Changes' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Changes on this/ })).toBeEnabled());
   });
 
   it('is disabled with the reason for a first release', async () => {
@@ -201,7 +201,7 @@ describe('the changes view of one subject', () => {
     renderApp(await makeCatalog([previous]), '/bundles/previous/components/button');
     await screen.findByRole('heading', { level: 1, name: 'button' });
 
-    const tab = screen.getByRole('button', { name: 'Changes' });
+    const tab = screen.getByRole('button', { name: /^Changes on this/ });
     expect(tab).toBeDisabled();
     expect(tab).toHaveAttribute('title', 'This is the first release, so there is nothing to compare with.');
   });

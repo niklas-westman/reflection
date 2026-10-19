@@ -107,8 +107,8 @@ export function AppShell({ crumbs, status, children }: AppShellProps): ReactNode
         </Crumbs>
         <Grow />
         {status}
-        <Button type="button" $quiet onClick={toggle} aria-label={`Switch to ${scheme === 'dark' ? 'light' : 'dark'} theme`}>
-          {scheme === 'dark' ? 'Light' : 'Dark'}
+        <Button type="button" $quiet onClick={toggle}>
+          Switch to {scheme === 'dark' ? 'light' : 'dark'}
         </Button>
       </Top>
       <Body>{children}</Body>

@@ -42,7 +42,7 @@ describe('the release history model', () => {
   it('describes a release the way the picker shows it', () => {
     const history = buildReleaseHistory({ bundles: [opened('a', '2.4.0', 'docs-site', 2, 'candidate')], archive: [makeArchiveSummary()] });
 
-    expect(history.projects[0]?.releases.map(describeRelease)).toEqual(['2.4.0 · build 2 · Release candidate', '2.2.0 · build 1 · summary only']);
+    expect(history.projects[0]?.releases.map(describeRelease)).toEqual(['2.4.0 · build 2 · Unreleased', '2.2.0 · build 1 · summary only']);
   });
 });
 
@@ -61,7 +61,7 @@ describe('the release picker', () => {
 
     const select = await screen.findByLabelText('Change release');
     // Every bundle is read before it can be listed, so the list fills in.
-    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Release candidate', '2.3.0 · build 1 · Released', '2.2.0 · build 1 · summary only']));
+    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Unreleased', '2.3.0 · build 1 · Released', '2.2.0 · build 1 · summary only']));
   });
 
   it('opens another bundle in full, and a summary as a summary', async () => {
@@ -273,6 +273,6 @@ describe('releases that read the same', () => {
     renderApp(await makeCatalog([current, { ...current, id: 'current-copy' }]), '/bundles/current');
 
     const select = await screen.findByLabelText('Change release');
-    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Release candidate (current)', '2.4.0 · build 1 · Release candidate (current-copy)']));
+    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Unreleased (current)', '2.4.0 · build 1 · Unreleased (current-copy)']));
   });
 });

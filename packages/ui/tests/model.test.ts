@@ -6,6 +6,7 @@ import { availableDimensions, filterMatrix, NO_FILTERS } from '../src/model/filt
 import { buildMatrix } from '../src/model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch } from '../src/model/search';
 import { describeRuns, releaseStateLabel, runAgeAtBuild } from '../src/model/format';
+import { hashRouteForPlainPath } from '../src/router';
 import { groupBySubject } from '../src/model/subject-model';
 import { makeProjection } from './helpers/test-bundles';
 
@@ -198,8 +199,8 @@ describe('formatting dates', () => {
 });
 
 describe('release and run wording', () => {
-  it('names the release state so it cannot be read as a page called Candidate', () => {
-    expect(releaseStateLabel('candidate')).toBe('Release candidate');
+  it('names the release state without claiming a stage the provider never claimed', () => {
+    expect(releaseStateLabel('candidate')).toBe('Unreleased');
     expect(releaseStateLabel('released')).toBe('Released');
   });
 
@@ -209,5 +210,15 @@ describe('release and run wording', () => {
     expect(runAgeAtBuild('2026-10-19T01:00:00Z', '2026-10-19T09:00:00Z')).toBeUndefined();
     expect(runAgeAtBuild('2026-10-20T01:00:00Z', '2026-10-19T09:00:00Z')).toBeUndefined();
     expect(describeRuns([{ finishedAt: '2026-10-16T00:00:00Z' }, { finishedAt: '2026-10-14T00:00:00Z' }], '2026-10-19T00:00:00Z')).toBe('2 runs, the oldest 5 days before this build');
+  });
+});
+
+describe('a plain path pasted without the hash', () => {
+  it('becomes the same hash route, and the root or a hash route is left alone', () => {
+    expect(hashRouteForPlainPath('/bundles/login-1', '', '/')).toBe('/#/bundles/login-1');
+    expect(hashRouteForPlainPath('/viewer/bundles/login-1/pages/login', '', '/viewer/')).toBe('/viewer/#/bundles/login-1/pages/login');
+    expect(hashRouteForPlainPath('/', '', '/')).toBeUndefined();
+    expect(hashRouteForPlainPath('/index.html', '', '/')).toBeUndefined();
+    expect(hashRouteForPlainPath('/bundles/login-1', '#/bundles/x', '/')).toBeUndefined();
   });
 });

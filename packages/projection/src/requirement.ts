@@ -16,6 +16,14 @@ export const subjectSchema = z.object({
 });
 export type Subject = z.output<typeof subjectSchema>;
 
+const COMMON_SUBJECT_KEYS = ['variant', 'mode', 'adapter', 'viewport', 'state'] as const;
+
+/** A subject's value for a dimension named by a common key or a key of `dimensions`; undefined when it has none. */
+export function subjectDimension(subject: Subject, key: string): string | undefined {
+  const common = (COMMON_SUBJECT_KEYS as readonly string[]).includes(key) ? subject[key as (typeof COMMON_SUBJECT_KEYS)[number]] : undefined;
+  return common ?? subject.dimensions?.[key];
+}
+
 export const designAvailabilitySchema = z.enum(['available', 'missing', 'unmapped']);
 
 export const requirementSchema = z.object({

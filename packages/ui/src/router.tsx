@@ -29,6 +29,16 @@ const comparisonRoute = createRoute({ getParentRoute: () => bundleRoute, path: '
 const routeTree = rootRoute.addChildren([bundlesRoute, archiveRoute, bundleRoute.addChildren([overviewRoute, changesRoute, designReferencesRoute, subjectRoute, comparisonRoute])]);
 
 /** Hash history keeps links working on any static host, with no server rewrite rules. */
+/**
+ * The hash route for a plain path such as /bundles/<id>, which someone pasted without the "#".
+ * Undefined when the address already is the app's root or carries a hash.
+ */
+export function hashRouteForPlainPath(pathname: string, hash: string, basePath: string): string | undefined {
+  if (hash !== '' || !pathname.startsWith(basePath)) return undefined;
+  const route = pathname.slice(basePath.length).replace(/^\/*/, '/');
+  return route === '/' || route === '/index.html' ? undefined : `${basePath}#${route}`;
+}
+
 export function createAppRouter(history = createHashHistory()): AnyRouter {
   return createRouter({ routeTree, history });
 }

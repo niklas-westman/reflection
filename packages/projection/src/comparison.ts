@@ -62,6 +62,20 @@ export const measurementSampleSchema = z.object({
   sourceNodeId: z.string().min(1).optional()
 });
 
+// The number a pixel comparison produced. `name` is the tool's id for it; `label`, `unit`, `direction` and
+// `passAt` (the passing line, in the same unit) let a viewer say what it means without the tool's documentation.
+export const diffMetricSchema = z.object({
+  name: z.string().min(1),
+  value: z.number(),
+  ratio: z.number().optional(),
+  diffPixels: z.number().int().nonnegative().optional(),
+  label: z.string().min(1).optional(),
+  unit: z.string().min(1).optional(),
+  direction: z.enum(['higher-is-better', 'lower-is-better']).optional(),
+  passAt: z.number().optional()
+});
+export type DiffMetric = z.output<typeof diffMetricSchema>;
+
 export const comparisonSchema = z.object({
   id: idSchema,
   // Joins the comparison to its requirement by exact identity. Engine case `ref` lands here.
@@ -83,7 +97,7 @@ export const comparisonSchema = z.object({
   diff: z
     .object({
       artifact: artifactSchema.optional(),
-      metric: z.object({ name: z.string().min(1), value: z.number(), ratio: z.number().optional(), diffPixels: z.number().int().nonnegative().optional() }),
+      metric: diffMetricSchema,
       threshold: z.record(z.string(), z.number()).optional()
     })
     .optional(),

@@ -12,9 +12,9 @@ export function joinDimensions(dimensions: Record<string, string>): string {
   return Object.values(dimensions).join(' · ');
 }
 
-/** The release state in words. "Release candidate", never a bare "Candidate", which a project may use as a page name. */
+/** The release state in words. "Unreleased" claims no stage: a candidate's name is often not a version. */
 export function releaseStateLabel(state: 'candidate' | 'released'): string {
-  return state === 'released' ? 'Released' : 'Release candidate';
+  return state === 'released' ? 'Released' : 'Unreleased';
 }
 
 /** "5 days before this build" when the run finished at least a whole day before the build, otherwise undefined. */

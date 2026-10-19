@@ -51,6 +51,7 @@ One comparison is one check of a reference against a rendered result.
 - **Never forward a folded word.** If your tool folds coverage gaps into every case outcome (one provider reported `blocked` for every row because coverage gaps were folded into each case outcome), do not copy that word into `verdict` or `proof`. Map the real per-layer result. Keep the tool's own word in `nativeOutcome`; the viewer shows it as "native" next to the verdict and never counts it.
 - `limitations` is where to say what a check could not do.
 - Record `capturePolicyHash` when the capture settings affect the result. Evidence under another policy is not comparable.
+- `diff.metric` is the number the comparison produced: `name` (your tool's id) and `value`. Add `label` (what a reader calls it, "Match"), `unit` ("%"), `direction` (`higher-is-better` or `lower-is-better`) and `passAt` (the passing line, in the same unit) so the viewer can say "Match 99.75 %, passes at 95 % or more" without your tool's documentation. Without them it shows the name and value as recorded.
 - Record `reference.baselineSha256` (the hash of the approved baseline file) when you have it. Otherwise the artifact hash is used.
 
 ### Reference approval
@@ -83,7 +84,8 @@ A snapshot is the design data something was proven against. Reflection does not 
 
 ## Subjects, links and release changes
 
-- **`subjects[]` is optional.** A subject (a component family or a page, grouped by `subject.id` and `kind`) needs no entry. Add one to give it a `label`, a `description`, a `sourceUrl` and a `changeNote`. `changeNote` is what changed in this release in your own words; the viewer never derives it.
+- **`subjects[]` is optional.** A subject (a component family or a page, grouped by `subject.id` and `kind`) needs no entry. Add one to give it a `label`, a `description`, a `sourceUrl`, a `changeNote` and a `presentation`. `changeNote` is what changed in this release in your own words; the viewer never derives it.
+- **`presentation`** says how to lay out the subject's required items. Each value names a dimension: a common key (`variant`, `mode`, `adapter`, `viewport`, `state`) or a key of `subject.dimensions`. `groupBy` gives one row per value (for example `state`), `columns` puts that dimension's values side by side in the row (`device`: desktop next to mobile), `sections` splits the rows under headings (`surface`: app and email). Failing and unproven items still come first. Without a hint the viewer keeps its default layout; it never guesses from dimension names.
 - **Links** (`subject.sourceUrl`, `snapshot.sourceUrl`) must be `http` or `https`. A script or `file:` URL is rejected. The viewer shows them as links and never follows them. Never put a Figma or Penpot name in the label of the generic chrome; the link text comes from your data.
 - **Release changes are computed by `diffProjections(previous, current)`**, not by the provider. For it to say something true, keep **requirement ids stable** across releases and give every reference a **hash** (`writeBundle` fills it in). A requirement is "updated" when its reference hash changed; renaming a requirement id reads as one removed and one added.
 - The baseline is the previous release: set `release.previousRelease` to the latest released version before this build.
@@ -94,7 +96,7 @@ A run records what produced the evidence and what it was produced from.
 
 - `run.inputs[]` is the engine's `report.inputs[]` shape: `{ role, key, hashKind, sha256, bytes, missing }`. For a native Reflection run, copy it as it is. For your own pipeline, hash the files and data the proof depends on (the coverage contract, the design snapshot, the baselines) with the same shape.
 - Keys are relative to a project directory. Never an absolute path.
-- `hashKind` is `bytes` (the file's bytes), `canonical-json` (a JSON value in canonical form) or `composite`: one hash you compute over a declared set of files, such as your app code. Name the set in the key (`app:src,public,index.html`) and keep the way you hash it fixed; a changed composite hash reads as that input changed. Prefer one input per file when the list is short, so the stale causes can name the file.
+- `hashKind` is `bytes` (the file's bytes), `canonical-json` (a JSON value in canonical form) or `composite`: one hash you compute over a declared set of files, such as your app code. Name the set in the key (`app:src,public,index.html`) and keep the way you hash it fixed; a changed composite hash reads as that input changed. Prefer one input per file when the list is short, so the stale causes can name the file. For a live check, compute the current value with the same function over the live files.
 - Validity is never stored. A viewer with access to the current inputs recomputes it with `computeValidity(recorded, current)` and gets `current`, `stale` (with the exact inputs that changed), `invalid`, `never-run` or `offline`. A bundle opened without live inputs reads `offline`: "freshness not verified".
 - `nativeValidity` keeps what your tool said about its own validity. The viewer shows it as "native" beside the run and never trusts it.
 - `verdictHash` and `measuredHash` come from the engine's `report.resultHash`. Without them, an identical rebuild cannot be told apart from a changed one by the run alone, but the decision binding still works from the comparisons.

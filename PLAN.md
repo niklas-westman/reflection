@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (Sourcer round 1 feedback received; fixing it for `reflection-projection` 0.2.0)
+Last updated: 2026-10-19 (0.2.0 published, Sourcer round 2 passed; building the UX brief for 0.3.0)
 
 ## How to keep this alive
 
@@ -42,16 +42,22 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Sourcer round 1 fixes** (feedback in `handoff/reflection-feedback/sourcer-feedback-01.md`; proposal accepted 2026-10-19). Then publish `reflection-projection` 0.2.0 and tell the Sourcer session what to retry.
-  - [x] Projection: `delegated` attestation (with `recordedBy` and the person's words, both required) on reference approvals and decisions; `composite` input `hashKind`; tests and JSON Schema. 142 tests.
-  - [x] Guide: approval fields (`by`, `at`, `note`, `boundTo`, `causes`, `recordedBy`), what `boundTo` and snapshot `sha256` hash, `composite` inputs, `enrolled` without the concept, native values.
-  - [x] Viewer: who and when for an approval (by, recorded by, at, note, bound hash); `delegated` counts as a person's approval and is labelled so; `nativeOutcome` and `nativeValidity` shown as native; measurement and implementation gaps only where the bundle has them; "Release candidate" from one helper; tall thumbnails fit; the metric row labelled by its own name; run age against the build. (Unknown counts were checked: they are never drawn as 0, nothing to fix.) 247 tests, mutation-checked; the thumbnail fix measured with a 393x1268 image (cropped at 1103px before, fits at 214px after).
-  - [~] Gates: tests, build and `a11y` (no findings) pass; `reflect` is pass-with-review with 12 visual differences from the intended label and layout changes, proposed by dry run. Left: the owner approves promoting the baselines.
-  - [~] Release: 0.2.0 prepared and pushed (all checks, package smoke and pack contents verified). Left: the owner runs `npm publish`, then verify from the registry.
+- [ ] **Sourcer UX brief, 0.3.0** (rounds 1 and 2 feedback plus the UX brief; scope accepted 2026-10-19). Build, gate, screenshot, then the owner publishes `reflection-projection` 0.3.0 and Sourcer retries.
+  - [x] Projection: optional `label`, `unit`, `direction`, `passAt` on `diff.metric`; optional presentation hint per subject (`subjects[].presentation`: `groupBy`, `columns`, `sections`); guide; tests; JSON Schema. `subjectDimension` reads a dimension by key. 145 tests.
+  - [ ] Approvals: a neutral overview line when approvals are delegated, linking to the notes; Design references buckets renamed and sorted strongest first, zero rows kept and greyed; approval per row in All required items.
+  - [ ] Comparison page: Fit uses the width (at least 400px per pane at 1400px); a Side by side variant with the Difference large; Provenance behind a disclosure.
+  - [ ] Gallery and table grouped by the presentation hint (rows by state, devices side by side, sections by surface); failures and unproven first; default unchanged without a hint.
+  - [ ] Metric row from label, unit, direction and passAt; long keys break at word or camelCase boundaries.
+  - [ ] One Freshness group (design export, run and its age, what could not be verified) on overview, page and comparison.
+  - [x] Wording: "Unreleased" for state candidate; page tab "Changes on this page" (or component); theme button "Switch to light/dark"; a plain `/bundles/<id>` path redirects to the hash route.
+  - [ ] Narrow width (390px) in the gate: no sideways scroll, readable content; fix what breaks. A designed mobile layout is a separate item.
+  - [ ] Demo fixtures: all failing, 200 mixed items with a presentation hint, a very long state name.
+  - [ ] Gates, before and after screenshots of Sourcer's bundle (overview, Login page, All required items, comparison; 1400px and 390px; light and dark); the 12 pending and new baselines proposed for one approval.
+  - [ ] Release: prepare 0.3.0; the owner publishes; a round 3 prompt for Sourcer.
 
 ## Next (in order)
 
-1. Sourcer round 2 (and 3 if needed): the retry after fixes. Sourcer switches its chat-given approvals to `delegated`; structural proof waits.
+1. Sourcer round 3: retry on 0.3.0 (presentation hint, metric fields). Structural proof waits.
 2. Marwes round 1, with what Sourcer taught us (R1 `.figma` upgrade and the R2 provider live in the Marwes repository and need the owner's go-ahead and a session there; the Marwes provider should declare `requiredImplementations`).
 3. The release portal: publish step and `index.json` (R3), release list and ping (R4), decisions and notes backend (R5, R5b), retention (R6). Each outward-facing step needs the owner's go-ahead.
 4. Open viewer items: dark-theme baselines, Linux baselines and the gate in CI, a hands-on screen-reader pass by a person.
@@ -84,9 +90,13 @@ The briefs are untracked because they hold local paths. If a brief and this file
 | 2026-10-19 | Publish and test on adapters, starting with Sourcer: the owner publishes (`docs/releasing.md`), the adapter session builds a provider and writes feedback, Reflection fixes and republishes, two or three rounds. `reflection-projection` is published under the unscoped name; `reflection-ui` stays a private app that adapters run from this repository | adapter trials |
 | 2026-10-19 | The v5 design set is the accepted direction, not a literal spec; where a mock and `context.md` or the product rules disagree, the text and rules win | viewer |
 | 2026-10-19 | An agent may record an approval or decision a person gave in conversation, as `attestation: 'delegated'` (`by` the person, `recordedBy` the agent, the person's words in the note). It counts as the person's and is shown as recorded by the agent. `agent` stays for records with no person behind them. Replaces the 2026-10-18 rule that only a person decides | approvals, R5 |
-| 2026-10-19 | The release state reads "Release candidate", not "Candidate" (clashed with a Sourcer page name) | viewer |
+| 2026-10-19 | The release state reads "Release candidate", not "Candidate" (clashed with a Sourcer page name). Superseded the same day by "Unreleased" | viewer |
 | 2026-10-19 | `run.inputs[]` gains `hashKind: 'composite'`: one provider-computed hash over a declared set of files | validity |
 | 2026-10-19 | Sourcer's email states stay under the Login page, separated by the `surface` dimension. Structural proof waits until after round 2 | Sourcer |
+| 2026-10-19 | Sourcer's delegated approvals (an agent's account of the owner's words) stay `delegated`; the overview shows a neutral line pointing to the notes until the owner re-confirms with the Approve button | approvals |
+| 2026-10-19 | The release state `candidate` reads "Unreleased" (replaces "Release candidate", which claimed a stage) | viewer |
+| 2026-10-19 | Narrow width (390px): checked in the gate and fixed where broken; a designed mobile layout is separate work | viewer |
+| 2026-10-19 | Presentation is a provider hint (`subjects[].presentation`), never guessed from dimension names | gallery |
 
 Rules every screen follows: two units never one ratio (required items versus comparisons); unknown is not zero; a reference is never a result; invalid evidence shows unknown, not a result; no percentages that read as compliance; no green comfort while items are missing; status is glyph plus text plus colour; one banner at a time; read-only until the decisions work starts.
 
@@ -117,6 +127,7 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [ ] Approver-list configuration schema (N3).
 - [ ] Discord message formatters for Approve and Require changes (N3).
 - [x] **Required implementations**: a requirement can name them (`requiredImplementations`); each must have a comparison and pass, a missing one leaves the item not proven, a failure still reads failing. Without it, only recorded comparisons count. Built 2026-10-19.
+- [x] `reflection-projection` 0.2.0 published 2026-10-19 (`delegated`, `composite`).
 - [x] `reflection-projection` 0.1.0 published 2026-10-19 under the unscoped name; public docs are project-neutral. `reflection-ui` stays a private app.
 
 ### 3. Bundles (`packages/projection`)
@@ -224,8 +235,9 @@ Viewer quality:
 **Adapter trials** (decided 2026-10-19: publish, try on one adapter, collect feedback, fix, repeat two or three times; Sourcer first, Marwes next). Feedback lives in the Eagle's Eye handoff folder `handoff/reflection-feedback/` (brief, template, one feedback file per round).
 - [x] Published 2026-10-19: `reflection-check` 0.7.0 and `reflection-projection` 0.1.0. Verified by installing both into an empty folder and running a provider flow (write a bundle, open it, count it).
 - [x] Sourcer round 1: the Sourcer session built the Login provider (30 required, 30 proven, counts match Sourcer's own; identical decision binding across two builds) and wrote `sourcer-feedback-01.md`.
-- [ ] Reflection session reads the feedback, fixes the toolkit or viewer, publishes a new version.
-- [ ] Sourcer round 2 (and 3 if needed).
+- [x] Reflection session read round 1, fixed the toolkit and viewer, published `reflection-projection` 0.2.0 (2026-10-19, verified from the registry).
+- [x] Sourcer round 2 on 0.2.0: all eight round 1 items fixed; counts 30 / 30; `delegated` and `composite` fit (`sourcer-feedback-02.md`), plus a UX brief.
+- [ ] Sourcer round 3 on 0.3.0.
 - [ ] Marwes round 1, with what Sourcer taught us.
 
 **Sourcer (Penpot)**
@@ -286,6 +298,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: `reflection-projection` 0.2.0 published; Sourcer round 2 passed; UX brief scoped for 0.3.0.
 - 2026-10-19: round 1 fixes built: `delegated` attestation and `composite` inputs in the projection, guide updated, viewer shows approval details, native values, "Release candidate", run age, the metric by name, and drops gaps a provider never had; tall thumbnails fit. Projection tests 139 to 142, UI tests 238 to 247.
 - 2026-10-19: Sourcer round 1 feedback read; fixes proposed and accepted; decisions on `delegated` attestation, "Release candidate", composite inputs, email states.
 - 2026-10-19: `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 published and verified from the registry.

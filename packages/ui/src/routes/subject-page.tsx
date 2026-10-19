@@ -169,7 +169,7 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
       <Spacer $size="sm" />
       <CoverageBar summary={subject.summary} />
       <Spacer />
-      <ViewSwitcher mode={view.mode} onChange={(mode) => update({ mode })} changesUnavailable={changesUnavailableReason(diffState)} />
+      <ViewSwitcher mode={view.mode} subjectKind={subject.kind} onChange={(mode) => update({ mode })} changesUnavailable={changesUnavailableReason(diffState)} />
       <Spacer $size="sm" />
       {total === 0 ? (
         <Empty>This subject has comparisons but no required items. They are listed in the data but not counted against anything.</Empty>

@@ -240,7 +240,7 @@ describe('the views of a subject', () => {
     const views = within(screen.getByRole('group', { name: 'View' }));
 
     expect(views.getByRole('button', { name: 'Visual gallery' })).toHaveAttribute('aria-pressed', 'true');
-    expect(views.getByRole('button', { name: 'Changes' })).toBeDisabled();
+    expect(views.getByRole('button', { name: /^Changes on this/ })).toBeDisabled();
 
     await userEvent.click(views.getByRole('button', { name: 'All required items' }));
 
