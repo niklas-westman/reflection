@@ -1,6 +1,6 @@
 # Provider guide
 
-For anyone writing the code that turns a project's own evidence into a Reflection projection and publishes it as a bundle. Marwes (Figma) and Sourcer (Penpot) are the first two providers. Read the [README](../README.md) first for what a projection holds; this guide says what a provider must do with it and what it must never do.
+For anyone writing the code that turns a project's own evidence into a Reflection projection and publishes it as a bundle. The first providers are a Figma-based design system and a Penpot-based product. Read the [README](../README.md) first for what a projection holds; this guide says what a provider must do with it and what it must never do.
 
 A provider lives in the project it describes, not in Reflection. Reflection never learns about Figma, Penpot, a component framework or Discord.
 
@@ -10,7 +10,7 @@ A provider lives in the project it describes, not in Reflection. Reflection neve
 2. The files it points at: comparison images, plus optionally an archived copy of the design inventory.
 3. An immutable bundle that holds both, written with `writeBundle` from `reflection-projection/node`.
 
-A provider can run without the engine's report: Marwes and Sourcer read their own evidence. A project that uses `reflection-check` directly needs no provider; `projectFromReflectionReport` covers it.
+A provider can run without the engine's report: it reads its own evidence. A project that uses `reflection-check` directly needs no provider; `projectFromReflectionReport` covers it.
 
 ## The five signals
 
@@ -48,7 +48,7 @@ One comparison is one check of a reference against a rendered result.
 - `requirementId` joins it to its requirement by exact identity. Do not join by name or position.
 - Set the proof of each layer you actually ran. Leave a layer absent if you have no concept of it.
 - `verdict` is what the engine or tool reported, in its own words: `status`, `severity`, `failureClass`. A decision binds to these three fields, so keep them free of anything that differs between identical runs (timestamps, run ids, paths).
-- **Never forward a folded word.** If your tool folds coverage gaps into every case outcome (Marwes reports `blocked` for all 573 rows because coverage gaps are folded in), do not copy that word into `verdict` or `proof`. Map the real per-layer result. Keep the tool's own word in `nativeOutcome` if you want it shown as "native".
+- **Never forward a folded word.** If your tool folds coverage gaps into every case outcome (one provider reported `blocked` for every row because coverage gaps were folded into each case outcome), do not copy that word into `verdict` or `proof`. Map the real per-layer result. Keep the tool's own word in `nativeOutcome` if you want it shown as "native".
 - `limitations` is where to say what a check could not do.
 - Record `capturePolicyHash` when the capture settings affect the result. Evidence under another policy is not comparable.
 - Record `reference.baselineSha256` (the hash of the approved baseline file) when you have it. Otherwise the artifact hash is used.
@@ -58,7 +58,7 @@ One comparison is one check of a reference against a rendered result.
 `reference.approval.state` is `holds`, `lapsed` or `none`, and any state other than `none` must say who recorded it with `attestation`.
 
 - `human`: a person approved this reference.
-- `agent`: an agent or script recorded it. **An agent-recorded approval is shown as such.** It is allowed only to import a legacy record (Sourcer's `approvals.json`), and it counts as reference approval only until a person re-confirms it.
+- `agent`: an agent or script recorded it. **An agent-recorded approval is shown as such.** It is allowed only to import a legacy record (an existing approvals file), and it counts as reference approval only until a person re-confirms it.
 
 A provider never invents an approval and never upgrades an agent record to a human one.
 
@@ -66,9 +66,9 @@ A provider never invents an approval and never upgrades an agent record to a hum
 
 A snapshot is the design data something was proven against. Reflection does not interpret `kind` or `role`; you supply them, and the UI shows your labels.
 
-- Emit **one snapshot per thing that has its own date**. Marwes has three: the full file sync, the per-family source capture the structural proof read, and the coverage contract. Keep them separate; never merge their dates.
+- Emit **one snapshot per thing that has its own date**. A design system can have a full sync, a per-family capture that a proof actually read, and a coverage contract. Keep them separate; never merge their dates.
 - A comparison names the snapshot that actually backed it (`snapshotId`), not the newest one you have. The UI says "proof based on" that date and shows the global sync as context.
-- `fileKey` is the upstream file the snapshot came from. `originalFileKey` is the file it was copied from, if each snapshot is a copy (Marwes copies the Figma project on every sync).
+- `fileKey` is the upstream file the snapshot came from. `originalFileKey` is the file it was copied from, if each snapshot is a copy of an original file.
 - `release.snapshotIds` lists the snapshots a release used. It may equal the previous release's: not every release has a new sync.
 - If the design source has moved on and your proof still reads the old one, that is a validity problem, not a note. Report it through `run.inputs` or as an integrity failure (below).
 
@@ -117,8 +117,8 @@ import { writeBundle } from 'reflection-projection/node';
 await writeBundle({
   directory: 'out/release/2.4.0',          // must not exist yet
   projection,                               // validated by projectionSchema
-  release: { release: '2.4.0', build: 1, bundleId: 'marwes-2.4.0-build-1', state: 'candidate', builtAt, previousRelease: '2.3.0', snapshotIds },
-  generator: { name: 'marwes-reflection-provider', version: '1.0.0' },
+  release: { release: '2.4.0', build: 1, bundleId: 'my-project-2.4.0-build-1', state: 'candidate', builtAt, previousRelease: '2.3.0', snapshotIds },
+  generator: { name: 'my-reflection-provider', version: '1.0.0' },
   files: [
     { path: 'artifacts/button/primary-hover.png', kind: 'artifact', fromFile: '/work/evidence/primary-hover.png' },
     { path: 'source/snapshot.json', kind: 'source', content: archivedInventoryJson }
@@ -146,7 +146,6 @@ Read a bundle back, as the viewer will, with `openBundle(source, { verifyFiles: 
 - Use a transient node id, a run id or a path as a requirement id.
 - Put absolute local paths, credentials, tokens, `_raw` content or executable files in a bundle.
 - Name Figma, Penpot, a framework or a Discord channel in anything that ships in Reflection.
-- Read the Figma REST API to build a bundle without asking the owner of the Figma budget. Use the MCP.
 - Add a proposed design variant to the required set from a viewer or a portal. Adding a requirement is a pull request in the project that owns the inventory.
 
 ## Provider checklist
@@ -166,6 +165,4 @@ Read a bundle back, as the viewer will, with `openBundle(source, { verifyFiles: 
 
 ## Provider notes
 
-**Marwes (Figma).** Button is 273 required, 203 proven, 0 failing, 14 needs-design, 56 not-enrolled. The required inventory is a repository file (`coverage-contract.json` per family). `reflection/*` frames are generated by the Marwes plugin and are pipeline output, not design: leave them out of "new in the design system". Copy the manifest and inventory into the bundle at release time (`source/snapshot.json`), because `.figma/marwes` is untracked and each sync overwrites it. Read the design through the Figma MCP.
-
-**Sourcer (Penpot).** Login is a page of 30 requirements. `readinessConcepts` are both `false`, so those buckets are `null`. Its existing `approvals.json` records import as `accept-reference` with `attestation: 'agent'`. Sourcer does not pin a Penpot revision yet, so its source currency is unknown: say so with an integrity or `offline` state rather than implying `current`. Read `07-sourcer-integration.md` in the Eagle's Eye handoff before building this provider.
+Facts specific to one design tool or one project (how its inventory is kept, which dates it has, what its evidence folder holds) belong with that provider, not in this guide. The rules above are the contract; a provider documents how it meets them.

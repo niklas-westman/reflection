@@ -1,6 +1,10 @@
 # reflection-projection
 
-The neutral contract between a project that proves a design against its implementation and anything that shows the result: reflection-check-ui, the release portal, a CLI. It is private for now and has no knowledge of Figma, Penpot, a component framework or Discord.
+The neutral contract between a project that proves a design against its implementation and anything that shows the result: reflection-check-ui, the release portal, a CLI. It has no knowledge of Figma, Penpot, a component framework or Discord.
+
+```bash
+pnpm add reflection-projection
+```
 
 A provider turns its own evidence into a `Projection`. The reader never needs to know where it came from.
 
@@ -57,4 +61,4 @@ Property names are camelCase, matching the engine's report. Ids, enum values, fi
 
 ## Fixtures
 
-`tests/fixtures` holds four shapes: a real native report from `examples/basic-react`, real Marwes Button and Sourcer Login samples mapped from evidence, and an independent project (screenshots, browsers as adapters). The Marwes and Sourcer samples carry only the comparisons and requirements that were really read. The test builder adds clearly named `placeholder/` requirements to reach their real totals (273 and 30), so the counts can be asserted without inventing detail.
+`tests/fixtures` holds four shapes: a real native report, two samples mapped from real projects, and an independent project (screenshots, browsers as adapters). The samples carry only the comparisons and requirements that were really read. The test builder adds clearly named `placeholder/` requirements to reach their real totals, so the counts can be asserted without inventing detail.

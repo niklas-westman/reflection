@@ -106,7 +106,7 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [ ] Approver-list configuration schema (N3).
 - [ ] Discord message formatters for Approve and Require changes (N3).
 - [x] **Required implementations**: a requirement can name them (`requiredImplementations`); each must have a comparison and pass, a missing one leaves the item not proven, a failure still reads failing. Without it, only recorded comparisons count. Built 2026-10-19.
-- [ ] Decide the package names and npm scope for `reflection-projection` and `reflection-ui`.
+- [~] `reflection-projection` 0.1.0 prepared for publishing on 2026-10-19 (unscoped name, free on npm; public docs made project-neutral; install smoke passes). Not published: the owner publishes (`docs/releasing.md`). `reflection-ui` stays a private app.
 
 ### 3. Bundles (`packages/projection`)
 
@@ -268,6 +268,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: pushed `main`; prepared `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 for the owner to publish; added `docs/releasing.md`; brief for the Sourcer adapter trial.
 - 2026-10-19: accessibility pass: audit script, fixes (decorative glyphs, label, button contrast, page titles, focus after navigation, live regions, group roles), dark variants of every route in the gate; the two comparison baselines were updated for the new breadcrumb (intended, approved). UI tests 228 to 238.
 - 2026-10-19: visual baselines for the viewer (14 routes, approved by the owner); threshold `maxDiffPixels: 50`; the overflow gap is closed by the baselines.
 - 2026-10-19: proved the viewer gate with two mutations: a console error is caught on both widths; sideways overflow inside the content pane is not (recorded as a gap).

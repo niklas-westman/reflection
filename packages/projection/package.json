@@ -1,8 +1,8 @@
 {
   "name": "reflection-projection",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Neutral projection contract shared by reflection-check-ui, the release portal and project providers.",
+  "version": "0.1.0",
+  "description": "Neutral evidence projection and immutable bundles for Reflection: schemas, readiness, validity, decisions, release diffs, and a bundle reader and writer.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,14 +14,34 @@
     "./node": {
       "import": "./dist/node/index.js",
       "types": "./dist/node/index.d.ts"
-    }
+    },
+    "./schema": "./schema/projection.v1.schema.json"
   },
+  "keywords": [
+    "reflection",
+    "ui-validation",
+    "design-systems",
+    "evidence",
+    "provider"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "docs",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm test && pnpm build",
-    "schema": "pnpm build && node scripts/generate-json-schema.mjs"
+    "schema": "pnpm build && node scripts/generate-json-schema.mjs",
+    "prepack": "pnpm build",
+    "smoke:package": "node scripts/smoke-package-install.mjs"
   },
   "dependencies": {
     "zod": "^4.4.3"
@@ -35,9 +55,5 @@
   },
   "engines": {
     "node": ">=22"
-  },
-  "files": [
-    "dist",
-    "schema"
-  ]
+  }
 }
