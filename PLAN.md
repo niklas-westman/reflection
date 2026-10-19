@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (v5 steps 1 to 3 done)
+Last updated: 2026-10-19 (v5 steps 1 to 4 done)
 
 ## How to keep this alive
 
@@ -42,12 +42,11 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **v5 step 4: comparison inspector** (see "Viewer" below). Not started. Cell and card links already land on a placeholder comparison route.
+- [ ] **v5 step 6: release and history picker, Design references page, remaining error states** (see "Viewer" below). Not started. Step 5 (Changes) is blocked on three owner decisions (see "Open questions"), so step 6 goes first.
 
 ## Next (in order)
 
-1. v5 step 5: Changes screen (needs three decisions, see "Open questions").
-2. v5 step 6: release and history picker, Design references, error states.
+1. v5 step 5: Changes screen. `[!]` Blocked on three decisions (Before and After means the reference image; baseline is the previous release only; no percentages), then `diffProjections` and the schema additions.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -154,16 +153,18 @@ Built so far:
 - [x] Views: Visual gallery, All required items; Changes is disabled until step 5. Attention links open the inventory already filtered.
 - [x] 119 tests, mutation-checked; browser check with interaction (dimension change, implementation toggle, open comparison) in light and dark, no console errors.
 
-**Step 4: comparison inspector**
-- [ ] Full-width route with a stable URL; previous and next through the current filter.
-- [ ] Modes: Side by side, Overlay (blink, opacity), Wipe, Diff; fit, zoom, checkerboard, download original.
-- [ ] Synced zoom and pan; images are the largest element.
-- [ ] Right rail: recorded result, validity, measurements failures first, "Not recorded" when absent.
-- [ ] Provenance, Gaps, Related (confirmed or suggested, never confused).
-- [ ] States: no diff recorded, mismatched dimensions, missing or unusable image, no reference.
-- [ ] Keyboard: `j`/`k` or arrows, `1` to `4` for modes; visible focus.
+**Step 4: comparison inspector** (done 2026-10-19)
+- [x] Full-width route with a stable URL; previous and next walk the comparisons of the subject in matrix order (failures first). They follow the filters of the page the reader came from, and a page filtered to failures walks only the failed comparisons. Filters and view state travel in every link.
+- [x] Modes: Side by side (reference, implementation and the recorded diff at once), Overlay (opacity, blink), Wipe (slider), Diff; zoom Fit, 100, 200, 400; checkerboard; download of each original that verifies. Mode, zoom and checkerboard are in the URL.
+- [x] Shared scroll across the side-by-side panels; images are the largest element, the rail is 17.5rem and stacks below 1100px.
+- [x] Right rail: result as recorded (offline: freshness cannot be rechecked), failing measurements first with one plain sentence from the recorded values, passing ones folded, recorded diff metric and threshold as facts (no control), "Not recorded" when absent, reference provenance caution.
+- [x] Provenance (run, runner, design source, file hashes, baseline, capture policy, source nodes, bundle), Gaps (what was not proven, plus recorded limitations), Related (the same item in other implementations).
+- [x] States: no diff recorded, no reference, unusable image, overlay and wipe needing both images, mismatched dimensions (Fit is overridden to native size and the banner says nothing was scaled to hide it).
+- [x] Keyboard: `j`/`k` or arrows between comparisons, `1` to `4` for modes, never while typing in a control; visible focus; blinking off under reduced motion.
+- [x] 163 tests (29 inspector UI, 16 inspector model), mutation-checked; browser check with real images (modes by key, zoom, synced scroll, next by key, reduced motion, dark), no console errors; the `docs-site` demo carries an illustrative diff, measurements and a size mismatch.
+- [ ] Not built: a `Related` list distinguishing confirmed from suggested design mappings (no such data exists yet); a legend for ignored regions and antialiasing (not in the schema); previous failure / next failure as separate controls.
 
-**Step 5: Changes screen** (needs the three decisions in "Open questions")
+**Step 5: Changes screen** `[!]` (needs the three decisions in "Open questions")
 - [ ] `diffProjections` and schema additions (area 2).
 - [ ] Changes screen: Added, Updated, Removed, before and after reference images from the previous retained bundle, "no longer retained" when pruned.
 - [ ] Baseline is the previous release only.
@@ -237,7 +238,7 @@ Viewer quality:
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (109 tests), then ui (119 tests, build)
+pnpm check:packages                            # projection (109 tests), then ui (163 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -248,6 +249,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: v5 step 4: comparison inspector (three-up and single-stage modes, zoom with synced scroll, measurements rail, provenance, gaps, related, honest states, keyboard). UI tests 119 to 163.
 - 2026-10-19: v5 step 3: component gallery (dimension selectors, reference and implementation cards, verification details, inline compare), page overview with recorded checks, view switcher, subject banner for unconfirmed reference approvals. UI tests 73 to 119.
 - 2026-10-19: v5 step 2: designed Release Overview (header facts, panels, needs-attention and changes-since cards, subject cards with view-all). UI tests 57 to 73.
 - 2026-10-19: v5 step 1: release-first shell and routes (sidebar, release picker, evidence state on every route, overview and changes stubs, section routes). UI tests 41 to 57.

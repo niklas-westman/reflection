@@ -21,7 +21,7 @@ const demos: Demo[] = [
   { id: 'marwes-button', projection: withRealSubject(buildFromSample('marwes-button.sample.json'), 'button') },
   { id: 'sourcer-login', projection: withRealSubject(buildFromSample('sourcer-login.sample.json'), 'login') },
   { id: 'native-basic-react', projection: projectFromReflectionReport(readFixture('native-basic-react.report.json') as never, { projectName: 'basic-react example' }) },
-  { id: 'docs-site', projection: withDemoDelta(projectionSchema.parse(readFixture('independent-docs-site.json'))) }
+  { id: 'docs-site', projection: withDemoDelta(withDemoEvidence(projectionSchema.parse(readFixture('independent-docs-site.json')))) }
 ];
 
 // The sample's placeholder requirements stand in for items that were counted but not itemised. Give them the
@@ -32,6 +32,37 @@ function withRealSubject(projection: Projection, subjectId: string): Projection 
     requirements: projection.requirements.map((requirement) => (requirement.subject.id === 'placeholder' ? { ...requirement, subject: { ...requirement.subject, id: subjectId } } : requirement)),
     comparisons: projection.comparisons.map((comparison) => (comparison.subject.id === 'placeholder' ? { ...comparison, subject: { ...comparison.subject, id: subjectId } } : comparison))
   };
+}
+
+// Gives the failing docs-site comparison what a real one can carry, so the comparison view can be tried: a
+// recorded diff image, measurements, and an implementation image of a different size than the reference.
+// All illustrative; the other comparisons stay as the fixture has them.
+function withDemoEvidence(projection: Projection): Projection {
+  const target = projection.comparisons.find((comparison) => Object.values(comparison.proof).includes('failed'));
+  if (!target) return projection;
+  return projectionSchema.parse({
+    ...projection,
+    comparisons: projection.comparisons.map((comparison) =>
+      comparison.id !== target.id || !comparison.reference || !comparison.actual
+        ? comparison
+        : {
+            ...comparison,
+            reference: { ...comparison.reference, artifact: { ...comparison.reference.artifact, width: 480, height: 300 } },
+            actual: { ...comparison.actual, width: 456, height: 300 },
+            diff: { artifact: { role: 'diff', path: 'demo/hero-phone-diff.png', width: 480, height: 300 }, metric: { name: 'diff-pixels', value: 1840, ratio: 0.0128, diffPixels: 1840 }, threshold: { maxDiffPixelRatio: 0.01 } },
+            measurements: {
+              total: 3,
+              passed: 2,
+              samples: [
+                { part: 'heading', property: 'font-size', expected: '28px', actual: '26px', delta: '-2px', tolerance: '0.5px', passed: false },
+                { part: 'cta', property: 'height', expected: '48px', actual: '48px', passed: true },
+                { part: 'cta', property: 'padding-x', expected: '24px', actual: '24px', passed: true }
+              ]
+            },
+            limitations: ['Illustrative demo data: these measurements were not produced by a real run']
+          }
+    )
+  });
 }
 
 // The only demo with a delta against a previous release, so the viewer's "changes since" card can be seen.

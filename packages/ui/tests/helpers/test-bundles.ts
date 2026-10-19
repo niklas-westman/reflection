@@ -171,3 +171,84 @@ export function makeComponentProjection(): Projection {
     comparisons
   });
 }
+
+/**
+ * One component with the shapes the inspector has to handle: a failing comparison with measurements and a
+ * recorded diff, one whose implementation image has a different size, a passing one that recorded nothing
+ * beyond its images, and one with no reference at all.
+ */
+export function makeInspectorProjection(): Projection {
+  const approval = { state: 'holds', attestation: 'human', by: 'reviewer@example.com', at: '2026-10-14T09:00:00.000Z' };
+  const requirement = (id: string, variant: string) => ({ id, label: `${variant} default`, subject: { kind: 'component', id: 'button', variant, state: 'default' }, requiredProofs: ['structural', 'visual'], enrolled: true });
+  const subject = (variant: string, adapter: string) => ({ kind: 'component', id: 'button', variant, state: 'default', mode: 'light', adapter, viewport: '1440x900' });
+  const sha = (character: string) => character.repeat(64);
+
+  return projectionSchema.parse({
+    schemaVersion: 1,
+    project: { id: 'inspect', name: 'Inspector fixture' },
+    provider: { name: 'test-provider', readinessConcepts: { needsDesign: true, notEnrolled: true } },
+    generatedAt: '2026-10-18T09:00:00.000Z',
+    inventory: 'full',
+    snapshots: [{ id: 'design-sync', kind: 'design-file', role: 'design-source', label: 'Design file', capturedAt: '2026-10-14T08:00:00.000Z', fileKey: 'FILE-KEY-123' }],
+    runs: [{ id: 'run-1', finishedAt: '2026-10-16T08:00:00.000Z', engine: { name: 'reflection-check', version: '0.6.0' }, runner: { browser: 'chromium 140', platform: 'linux' } }],
+    requirements: [requirement('btn.primary', 'primary'), requirement('btn.secondary', 'secondary'), requirement('btn.ghost', 'ghost'), requirement('btn.outline', 'outline')],
+    comparisons: [
+      {
+        id: 'btn.primary/react',
+        requirementId: 'btn.primary',
+        subject: subject('primary', 'react'),
+        snapshotId: 'design-sync',
+        runId: 'run-1',
+        sourceNodeIds: ['1362:7471'],
+        capturePolicyHash: sha('c'),
+        reference: { artifact: { role: 'reference', path: 'artifacts/primary-reference.png', width: 400, height: 200 }, baselineSha256: sha('b'), approval },
+        actual: { role: 'actual', path: 'artifacts/primary-react.png', width: 400, height: 200 },
+        diff: { artifact: { role: 'diff', path: 'artifacts/primary-diff.png' }, metric: { name: 'diff-pixels', value: 120, ratio: 0.0015, diffPixels: 120 }, threshold: { ratio: 0.001 } },
+        measurements: {
+          total: 4,
+          passed: 2,
+          samples: [
+            { part: 'label', property: 'padding-x', expected: '16px', actual: '14px', delta: '-2px', tolerance: '0.5px', passed: false },
+            { part: 'label', property: 'font-size', expected: '14px', actual: '14px', passed: true },
+            { part: 'root', property: 'height', expected: '40px', actual: '40px', passed: true },
+            { part: 'root', property: 'radius', expected: '6px', actual: '4px', passed: false }
+          ]
+        },
+        limitations: ['Hover styles are not captured'],
+        proof: { structural: 'failed', visual: 'failed' },
+        verdict: { status: 'fail', severity: 'blocking', failureClass: 'measurement' }
+      },
+      {
+        id: 'btn.primary/vue',
+        requirementId: 'btn.primary',
+        subject: subject('primary', 'vue'),
+        snapshotId: 'design-sync',
+        runId: 'run-1',
+        reference: { artifact: { role: 'reference', path: 'artifacts/primary-reference.png', width: 400, height: 200 }, approval },
+        actual: { role: 'actual', path: 'artifacts/primary-vue.png', width: 400, height: 200 },
+        proof: { structural: 'passed', visual: 'passed' },
+        verdict: { status: 'pass', severity: 'review' }
+      },
+      {
+        id: 'btn.secondary/react',
+        requirementId: 'btn.secondary',
+        subject: subject('secondary', 'react'),
+        snapshotId: 'design-sync',
+        runId: 'run-1',
+        reference: { artifact: { role: 'reference', path: 'artifacts/secondary-reference.png', width: 400, height: 200 }, approval },
+        actual: { role: 'actual', path: 'artifacts/secondary-react.png', width: 380, height: 200 },
+        proof: { structural: 'passed', visual: 'passed' },
+        verdict: { status: 'pass', severity: 'review' }
+      },
+      {
+        id: 'btn.ghost/react',
+        requirementId: 'btn.ghost',
+        subject: subject('ghost', 'react'),
+        runId: 'run-1',
+        actual: { role: 'actual', path: 'artifacts/ghost-react.png' },
+        proof: { visual: 'not-run' },
+        verdict: { status: 'skipped', severity: 'info' }
+      }
+    ]
+  });
+}

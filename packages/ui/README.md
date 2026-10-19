@@ -36,10 +36,12 @@ One sidebar for every route in a release: the release picker (project, release, 
 #/bundles/:bundle/changes                       changes (not available yet)
 #/bundles/:bundle/components/:subject           all required items for a component family
 #/bundles/:bundle/pages/:subject                all required items for a page
-#/bundles/:bundle/<section>/:subject/comparisons/:comparison   comparison (placeholder)
+#/bundles/:bundle/<section>/:subject/comparisons/:comparison   full comparison (?mode, ?zoom, ?checker, plus the filters it came from)
 ```
 
 A subject opened under the wrong section is redirected to its own.
+
+**The comparison view** shows one recorded comparison large: reference, implementation and the recorded diff side by side, or overlay (opacity, blink), wipe, or the diff alone, with zoom and a shared scroll. The rail has the recorded result, failing measurements first, the recorded diff metric and threshold, and any reference caution. Below are provenance, gaps (what was not proven, plus recorded limitations) and the same item in other implementations. Previous and next walk the subject in matrix order and follow the filters of the page the reader came from. Keys: `j` and `k` (or the arrows) move between comparisons, `1` to `4` switch the mode. If the two images differ in size, Fit is overridden to native size and a banner says so: nothing is scaled to hide it. Nothing in the view can change an outcome, and the threshold is shown, not adjustable.
 
 **A subject** has views: the visual gallery (default), all required items, and Changes (disabled until it exists). For a component the gallery shows one required item: dimension selectors pick it (a change keeps that value and as many others as an existing item allows), then the reference and one card per chosen implementation, verification details and a light pairwise comparison. For a page it shows the recorded page checks, failed and unproven first, with a link to the full inventory. The item, the implementations and the filters are in the URL.
 

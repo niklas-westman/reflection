@@ -18,7 +18,7 @@ import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters
 import { formatDate } from '../model/format';
 import { buildItemDetail, currentRow, dimensionChoices, orderedRows, pickRow, selectedColumns } from '../model/gallery-model';
 import { buildMatrix } from '../model/matrix-model';
-import { parseSubjectSearch, toSubjectSearch, type SubjectView as SubjectViewState } from '../model/search';
+import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch, type SubjectView as SubjectViewState } from '../model/search';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
 import { isSection, paths, sectionOf } from './paths';
 
@@ -195,7 +195,7 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
               </p>
             </Empty>
           ) : (
-            <MatrixTable matrix={filtered} comparisonHref={(comparisonId) => paths.comparison(bundleId, subject.kind, subject.id, comparisonId)} density={view.density} filtersActive={filtersActive} />
+            <MatrixTable matrix={filtered} comparisonHref={(comparisonId) => paths.comparison(bundleId, subject.kind, subject.id, comparisonId, toSubjectSearch({ ...DEFAULT_SUBJECT_VIEW, filters: view.filters }))} density={view.density} filtersActive={filtersActive} />
           )}
         </>
       )}

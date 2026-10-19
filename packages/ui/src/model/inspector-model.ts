@@ -1,0 +1,225 @@
+import type { Artifact, Comparison, Projection, ProofLayer } from 'reflection-projection';
+import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
+import { formatDate } from './format';
+import { rowMatches, type MatrixFilters } from './filters';
+import type { Matrix, MatrixRow } from './matrix-model';
+
+export interface MeasurementSample {
+  part: string;
+  property: string;
+  expected: string;
+  actual: string;
+  delta: string | undefined;
+  tolerance: string | undefined;
+  passed: boolean;
+}
+
+export interface Fact {
+  label: string;
+  value: string;
+  // Hashes and ids read better in a fixed-width face.
+  mono?: boolean;
+}
+
+export interface SequenceInfo {
+  ids: string[];
+  index: number;
+  previous: string | undefined;
+  next: string | undefined;
+  // False when the current comparison is outside the filtered list, so the whole subject is walked instead.
+  filtered: boolean;
+}
+
+export interface Sibling {
+  id: string;
+  label: string;
+  outcome: ComparisonOutcome;
+}
+
+export interface InspectorModel {
+  comparison: Comparison;
+  row: MatrixRow | undefined;
+  label: string;
+  implementation: string | undefined;
+  outcome: ComparisonOutcome;
+  unusable: boolean;
+  referenceArtifact: Artifact | undefined;
+  actualArtifact: Artifact | undefined;
+  diffArtifact: Artifact | undefined;
+  referenceApproval: { state: string; attestation: string | undefined } | undefined;
+  // A reference nobody confirmed is a trust fact shown in warning colour.
+  caution: string | undefined;
+  verdict: string;
+  measurements: { total: number; passedCount: number; failing: MeasurementSample[]; passing: MeasurementSample[]; sentence: string | undefined } | undefined;
+  diffSummary: { metric: string; value: number; ratio: number | undefined; threshold: Array<{ name: string; value: number }> } | undefined;
+  facts: Fact[];
+  provenance: Fact[];
+  gaps: string[];
+  limitations: string[];
+  siblings: Sibling[];
+  sequence: SequenceInfo;
+}
+
+export interface BuildInspectorOptions {
+  projection: Projection;
+  matrix: Matrix;
+  // The filters of the page the reader came from; previous and next walk what that page was showing.
+  filters: MatrixFilters;
+  comparisonId: string;
+  unusableComparisonIds: ReadonlySet<string>;
+  bundleHash: string;
+}
+
+/** Everything the inspector shows, derived from one recorded comparison. Pure; nothing here is invented. */
+export function buildInspectorModel(options: BuildInspectorOptions): InspectorModel | undefined {
+  const { projection, matrix, comparisonId, unusableComparisonIds } = options;
+  const comparison = projection.comparisons.find((entry) => entry.id === comparisonId);
+  if (!comparison) {
+    return undefined;
+  }
+
+  const rows = matrix.groups.flatMap((group) => group.rows);
+  const row = rows.find((entry) => entry.requirement.id === comparison.requirementId);
+  const unusable = unusableComparisonIds.has(comparison.id);
+  const implementation = comparison.subject.adapter;
+  const approval = comparison.reference?.approval;
+  const measurements = comparison.measurements;
+
+  const failing = (measurements?.samples ?? []).filter((sample) => !sample.passed).map(toSample);
+  return {
+    comparison,
+    row,
+    label: [row?.label ?? comparison.id, implementation].filter(Boolean).join(' · '),
+    implementation,
+    outcome: comparisonOutcome(comparison),
+    unusable,
+    referenceArtifact: comparison.reference?.artifact,
+    actualArtifact: comparison.actual,
+    diffArtifact: comparison.diff?.artifact,
+    referenceApproval: approval ? { state: approval.state, attestation: approval.attestation } : undefined,
+    caution: approvalCaution(approval),
+    verdict: [comparison.verdict.status, comparison.verdict.severity, comparison.verdict.failureClass].filter(Boolean).join(' / '),
+    measurements: measurements
+      ? {
+          total: measurements.total,
+          passedCount: measurements.passed,
+          failing,
+          passing: measurements.samples.filter((sample) => sample.passed).map(toSample),
+          sentence: failing[0] ? describeSample(failing[0]) : undefined
+        }
+      : undefined,
+    diffSummary: comparison.diff
+      ? {
+          metric: comparison.diff.metric.name,
+          value: comparison.diff.metric.value,
+          ratio: comparison.diff.metric.ratio,
+          threshold: Object.entries(comparison.diff.threshold ?? {}).map(([name, value]) => ({ name, value }))
+        }
+      : undefined,
+    facts: buildFacts(comparison, projection),
+    provenance: buildProvenance(comparison, projection, options.bundleHash),
+    gaps: buildGaps(comparison, row, unusable),
+    limitations: comparison.limitations ?? [],
+    siblings: siblingsOf(comparison, projection),
+    sequence: buildSequence(options, rows)
+  };
+}
+
+function toSample(sample: { part: string; property: string; expected: string; actual: string; delta?: string | undefined; tolerance?: string | undefined; passed: boolean }): MeasurementSample {
+  return { part: sample.part, property: sample.property, expected: sample.expected, actual: sample.actual, delta: sample.delta, tolerance: sample.tolerance, passed: sample.passed };
+}
+
+/** One plain sentence for a failing measurement, from the recorded values only. */
+export function describeSample(sample: MeasurementSample): string {
+  return `${sample.part} ${sample.property}: the design says ${sample.expected}, the implementation has ${sample.actual}${sample.delta ? ` (${sample.delta})` : ''}.`;
+}
+
+function approvalCaution(approval: { state: string; attestation?: string | undefined } | undefined): string | undefined {
+  if (approval?.state === 'lapsed') return 'The approval of this reference no longer matches the current reference.';
+  if (approval?.state === 'holds' && approval.attestation === 'agent') return 'The reference approval was recorded by an agent. A person has not confirmed it, and a passing comparison does not grant that approval.';
+  return undefined;
+}
+
+function buildFacts(comparison: Comparison, projection: Projection): Fact[] {
+  const run = projection.runs.find((entry) => entry.id === comparison.runId);
+  const { subject } = comparison;
+  const facts: Fact[] = [];
+  if (subject.viewport) facts.push({ label: 'Viewport', value: subject.viewport });
+  if (subject.state) facts.push({ label: 'State', value: subject.state });
+  if (subject.mode) facts.push({ label: 'Mode', value: subject.mode });
+  if (run) facts.push({ label: 'Run', value: `${formatDate(run.finishedAt)} · ${run.engine.name}${run.engine.version ? ` ${run.engine.version}` : ''}` });
+  return facts;
+}
+
+function buildProvenance(comparison: Comparison, projection: Projection, bundleHash: string): Fact[] {
+  const run = projection.runs.find((entry) => entry.id === comparison.runId);
+  const snapshot = projection.snapshots.find((entry) => entry.id === comparison.snapshotId);
+  const facts: Fact[] = [];
+  if (run) {
+    facts.push({ label: 'Run', value: run.id, mono: true });
+    for (const [key, value] of Object.entries(run.runner ?? {})) {
+      if (typeof value === 'string' || typeof value === 'number') facts.push({ label: key, value: String(value) });
+    }
+  }
+  if (snapshot) {
+    facts.push({ label: 'Design source', value: `${snapshot.label ?? snapshot.role}, captured ${formatDate(snapshot.capturedAt)}` });
+    if (snapshot.fileKey) facts.push({ label: 'Source file', value: snapshot.fileKey, mono: true });
+  }
+  const hashes: Array<[string, string | undefined]> = [
+    ['Reference file', comparison.reference?.artifact.sha256],
+    ['Approved baseline', comparison.reference?.baselineSha256],
+    ['Actual file', comparison.actual?.sha256],
+    ['Diff file', comparison.diff?.artifact?.sha256],
+    ['Capture policy', comparison.capturePolicyHash]
+  ];
+  for (const [label, value] of hashes) {
+    if (value) facts.push({ label, value, mono: true });
+  }
+  if (comparison.sourceNodeIds && comparison.sourceNodeIds.length > 0) {
+    facts.push({ label: 'Design source nodes', value: comparison.sourceNodeIds.join(', '), mono: true });
+  }
+  facts.push({ label: 'Bundle', value: bundleHash, mono: true });
+  return facts;
+}
+
+const LAYER_TEXT: Record<string, string> = { 'not-run': 'did not run', unsupported: 'is unsupported', absent: 'was not recorded' };
+
+/** What this comparison did not prove, so a reader never mistakes a pass on one layer for all of them. */
+function buildGaps(comparison: Comparison, row: MatrixRow | undefined, unusable: boolean): string[] {
+  const gaps: string[] = [];
+  if (unusable) gaps.push('A file behind this comparison is unusable, so its result is unknown.');
+  for (const layer of (row?.requirement.requiredProofs ?? []) as ProofLayer[]) {
+    const outcome = comparison.proof[layer] ?? 'absent';
+    if (outcome !== 'passed' && outcome !== 'failed') {
+      gaps.push(`The ${layer} proof ${LAYER_TEXT[outcome] ?? outcome}.`);
+    }
+  }
+  if (!comparison.reference) gaps.push('No reference image was recorded.');
+  if (!comparison.actual) gaps.push('No implementation image was recorded.');
+  if (!comparison.diff) gaps.push('No difference image or pixel metric was recorded.');
+  if (!comparison.measurements) gaps.push('Detailed measurements were not recorded.');
+  if (approvalCaution(comparison.reference?.approval)) gaps.push('The reference approval is not confirmed by a person.');
+  const notCompared = [...(row?.cells.entries() ?? [])].filter(([, cell]) => cell.outcome === 'none').map(([id]) => (id === '' ? 'Result' : id));
+  if (notCompared.length > 0) gaps.push(`This item was not compared in: ${notCompared.join(', ')}.`);
+  return gaps;
+}
+
+function siblingsOf(comparison: Comparison, projection: Projection): Sibling[] {
+  return projection.comparisons
+    .filter((entry) => entry.requirementId !== undefined && entry.requirementId === comparison.requirementId && entry.id !== comparison.id)
+    .map((entry) => ({ id: entry.id, label: entry.subject.adapter ?? entry.id, outcome: comparisonOutcome(entry) }));
+}
+
+/** The comparisons of the subject in the order its matrix shows them, so previous and next follow the page it came from. */
+function buildSequence(options: BuildInspectorOptions, rows: MatrixRow[]): SequenceInfo {
+  // A page filtered to failures is for walking failures, so only the failed comparisons of those items are visited.
+  const failuresOnly = options.filters.outcomes.length > 0 && options.filters.outcomes.every((outcome) => outcome === 'failed');
+  const orderOf = (list: MatrixRow[], onlyFailed = false): string[] =>
+    list.flatMap((row) => [...row.cells.values()].flatMap((cell) => cell.comparisons.filter((comparison) => !onlyFailed || comparisonOutcome(comparison) === 'failed').map((comparison) => comparison.id)));
+  const all = orderOf(rows);
+  const filteredIds = orderOf(rows.filter((row) => rowMatches(row, options.filters)), failuresOnly);
+  const filtered = filteredIds.includes(options.comparisonId);
+  const ids = filtered ? filteredIds : all;
+  const index = ids.indexOf(options.comparisonId);
+  return { ids, index, previous: index > 0 ? ids[index - 1] : undefined, next: index >= 0 && index < ids.length - 1 ? ids[index + 1] : undefined, filtered };
+}
