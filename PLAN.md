@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (the v5 design is built and checked: smoke gate, visual baselines, accessibility audit, dark theme)
+Last updated: 2026-10-19 (the viewer is built and checked; `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 are published; the Sourcer adapter trial is waiting for feedback)
 
 ## How to keep this alive
 
@@ -42,13 +42,14 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Decide what happens to what is built: publishing (package names, npm scope, version bump, push) and the first provider.** The viewer, projection and bundles are complete locally; the Marwes provider (R1, R2) and the Sourcer provider (R2b) live in other repositories and need your go-ahead and a session in each. Nothing is waiting on code in this repository except the items marked open below.
+- [ ] **Sourcer adapter trial, round 1: waiting for `sourcer-feedback-01.md`.** The Sourcer session builds the Login provider from `handoff/reflection-feedback/01-sourcer-brief.md` (in the Eagle's Eye folder) and writes its feedback there. When the file exists: read it, turn every finding into a fix in `reflection-projection`, its guide or the viewer, publish a new version (`docs/releasing.md`, the owner runs `npm publish`), and tell the Sourcer session what to retry. Nothing else is waiting on code here.
 
 ## Next (in order)
 
-1. Providers: Marwes (R1 `.figma` upgrade, R2 provider) and Sourcer (R2b), each in its own repository.
-
-Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
+1. Sourcer round 2 (and 3 if needed): the retry after fixes.
+2. Marwes round 1, with what Sourcer taught us (R1 `.figma` upgrade and the R2 provider live in the Marwes repository and need the owner's go-ahead and a session there; the Marwes provider should declare `requiredImplementations`).
+3. The release portal: publish step and `index.json` (R3), release list and ping (R4), decisions and notes backend (R5, R5b), retention (R6). Each outward-facing step needs the owner's go-ahead.
+4. Open viewer items: dark-theme baselines, Linux baselines and the gate in CI, a hands-on screen-reader pass by a person.
 
 ---
 
@@ -75,6 +76,7 @@ Providers and the release portal follow once the viewer can open a real bundle. 
 | 2026-10-19 | The baseline for Changes is the **latest released version before this build**, recorded in the bundle (`release.previousRelease`) and fixed; no baseline picker | step 5 |
 | 2026-10-19 | **No percentages anywhere** in the viewer; counts with their unit only | all screens |
 | 2026-10-19 | An item is proven in all its **required implementations** only where the provider declares `requiredImplementations`; undeclared keeps the recorded-comparisons rule | readiness, viewer |
+| 2026-10-19 | Publish and test on adapters, starting with Sourcer: the owner publishes (`docs/releasing.md`), the adapter session builds a provider and writes feedback, Reflection fixes and republishes, two or three rounds. `reflection-projection` is published under the unscoped name; `reflection-ui` stays a private app that adapters run from this repository | adapter trials |
 | 2026-10-19 | The v5 design set is the accepted direction, not a literal spec; where a mock and `context.md` or the product rules disagree, the text and rules win | viewer |
 
 Rules every screen follows: two units never one ratio (required items versus comparisons); unknown is not zero; a reference is never a result; invalid evidence shows unknown, not a result; no percentages that read as compliance; no green comfort while items are missing; status is glyph plus text plus colour; one banner at a time; read-only until the decisions work starts.
