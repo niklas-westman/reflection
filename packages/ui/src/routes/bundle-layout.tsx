@@ -1,14 +1,15 @@
-import { Navigate, Outlet, useParams } from '@tanstack/react-router';
+import { Outlet, useParams, useRouterState } from '@tanstack/react-router';
 import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { BundleViewProvider } from '../data/bundle-context';
 import { useBundle, useVerifiedBundle } from '../data/bundle-queries';
 import { Banner } from '../components/molecules/banner';
-import { AppShell } from '../components/organisms/app-shell';
-import { SubjectRail } from '../components/organisms/subject-rail';
+import { AppShell, type Crumb } from '../components/organisms/app-shell';
+import { ReleaseSidebar, type NavLocation } from '../components/organisms/release-sidebar';
+import { ValidityPill } from '../components/organisms/validity-pill';
 import { prepareBundle } from '../model/bundle-state';
 import { groupBySubject } from '../model/subject-model';
-import { paths } from './paths';
+import { isSection, paths, SECTION_TITLES } from './paths';
 
 const Content = styled.main`
   flex: 1;
@@ -18,7 +19,7 @@ const Content = styled.main`
 `;
 
 export function BundleLayout(): ReactNode {
-  const { bundleId = '', subjectId } = useParams({ strict: false });
+  const { bundleId = '' } = useParams({ strict: false });
   const initial = useBundle(bundleId);
   const verified = useVerifiedBundle(bundleId, initial.data?.status === 'opened');
   // The quick open shows the bundle at once; the full check replaces it when it finishes.
@@ -27,14 +28,14 @@ export function BundleLayout(): ReactNode {
 
   if (bundle.isPending) {
     return (
-      <AppShell crumbs={[{ label: 'Bundles', href: paths.bundles() }, { label: bundleId }]}>
+      <AppShell crumbs={[{ label: bundleId }]}>
         <Content>Loading bundle…</Content>
       </AppShell>
     );
   }
   if (bundle.isError) {
     return (
-      <AppShell crumbs={[{ label: 'Bundles', href: paths.bundles() }, { label: bundleId }]}>
+      <AppShell crumbs={[{ label: bundleId }]}>
         <Content>
           <Banner tone="fail" title="The bundle could not be loaded">
             <p>{bundle.error.message}</p>
@@ -47,12 +48,15 @@ export function BundleLayout(): ReactNode {
   // A bundle that cannot be trusted is shown as such. The viewer never falls back to another bundle.
   if (bundle.data.status === 'rejected') {
     return (
-      <AppShell crumbs={[{ label: 'Bundles', href: paths.bundles() }, { label: bundleId }]}>
+      <AppShell crumbs={[{ label: bundleId }]}>
         <Content>
           <Banner tone="fail" title="This bundle is invalid and cannot be shown">
             <ul>
               {bundle.data.problems.map((problem, index) => (
-                <li key={index}>{problem.path ? `${problem.path}: ` : ''}{problem.message}</li>
+                <li key={index}>
+                  {problem.path ? `${problem.path}: ` : ''}
+                  {problem.message}
+                </li>
               ))}
             </ul>
           </Banner>
@@ -61,10 +65,14 @@ export function BundleLayout(): ReactNode {
     );
   }
 
-  return <OpenLayout bundleId={bundleId} subjectId={subjectId} result={bundle.data} verifying={verifying} />;
+  return <OpenLayout bundleId={bundleId} result={bundle.data} verifying={verifying} />;
 }
 
-function OpenLayout({ bundleId, subjectId, result, verifying }: { bundleId: string; subjectId: string | undefined; verifying: boolean; result: Extract<NonNullable<ReturnType<typeof useBundle>['data']>, { status: 'opened' }> }): ReactNode {
+type OpenedResult = Extract<NonNullable<ReturnType<typeof useBundle>['data']>, { status: 'opened' }>;
+
+function OpenLayout({ bundleId, result, verifying }: { bundleId: string; result: OpenedResult; verifying: boolean }): ReactNode {
+  const { section, subjectId } = useParams({ strict: false });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const view = useMemo(
     () => ({ bundleId, manifest: result.bundle.manifest, unusablePaths: result.bundle.unusablePaths, prepared: prepareBundle(result.bundle, result.problems), verifying }),
     [bundleId, result, verifying]
@@ -72,35 +80,22 @@ function OpenLayout({ bundleId, subjectId, result, verifying }: { bundleId: stri
   const subjects = useMemo(() => groupBySubject(view.prepared.projection), [view]);
   const { project, release } = result.bundle.manifest;
 
-  const crumbs = [
-    { label: 'Bundles', href: paths.bundles() },
-    { label: `${project.name} ${release.release}`, href: paths.bundle(bundleId) },
-    ...(subjectId ? [{ label: subjectId }] : [])
-  ];
+  const location: NavLocation = isSection(section) && subjectId ? { page: 'subject', section, subjectId } : pathname.endsWith('/changes') ? { page: 'changes' } : { page: 'overview' };
+  const crumbs: Crumb[] = [{ label: `${project.name} ${release.release}`, href: paths.bundle(bundleId) }];
+  if (location.page === 'subject') {
+    crumbs.push({ label: SECTION_TITLES[location.section] }, { label: location.subjectId });
+  } else if (location.page === 'changes') {
+    crumbs.push({ label: 'Changes' });
+  }
 
   return (
     <BundleViewProvider value={view}>
-      <AppShell crumbs={crumbs}>
-        <SubjectRail bundleId={bundleId} subjects={subjects} currentId={subjectId} />
+      <AppShell crumbs={crumbs} status={<ValidityPill validity={view.prepared.validity} verifying={verifying} />}>
+        <ReleaseSidebar bundleId={bundleId} manifest={result.bundle.manifest} subjects={subjects} location={location} />
         <Content>
           <Outlet />
         </Content>
       </AppShell>
     </BundleViewProvider>
   );
-}
-
-/** The bundle's own address has no page of its own yet: it opens its first subject. */
-export function BundleIndex(): ReactNode {
-  const { bundleId = '' } = useParams({ strict: false });
-  const bundle = useBundle(bundleId);
-  if (bundle.data?.status !== 'opened') {
-    return null;
-  }
-
-  const [first] = groupBySubject(bundle.data.bundle.projection);
-  if (!first) {
-    return <p>This bundle has no required items and no comparisons.</p>;
-  }
-  return <Navigate to="/bundles/$bundleId/subjects/$subjectId" params={{ bundleId, subjectId: first.id }} replace />;
 }

@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19
+Last updated: 2026-10-19 (v5 step 1 done)
 
 ## How to keep this alive
 
@@ -42,15 +42,14 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Step 1 of the v5 design: release-first shell and routes** (see "Viewer" below). Not started. Proposed 2026-10-19, waiting for the go-ahead.
+- [ ] **v5 step 2: Release Overview** (see "Viewer" below). Not started. The overview route exists with a seed (release identity, the two summary panels, subject links); step 2 replaces it with the designed page.
 
 ## Next (in order)
 
-1. v5 step 2: Release Overview.
-2. v5 step 3: family and page overview (gallery plus all required items).
-3. v5 step 4: comparison inspector.
-4. v5 step 5: Changes screen (needs three decisions, see "Open questions").
-5. v5 step 6: release and history picker, Design references, error states.
+1. v5 step 3: family and page overview (gallery plus all required items).
+2. v5 step 4: comparison inspector.
+3. v5 step 5: Changes screen (needs three decisions, see "Open questions").
+4. v5 step 6: release and history picker, Design references, error states.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -129,16 +128,17 @@ Built so far:
 
 **v5 design, in build order** (evaluated 2026-10-19; corrections and data additions in the continuation brief, section 14):
 
-**Step 1: shell and routes** (Now, not started)
-- [ ] Routes: bundle overview, changes, `components/:subject`, `pages/:subject`, comparison.
-- [ ] One persistent sidebar: Overview, Changes, one expandable Components, one expandable Pages, Design references.
-- [ ] Project and release picker from the bundle list, above the navigation, visible on every route.
-- [ ] Current subject page becomes the "All required items" view.
-- [ ] Tests and browser check (light and dark).
+**Step 1: shell and routes** (done 2026-10-19)
+- [x] Routes: bundle overview, `changes`, `components/:subject`, `pages/:subject`, comparison under each. A subject opened under the wrong section is redirected.
+- [x] One persistent sidebar: Overview, Changes, one expandable Components, one expandable Pages (search inside each, only while open), Design references (disabled until step 6).
+- [x] Release picker from the bundle list, above the navigation, visible on every route; the evidence state (offline, invalid, verifying) is in the top bar on every route.
+- [x] Current subject page is the "All required items" view (the matrix).
+- [x] Overview and Changes exist as honest stubs: the overview shows release identity, both summary panels and subject links; Changes says it is not available yet.
+- [x] 57 tests, mutation-checked; browser check in light and dark; keyboard order top bar, sidebar, content.
 
 **Step 2: Release Overview**
-- [ ] Release header with all source dates (not one), run, offline fact.
-- [ ] Required-items panel and comparisons panel, no percentages.
+- [~] Release header with all source dates (not one), run, offline fact. Seeded in step 1 (every snapshot with its date and the run); not yet the designed header.
+- [~] Required-items panel and comparisons panel, no percentages. Seeded in step 1; no percentages anywhere.
 - [ ] "Needs attention" card derived from the data.
 - [ ] Family and page cards: one coverage line each, no repeated comparison totals, change type separate from verification.
 - [ ] "What changed" and "Designer review" cards only when a delta exists; derived counts, no process copy.
@@ -231,7 +231,7 @@ Viewer quality:
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (109 tests), then ui (41 tests, build)
+pnpm check:packages                            # projection (109 tests), then ui (57 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -242,5 +242,6 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: v5 step 1: release-first shell and routes (sidebar, release picker, evidence state on every route, overview and changes stubs, section routes). UI tests 41 to 57.
 - 2026-10-19: plan created in the repository; v5 design set evaluated and added as the viewer's build order.
 - 2026-10-18: design pass 1 on the viewer (`2272e6e`); viewer scaffold and matrix (`1dd64b6`); bundle layout, notes, archive summary and provider guide (`6a5a2de`); workspace and projection contract (`eb25770`); engine exports (`b9cc37c`); E0 engine additions (`dc3c987`).

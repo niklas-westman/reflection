@@ -57,7 +57,14 @@ export interface Crumb {
   href?: string;
 }
 
-export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: ReactNode }): ReactNode {
+export interface AppShellProps {
+  crumbs: Crumb[];
+  // Always visible on the right of the top bar, for facts that must show on every route (the evidence state).
+  status?: ReactNode;
+  children: ReactNode;
+}
+
+export function AppShell({ crumbs, status, children }: AppShellProps): ReactNode {
   const [scheme, setScheme] = useState<ColorScheme>(() => document.documentElement.dataset.theme === 'dark' ? 'dark' : readColorScheme());
 
   const toggle = (): void => {
@@ -79,6 +86,7 @@ export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: Reac
           ))}
         </Crumbs>
         <Grow />
+        {status}
         <Button type="button" $quiet onClick={toggle} aria-label={`Switch to ${scheme === 'dark' ? 'light' : 'dark'} theme`}>
           {scheme === 'dark' ? 'Light' : 'Dark'}
         </Button>

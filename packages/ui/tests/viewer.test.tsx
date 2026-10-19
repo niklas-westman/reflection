@@ -5,7 +5,7 @@ import { collectArtifactRefs } from 'reflection-projection';
 import { makeCatalog, makeProjection, overwrite } from './helpers/test-bundles';
 import { renderApp } from './helpers/render-app';
 
-const subjectPath = '/bundles/docs-site/subjects/pricing';
+const subjectPath = '/bundles/docs-site/pages/pricing';
 
 // A number from one of the summary panels, by panel and label.
 function stat(panel: 'Required items' | 'Comparisons', label: string): string {
@@ -79,7 +79,7 @@ describe('the subject page', () => {
 
     const failedCell = screen.getByRole('link', { name: 'hero.phone, chrome: Failed' });
 
-    expect(failedCell).toHaveAttribute('href', '#/bundles/docs-site/subjects/pricing/comparisons/hero.phone%2Fchrome');
+    expect(failedCell).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing/comparisons/hero.phone%2Fchrome');
   });
 
   it('says where the proof came from, with its own date', async () => {
@@ -135,16 +135,9 @@ describe('the subject page', () => {
 
   it('says so when the subject is not in the bundle', async () => {
     const catalog = await makeCatalog([{ id: 'docs-site', projection: makeProjection() }]);
-    renderApp(catalog, '/bundles/docs-site/subjects/nothing');
+    renderApp(catalog, '/bundles/docs-site/pages/nothing');
 
     expect(await screen.findByText(/No subject called “nothing” in this bundle/)).toBeInTheDocument();
-  });
-
-  it('opens the first subject from the bundle address', async () => {
-    const catalog = await makeCatalog([{ id: 'docs-site', projection: makeProjection() }]);
-    renderApp(catalog, '/bundles/docs-site');
-
-    expect(await screen.findByRole('heading', { level: 1, name: 'pricing' })).toBeInTheDocument();
   });
 });
 

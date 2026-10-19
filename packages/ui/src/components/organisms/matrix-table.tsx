@@ -1,9 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import styled from 'styled-components';
-import { useBundleView } from '../../data/bundle-context';
 import { joinDimensions } from '../../model/format';
 import type { Matrix, MatrixCell, MatrixColumn, MatrixGroup, MatrixRow, ReferenceSummary } from '../../model/matrix-model';
-import { paths } from '../../routes/paths';
 import { StatusGlyph, type GlyphKind } from '../atoms/status-glyph';
 import { Thumbnail } from '../atoms/thumbnail';
 import { OUTCOME_TITLES, type Density } from '../molecules/filter-bar';
@@ -191,12 +189,12 @@ const CELL_TEXT: Record<MatrixCell['outcome'] | 'unusable', { glyph: GlyphKind; 
 
 export interface MatrixTableProps {
   matrix: Matrix;
-  subjectId: string;
+  comparisonHref: (comparisonId: string) => string;
   density: Density;
   filtersActive: boolean;
 }
 
-export function MatrixTable({ matrix, subjectId, density, filtersActive }: MatrixTableProps): ReactNode {
+export function MatrixTable({ matrix, comparisonHref, density, filtersActive }: MatrixTableProps): ReactNode {
   const [toggled, setToggled] = useState<Partial<Record<MatrixGroup['id'], boolean>>>({});
   const columnCount = 2 + matrix.columns.length;
 
@@ -245,7 +243,7 @@ export function MatrixTable({ matrix, subjectId, density, filtersActive }: Matri
                     </GroupButton>
                   </th>
                 </tr>
-                {open ? group.rows.map((row) => <ItemRow key={row.requirement.id} row={row} columns={matrix.columns} subjectId={subjectId} density={density} />) : null}
+                {open ? group.rows.map((row) => <ItemRow key={row.requirement.id} row={row} columns={matrix.columns} comparisonHref={comparisonHref} density={density} />) : null}
               </tbody>
             );
           })}
@@ -278,7 +276,7 @@ function describeGroup(group: MatrixGroup): string {
   return '';
 }
 
-function ItemRow({ row, columns, subjectId, density }: { row: MatrixRow; columns: MatrixColumn[]; subjectId: string; density: Density }): ReactNode {
+function ItemRow({ row, columns, comparisonHref, density }: { row: MatrixRow; columns: MatrixColumn[]; comparisonHref: (comparisonId: string) => string; density: Density }): ReactNode {
   return (
     <tr className="item">
       <th className="identity" scope="row">
@@ -293,7 +291,7 @@ function ItemRow({ row, columns, subjectId, density }: { row: MatrixRow; columns
         const cell = row.cells.get(column.id);
         return (
           <td key={column.id}>
-            {cell ? <ResultCell cell={cell} row={row} column={column} subjectId={subjectId} density={density} /> : null}
+            {cell ? <ResultCell cell={cell} row={row} column={column} comparisonHref={comparisonHref} density={density} /> : null}
           </td>
         );
       })}
@@ -344,8 +342,7 @@ function describeApproval(reference: ReferenceSummary): string {
   return reference.approval === 'none' ? 'Not approved' : '';
 }
 
-function ResultCell({ cell, row, column, subjectId, density }: { cell: MatrixCell; row: MatrixRow; column: MatrixColumn; subjectId: string; density: Density }): ReactNode {
-  const { bundleId } = useBundleView();
+function ResultCell({ cell, row, column, comparisonHref, density }: { cell: MatrixCell; row: MatrixRow; column: MatrixColumn; comparisonHref: (comparisonId: string) => string; density: Density }): ReactNode {
   const key = cell.unusable ? 'unusable' : cell.outcome;
   const { glyph, text } = CELL_TEXT[key];
   const more = cell.comparisons.length > 1 ? ` (${cell.comparisons.length} comparisons)` : '';
@@ -362,7 +359,7 @@ function ResultCell({ cell, row, column, subjectId, density }: { cell: MatrixCel
   const imagePath = cell.primary.actual?.path;
   return (
     <CellLink
-      href={paths.comparison(bundleId, subjectId, cell.primary.id)}
+      href={comparisonHref(cell.primary.id)}
       $failed={cell.outcome === 'failed' && !cell.unusable}
       aria-label={`${row.label}, ${column.label}: ${text}${more}`}
       title={`${text}${more}`}

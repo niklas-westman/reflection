@@ -2,7 +2,7 @@
 
 A read-only viewer for Reflection evidence bundles (see `reflection-projection`). It shows what was proven for each required item, for any project that can emit a bundle. It knows nothing about Figma, Penpot or a component framework.
 
-Status: step N2a (subject list and matrix). The comparison view and the release overview are the next steps.
+Status: the matrix (N2a) inside the release-first shell (v5 step 1). The designed release overview, the family gallery, the comparison view and the Changes screen are the next steps; see `PLAN.md`.
 
 ## Try it
 
@@ -26,6 +26,21 @@ The demo bundles are written from the projection package's fixtures, with genera
 | `docs-site-tampered-image` | One image no longer matches its hash: evidence invalid, that comparison counted as unknown |
 | `docs-site-rejected` | A manifest edited after publishing: the bundle is refused |
 
+## Navigation
+
+One sidebar for every route in a release: the release picker (project, release, state, and a selector for the other bundles), Overview, Changes, one expandable Components list and one expandable Pages list (each with its own search), and Design references (disabled until it exists). The evidence state sits in the top bar on every route. Routes:
+
+```text
+#/                                              bundle list
+#/bundles/:bundle                               release overview
+#/bundles/:bundle/changes                       changes (not available yet)
+#/bundles/:bundle/components/:subject           all required items for a component family
+#/bundles/:bundle/pages/:subject                all required items for a page
+#/bundles/:bundle/<section>/:subject/comparisons/:comparison   comparison (placeholder)
+```
+
+A subject opened under the wrong section is redirected to its own.
+
 ## How it behaves
 
 - **Counts come from one function** (`summarizeProjection` / `summarizeReadiness`). Required items and comparisons are shown as two groups with one unit each, never as one ratio. A bucket the provider has no concept of reads "unknown", never 0.
@@ -43,7 +58,7 @@ src/
   data/        bundle catalog (HTTP), queries, open-bundle context
   model/       pure view model: subjects, matrix, filters, bundle state, search (no React)
   components/  atoms, molecules, organisms
-  routes/      pages and path helpers
+  routes/      pages, layout and path helpers
   theme/       tokens (rem spacing), global style, color scheme
 scripts/       make-demo-bundles.ts
 tests/         model tests and viewer tests that read real bundles written by the writer

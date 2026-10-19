@@ -1,21 +1,21 @@
-import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { Navigate, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import type { Projection } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
 import { Pill } from '../components/atoms/pill';
 import { Spacer } from '../components/atoms/spacer';
-import { Banner } from '../components/molecules/banner';
 import { CoverageBar } from '../components/molecules/coverage-bar';
 import { FilterBar, type Density } from '../components/molecules/filter-bar';
 import { SummaryGroups } from '../components/molecules/summary-groups';
 import { MatrixTable } from '../components/organisms/matrix-table';
-import { ValidityPill } from '../components/organisms/validity-pill';
+import { EvidenceNotice } from '../components/organisms/evidence-notice';
 import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters } from '../model/filters';
 import { formatDate } from '../model/format';
 import { buildMatrix } from '../model/matrix-model';
 import { parseSubjectSearch, toSubjectSearch } from '../model/search';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
+import { isSection, paths, sectionOf } from './paths';
 
 const Title = styled.div`
   display: flex;
@@ -66,11 +66,11 @@ const Empty = styled.div`
 `;
 
 export function SubjectPage(): ReactNode {
-  const { subjectId = '' } = useParams({ strict: false });
-  const { prepared, manifest } = useBundleView();
+  const { section, subjectId = '' } = useParams({ strict: false });
+  const { bundleId, prepared, manifest } = useBundleView();
   const subject = useMemo(() => groupBySubject(prepared.projection).find((group) => group.id === subjectId), [prepared, subjectId]);
 
-  if (!subject) {
+  if (!subject || !isSection(section)) {
     return (
       <Empty role="status">
         <strong>No subject called “{subjectId}” in this bundle.</strong>
@@ -79,11 +79,15 @@ export function SubjectPage(): ReactNode {
       </Empty>
     );
   }
+  // A page opened under /components (or the other way round) is sent to where it really lives.
+  if (sectionOf(subject.kind) !== section) {
+    return <Navigate to="/bundles/$bundleId/$section/$subjectId" params={{ bundleId, section: sectionOf(subject.kind), subjectId: subject.id }} replace />;
+  }
   return <SubjectView subject={subject} />;
 }
 
 function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
-  const { prepared, manifest, verifying } = useBundleView();
+  const { bundleId, prepared, manifest } = useBundleView();
   const { projection } = prepared;
   const navigate = useNavigate();
   const view = parseSubjectSearch(useSearch({ strict: false }) as Record<string, unknown>);
@@ -113,15 +117,9 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
             <dd>{fact.value}</dd>
           </div>
         ))}
-        <div>
-          <dt>Evidence</dt>
-          <dd>
-            <ValidityPill validity={prepared.validity} verifying={verifying} />
-          </dd>
-        </div>
       </Provenance>
       <Spacer />
-      <Notice />
+      <EvidenceNotice />
       <Spacer $size="sm" />
       <SummaryGroups items={subject.summary} comparisons={subject.comparisonCounts} lowerBound={projection.inventory === 'executed-only'} />
       <Spacer $size="sm" />
@@ -150,39 +148,10 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
           </p>
         </Empty>
       ) : (
-        <MatrixTable matrix={filtered} subjectId={subject.id} density={view.density} filtersActive={filtersActive} />
+        <MatrixTable matrix={filtered} comparisonHref={(comparisonId) => paths.comparison(bundleId, subject.kind, subject.id, comparisonId)} density={view.density} filtersActive={filtersActive} />
       )}
     </>
   );
-}
-
-// At most one banner, and only when something needs attention.
-function Notice(): ReactNode {
-  const { prepared } = useBundleView();
-  if (prepared.validity.state === 'invalid') {
-    const shown = prepared.problems.slice(0, 3);
-    return (
-      <Banner tone="fail" title={`Some evidence in this bundle is unusable (${prepared.problems.length})`}>
-        <p style={{ margin: '0.25rem 0 0' }}>Affected comparisons are counted as unknown, not as passed or failed.</p>
-        <ul>
-          {shown.map((problem, index) => (
-            <li key={index}>
-              {problem.path ? <code>{problem.path}</code> : null} {problem.message}
-            </li>
-          ))}
-          {prepared.problems.length > shown.length ? <li>and {prepared.problems.length - shown.length} more</li> : null}
-        </ul>
-      </Banner>
-    );
-  }
-  if (prepared.projection.inventory === 'executed-only') {
-    return (
-      <Banner tone="gap" title="Only checks that ran are listed">
-        <p style={{ margin: '0.25rem 0 0' }}>This provider cannot declare required items, so anything that did not run is not visible here and the counts are a lower bound.</p>
-      </Banner>
-    );
-  }
-  return null;
 }
 
 interface Fact {
