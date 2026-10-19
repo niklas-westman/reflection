@@ -42,11 +42,11 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **v5 step 6: release and history picker, Design references page, remaining error states** (see "Viewer" below). Not started. Step 5 (Changes) is blocked on three owner decisions (see "Open questions"), so step 6 goes first.
+- [ ] **v5 step 5: Changes screen** (see "Viewer" below). Not started. Unblocked by the three decisions of 2026-10-19.
 
 ## Next (in order)
 
-1. v5 step 5: Changes screen. `[!]` Blocked on three decisions (Before and After means the reference image; baseline is the previous release only; no percentages), then `diffProjections` and the schema additions.
+1. v5 step 6: release and history picker, Design references page, remaining error states.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -71,6 +71,9 @@ Providers and the release portal follow once the viewer can open a real bundle. 
 | 2026-10-18 | One `projection.json` per bundle rather than the split files in the portal brief | bundles |
 | 2026-10-18 | A viewer "family" is `subject.id` | UI grouping |
 | 2026-10-18 | Local commits of verified steps need no confirmation; briefs stay untracked | process |
+| 2026-10-19 | On the Changes screen, Before and After are the **reference (design) image** from the previous bundle; "Updated" means the reference hash changed | step 5 |
+| 2026-10-19 | The baseline for Changes is the **latest released version before this build**, recorded in the bundle (`release.previousRelease`) and fixed; no baseline picker | step 5 |
+| 2026-10-19 | **No percentages anywhere** in the viewer; counts with their unit only | all screens |
 | 2026-10-19 | The v5 design set is the accepted direction, not a literal spec; where a mock and `context.md` or the product rules disagree, the text and rules win | viewer |
 
 Rules every screen follows: two units never one ratio (required items versus comparisons); unknown is not zero; a reference is never a result; invalid evidence shows unknown, not a result; no percentages that read as compliance; no green comfort while items are missing; status is glyph plus text plus colour; one banner at a time; read-only until the decisions work starts.
@@ -164,7 +167,7 @@ Built so far:
 - [x] 163 tests (29 inspector UI, 16 inspector model), mutation-checked; browser check with real images (modes by key, zoom, synced scroll, next by key, reduced motion, dark), no console errors; the `docs-site` demo carries an illustrative diff, measurements and a size mismatch.
 - [ ] Not built: a `Related` list distinguishing confirmed from suggested design mappings (no such data exists yet); a legend for ignored regions and antialiasing (not in the schema); previous failure / next failure as separate controls.
 
-**Step 5: Changes screen** `[!]` (needs the three decisions in "Open questions")
+**Step 5: Changes screen** (decisions made 2026-10-19: reference image, previous release only, no percentages)
 - [ ] `diffProjections` and schema additions (area 2).
 - [ ] Changes screen: Added, Updated, Removed, before and after reference images from the previous retained bundle, "no longer retained" when pruned.
 - [ ] Baseline is the previous release only.
@@ -228,9 +231,9 @@ Viewer quality:
 - [ ] **Penpot backend RPC**: does it work headless, for source currency in CI?
 - [ ] **Sourcer v1**: does it keep the Figma path (Reflection 0.3.0, MCP, n8n)?
 - [ ] **Publishing**: when to bump and publish `reflection-check`; package names and npm scope; push.
-- [ ] **v5, "Before and After"**: proposed to mean the reference image from the previous retained bundle.
-- [ ] **v5, "Compare against"**: proposed to offer only the previous release (retention keeps two).
-- [ ] **v5, no percentages anywhere**: proposed.
+- [x] **v5, "Before and After"**: the reference image from the previous bundle. Decided 2026-10-19.
+- [x] **v5, "Compare against"**: the latest released version before this build, fixed, no picker. Decided 2026-10-19.
+- [x] **v5, no percentages anywhere**. Decided 2026-10-19.
 - [ ] **Mandatory implementations**: should an item compared in only some implementations be Proven? (Needs a provider rule or a field on the requirement.)
 - [ ] **Verification cost**: full background verification reads every file; is that acceptable for the largest Marwes bundles, or opt-in?
 
