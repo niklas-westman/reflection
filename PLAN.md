@@ -210,6 +210,13 @@ Viewer quality:
 - [ ] Declare `requiredImplementations` (react, vue, svelte) on each requirement, if those are the fixed set.
 - [ ] Run the provider checklist (builds twice identical; `openBundle` returns opened with no problems).
 
+**Adapter trials** (decided 2026-10-19: publish, try on one adapter, collect feedback, fix, repeat two or three times; Sourcer first, Marwes next). Feedback lives in the Eagle's Eye handoff folder `handoff/reflection-feedback/` (brief, template, one feedback file per round).
+- [ ] Owner publishes `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 (`docs/releasing.md`).
+- [ ] Sourcer round 1: the Sourcer session builds the Login provider (step 1: show Sourcer in the viewer, no behaviour change) and writes `sourcer-feedback-01.md`.
+- [ ] Reflection session reads the feedback, fixes the toolkit or viewer, publishes a new version.
+- [ ] Sourcer round 2 (and 3 if needed).
+- [ ] Marwes round 1, with what Sourcer taught us.
+
 **Sourcer (Penpot)**
 - [ ] Read the Sourcer integration note in the Eagle's Eye handoff first.
 - [ ] R2b step 1: Login as a page with 30 requirements; approvals import as agent-recorded; hashes added at ingest.
