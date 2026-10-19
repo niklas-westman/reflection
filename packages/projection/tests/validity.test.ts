@@ -37,6 +37,12 @@ describe('computeValidity', () => {
     expect(computeValidity([input('x', a)], [input('x', a, { hashKind: 'canonical-json' })])).toMatchObject({ state: 'stale' });
   });
 
+  it('compares a composite input like any other: a changed composite hash makes the run stale', () => {
+    const composite = (sha256: string) => ({ role: 'app', key: 'app:src,public,index.html', hashKind: 'composite' as const, sha256 });
+    expect(computeValidity([composite(a)], [composite(a)])).toEqual({ state: 'current' });
+    expect(computeValidity([composite(a)], [composite(b)])).toEqual({ state: 'stale', causes: [{ role: 'app', key: 'app:src,public,index.html', change: 'changed' }] });
+  });
+
   it('keeps the same key under different roles apart', () => {
     const recorded = [input('x', a, { role: 'baseline' }), input('x', a, { role: 'source' })];
     const current = [input('x', b, { role: 'source' }), input('x', a, { role: 'baseline' })];

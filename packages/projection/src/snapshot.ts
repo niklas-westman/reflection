@@ -13,6 +13,8 @@ export const sourceSnapshotSchema = z.object({
   capturedAt: timestampSchema,
   upstreamModifiedAt: timestampSchema.optional(),
   version: z.string().min(1).optional(),
+  // Hash of the design source content this snapshot holds (for example the provider's reference manifest),
+  // never of the bundle. A reference approval's boundTo names the same value.
   sha256: sha256Schema.optional(),
   // Identity of the upstream file this snapshot was taken from, and of the original it was copied from, if any.
   fileKey: z.string().min(1).optional(),

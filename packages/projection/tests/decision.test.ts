@@ -55,6 +55,13 @@ describe('decision schema', () => {
     expect(() => approval({ kind: 'approve', attestation: 'agent' })).toThrow('only a legacy reference approval');
     expect(() => approval({ kind: 'changes-required', message: 'x', attestation: 'agent' })).toThrow('only a legacy reference approval');
   });
+
+  it('accepts a decision a person gave in conversation when the agent that recorded it and the words are kept', () => {
+    const delegated = { attestation: 'delegated', recordedBy: 'Claude', comment: 'Ship it, the Login page is right.' } as const;
+    expect(approval(delegated).attestation).toBe('delegated');
+    expect(() => approval({ ...delegated, recordedBy: undefined })).toThrow('name the agent');
+    expect(() => approval({ ...delegated, comment: undefined })).toThrow("person's words in comment");
+  });
 });
 
 describe('buildDecisionBinding', () => {

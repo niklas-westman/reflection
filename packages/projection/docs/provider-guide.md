@@ -30,7 +30,7 @@ A requirement is something that must be proven, whether or not anything has run 
 
 - **Declare every required item you know about**, including ones with no design or no test yet. Set `inventory: 'full'`. A provider that only lists what ran must say `'executed-only'`, and the UI then shows its coverage as a lower bound.
 - `id` is stable across runs and builds. Use a logical key (`button/primary/medium/hover/light`), never a transient node id or a run id. A decision binds to these ids, so an id that changes lapses every decision.
-- `enrolled: false` means a comparison is not set up yet. `design.availability` is `missing` (no design exists) or `unmapped` (one may exist but is not linked to this requirement).
+- `enrolled: false` means a comparison is not set up yet. A project with no notion of enrolment sets `enrolled: true` on every requirement and `readinessConcepts.notEnrolled: false`. `design.availability` is `missing` (no design exists) or `unmapped` (one may exist but is not linked to this requirement).
 - Put dimensions in `subject` (`variant`, `mode`, `adapter`, `viewport`, `state`) and the rest in `subject.dimensions`. The UI groups and filters by these without knowing what they mean.
 - `requiredImplementations` (optional) names the implementations (adapters) that must each have a comparison and pass before the item is proven. A project with a fixed set of implementations, such as React, Vue and Svelte, should declare it: otherwise an item compared in only one of them reads as proven. A comparison with no `subject.adapter` never satisfies a named implementation, and a failure still reads as failing even when another implementation is missing. Leave it out when implementations are not a fixed set, and only recorded comparisons count.
 - `requiredProofs` lists the layers that must pass before the item counts as proven. A layer that is `not-run` or `unsupported` can never count as a pass.
@@ -48,7 +48,7 @@ One comparison is one check of a reference against a rendered result.
 - `requirementId` joins it to its requirement by exact identity. Do not join by name or position.
 - Set the proof of each layer you actually ran. Leave a layer absent if you have no concept of it.
 - `verdict` is what the engine or tool reported, in its own words: `status`, `severity`, `failureClass`. A decision binds to these three fields, so keep them free of anything that differs between identical runs (timestamps, run ids, paths).
-- **Never forward a folded word.** If your tool folds coverage gaps into every case outcome (one provider reported `blocked` for every row because coverage gaps were folded into each case outcome), do not copy that word into `verdict` or `proof`. Map the real per-layer result. Keep the tool's own word in `nativeOutcome` if you want it shown as "native".
+- **Never forward a folded word.** If your tool folds coverage gaps into every case outcome (one provider reported `blocked` for every row because coverage gaps were folded into each case outcome), do not copy that word into `verdict` or `proof`. Map the real per-layer result. Keep the tool's own word in `nativeOutcome`; the viewer shows it as "native" next to the verdict and never counts it.
 - `limitations` is where to say what a check could not do.
 - Record `capturePolicyHash` when the capture settings affect the result. Evidence under another policy is not comparable.
 - Record `reference.baselineSha256` (the hash of the approved baseline file) when you have it. Otherwise the artifact hash is used.
@@ -57,10 +57,18 @@ One comparison is one check of a reference against a rendered result.
 
 `reference.approval.state` is `holds`, `lapsed` or `none`, and any state other than `none` must say who recorded it with `attestation`.
 
-- `human`: a person approved this reference.
-- `agent`: an agent or script recorded it. **An agent-recorded approval is shown as such.** It is allowed only to import a legacy record (an existing approvals file), and it counts as reference approval only until a person re-confirms it.
+- `human`: a person approved this reference and recorded it themselves.
+- `delegated`: a person approved it in conversation and an agent wrote it down. `by` is the person, `recordedBy` is the agent, and `note` keeps the person's words (required). It counts as the person's approval, and the viewer says it was recorded by the agent.
+- `agent`: an agent or script recorded it with no person's words behind it. **It is shown as not confirmed by a person.** Use it to import a legacy record you cannot trace to a person's words.
 
-A provider never invents an approval and never upgrades an agent record to a human one.
+The other fields, all optional and all shown in the viewer:
+
+- `by`: who approved. `at`: when.
+- `boundTo`: the hash of the design source content the approval named. Use the same value as the snapshot's `sha256` when the snapshot hashes that content (for example your own reference manifest). Never the bundle manifest: it does not exist until after the projection is written.
+- `causes`: for `lapsed`, what changed since the approval.
+- `note`: free text, shown as written.
+
+A provider never invents an approval and never upgrades an `agent` record to `human` or `delegated`. A record whose source names the person and keeps their words (for example "approved by the owner; recorded by the assistant on that basis") is `delegated`.
 
 ## Snapshots and dates
 
@@ -68,6 +76,7 @@ A snapshot is the design data something was proven against. Reflection does not 
 
 - Emit **one snapshot per thing that has its own date**. A design system can have a full sync, a per-family capture that a proof actually read, and a coverage contract. Keep them separate; never merge their dates.
 - A comparison names the snapshot that actually backed it (`snapshotId`), not the newest one you have. The UI says "proof based on" that date and shows the global sync as context.
+- `sha256` is the hash of the design source content the snapshot holds (for example your reference manifest), never of the bundle. A reference approval's `boundTo` uses the same value.
 - `fileKey` is the upstream file the snapshot came from. `originalFileKey` is the file it was copied from, if each snapshot is a copy of an original file.
 - `release.snapshotIds` lists the snapshots a release used. It may equal the previous release's: not every release has a new sync.
 - If the design source has moved on and your proof still reads the old one, that is a validity problem, not a note. Report it through `run.inputs` or as an integrity failure (below).
@@ -85,8 +94,9 @@ A run records what produced the evidence and what it was produced from.
 
 - `run.inputs[]` is the engine's `report.inputs[]` shape: `{ role, key, hashKind, sha256, bytes, missing }`. For a native Reflection run, copy it as it is. For your own pipeline, hash the files and data the proof depends on (the coverage contract, the design snapshot, the baselines) with the same shape.
 - Keys are relative to a project directory. Never an absolute path.
+- `hashKind` is `bytes` (the file's bytes), `canonical-json` (a JSON value in canonical form) or `composite`: one hash you compute over a declared set of files, such as your app code. Name the set in the key (`app:src,public,index.html`) and keep the way you hash it fixed; a changed composite hash reads as that input changed. Prefer one input per file when the list is short, so the stale causes can name the file.
 - Validity is never stored. A viewer with access to the current inputs recomputes it with `computeValidity(recorded, current)` and gets `current`, `stale` (with the exact inputs that changed), `invalid`, `never-run` or `offline`. A bundle opened without live inputs reads `offline`: "freshness not verified".
-- `nativeValidity` keeps what your tool said about its own validity. It is shown as "native" and never trusted.
+- `nativeValidity` keeps what your tool said about its own validity. The viewer shows it as "native" beside the run and never trusts it.
 - `verdictHash` and `measuredHash` come from the engine's `report.resultHash`. Without them, an identical rebuild cannot be told apart from a changed one by the run alone, but the decision binding still works from the comparisons.
 
 ## Decisions
@@ -99,7 +109,7 @@ Providers do not write decisions. The portal records them, bound to content (ver
 
 What this asks of a provider: **keep verdicts, baseline hashes and requirement ids stable between identical builds.** A provider that puts a timestamp into a verdict or renames ids on every build lapses every decision for no reason.
 
-The only decisions a provider may include are legacy imports of `accept-reference` records, with `attestation: 'agent'`.
+The only decisions a provider may include are imports of `accept-reference` records: `delegated` when the record names the person and keeps their words (`recordedBy`, and the words in `comment`), `agent` otherwise. A person's decision given to an agent in conversation is recorded as `delegated`; the portal records its own as `human`.
 
 ## Artifacts
 
@@ -142,7 +152,7 @@ Read a bundle back, as the viewer will, with `openBundle(source, { verifyFiles: 
 - Report an unknown bucket as 0.
 - Forward a folded status word (`blocked`) as a verdict or a proof result.
 - Treat `not-run` or `unsupported` as a pass.
-- Record an approval for a person, or mark an agent record as `human`.
+- Record an approval for a person without their words, or mark an agent record as `human` or `delegated`.
 - Use a transient node id, a run id or a path as a requirement id.
 - Put absolute local paths, credentials, tokens, `_raw` content or executable files in a bundle.
 - Name Figma, Penpot, a framework or a Discord channel in anything that ships in Reflection.

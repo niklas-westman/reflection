@@ -1,6 +1,7 @@
 export * from './primitives.js';
 export * from './proof.js';
 export * from './snapshot.js';
+export * from './attestation.js';
 export * from './evidence.js';
 export * from './comparison.js';
 export * from './comparison-outcome.js';

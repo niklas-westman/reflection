@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { idSchema, relativePathSchema, sha256Schema, timestampSchema } from './primitives.js';
 import { proofSchema } from './proof.js';
 import { subjectSchema } from './requirement.js';
+import { addDelegationIssues, attestationSchema } from './attestation.js';
 
 export const artifactSchema = z.object({
   role: z.enum(['reference', 'actual', 'diff', 'debug']),
@@ -16,19 +17,27 @@ export type Artifact = z.output<typeof artifactSchema>;
 
 // "Is this design export the approved truth." Separate from review of results.
 // state: holds (bound to the reference hashes), lapsed (they changed), none (never approved).
-// attestation says who made the statement: a record written by an agent is not a human approval.
+// attestation says who made the statement: `human` (a person recorded it), `delegated` (a person gave it in
+// conversation and an agent wrote it down; `by` is the person, `recordedBy` the agent, `note` the person's
+// words) or `agent` (no person behind it). Only `agent` is not a person's approval.
+// boundTo is the hash of the design source content the approval named (the same value as the snapshot's
+// sha256 when the snapshot hashes that content), never the bundle manifest.
 export const referenceApprovalSchema = z
   .object({
     state: z.enum(['holds', 'lapsed', 'none']),
-    attestation: z.enum(['human', 'agent']).optional(),
+    attestation: attestationSchema.optional(),
     by: z.string().min(1).optional(),
+    recordedBy: z.string().min(1).optional(),
     at: timestampSchema.optional(),
     boundTo: sha256Schema.optional(),
     causes: z.array(z.string()).optional(),
     note: z.string().optional()
   })
-  .refine((approval) => approval.state === 'none' || approval.attestation !== undefined, {
-    message: 'an approval that holds or has lapsed must say whether a human or an agent recorded it'
+  .superRefine((approval, context) => {
+    if (approval.state !== 'none' && approval.attestation === undefined) {
+      context.addIssue({ code: 'custom', path: ['attestation'], message: 'an approval that holds or has lapsed must say whether a person, a person through an agent, or an agent recorded it' });
+    }
+    if (approval.attestation === 'delegated') addDelegationIssues(approval, { path: 'note', value: approval.note }, context);
   });
 export type ReferenceApproval = z.output<typeof referenceApprovalSchema>;
 

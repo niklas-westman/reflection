@@ -327,7 +327,8 @@ function ReferenceCell({ row }: { row: MatrixRow }): ReactNode {
 
 function describeApproval(reference: ReferenceSummary): string {
   if (reference.approval === 'holds') {
-    return reference.attestation === 'agent' ? 'Recorded by an agent' : 'Approved by a person';
+    if (reference.attestation === 'agent') return 'Recorded by an agent';
+    return reference.attestation === 'delegated' ? 'Approved by a person, recorded by an agent' : 'Approved by a person';
   }
   if (reference.approval === 'lapsed') {
     return 'Approval lapsed';

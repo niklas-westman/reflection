@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import type { BundleManifest } from 'reflection-projection';
+import { releaseStateLabel } from '../../model/format';
 import type { SubjectGroup } from '../../model/subject-model';
 import { paths, SECTION_TITLES, sectionOf, type Section } from '../../routes/paths';
 import { Pill } from '../atoms/pill';
@@ -179,7 +180,7 @@ function ReleaseCardWithPicker({ bundleId, manifest }: { bundleId: string; manif
       <span className="name">{manifest.project.name}</span>
       <span>
         {manifest.release.release} · build {manifest.release.build}{' '}
-        <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{manifest.release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
+        <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{releaseStateLabel(manifest.release.state)}</Pill>
       </span>
       <ReleasePicker projectId={manifest.project.id} current={`bundle:${bundleId}`} />
     </ReleaseCard>

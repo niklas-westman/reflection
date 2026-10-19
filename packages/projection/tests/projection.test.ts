@@ -48,11 +48,19 @@ describe('artifact paths', () => {
 });
 
 describe('reference approval', () => {
-  it('says whether a human or an agent recorded an approval that holds or lapsed', () => {
-    expect(() => referenceApprovalSchema.parse({ state: 'holds' })).toThrow('human or an agent');
-    expect(() => referenceApprovalSchema.parse({ state: 'lapsed' })).toThrow('human or an agent');
+  it('says who recorded an approval that holds or lapsed', () => {
+    expect(() => referenceApprovalSchema.parse({ state: 'holds' })).toThrow('must say whether a person');
+    expect(() => referenceApprovalSchema.parse({ state: 'lapsed' })).toThrow('must say whether a person');
     expect(referenceApprovalSchema.parse({ state: 'none' }).state).toBe('none');
     expect(referenceApprovalSchema.parse({ state: 'holds', attestation: 'agent' }).attestation).toBe('agent');
+  });
+
+  it('accepts a delegated approval only with the person, the agent that wrote it down and the person\'s words', () => {
+    const delegated = { state: 'holds', attestation: 'delegated', by: 'Niklas Westman', recordedBy: 'Claude', note: 'Approve the Login references.' } as const;
+    expect(referenceApprovalSchema.parse(delegated).recordedBy).toBe('Claude');
+    expect(() => referenceApprovalSchema.parse({ ...delegated, by: undefined })).toThrow('name the person');
+    expect(() => referenceApprovalSchema.parse({ ...delegated, recordedBy: undefined })).toThrow('name the agent');
+    expect(() => referenceApprovalSchema.parse({ ...delegated, note: '  ' })).toThrow("person's words in note");
   });
 });
 

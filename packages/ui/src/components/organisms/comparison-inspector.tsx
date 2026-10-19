@@ -310,10 +310,17 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
         <Rail>
           <ResultCard model={model} offline={offline} />
           <MeasurementsCard model={model} />
-          {model.caution ? (
-            <Card $caution aria-label="Reference provenance">
+          {model.caution || model.approvalFacts.length > 0 ? (
+            <Card $caution={model.caution !== undefined} aria-label="Reference provenance">
               <h2>Reference provenance</h2>
-              <p>{model.caution}</p>
+              {model.caution ? <p>{model.caution}</p> : null}
+              {model.approvalFacts.length > 0 ? (
+                <dl>
+                  {model.approvalFacts.map((fact) => (
+                    <FactRow key={fact.label} fact={fact} />
+                  ))}
+                </dl>
+              ) : null}
             </Card>
           ) : null}
         </Rail>
@@ -340,7 +347,7 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
         <Card aria-label="Related">
           <h2>Related</h2>
           {model.siblings.length === 0 ? (
-            <p className="muted">No other implementation was compared for this item.</p>
+            <p className="muted">{model.implementationsRecorded ? 'No other implementation was compared for this item.' : 'This release records no implementations to relate.'}</p>
           ) : (
             <>
               <p className="muted">The same required item in other implementations</p>
@@ -385,6 +392,14 @@ function ResultCard({ model, offline }: { model: InspectorModel; offline: boolea
         <dd>{model.row?.label ?? 'Not tied to a required item'}</dd>
         <dt>Recorded as</dt>
         <dd>{model.verdict}</dd>
+        {model.nativeOutcome ? (
+          <>
+            <dt>Native</dt>
+            <dd>
+              {model.nativeOutcome} <span className="muted">(the tool's own word, not counted)</span>
+            </dd>
+          </>
+        ) : null}
         <dt>Source status</dt>
         <dd>{offline ? 'Not verified' : 'Checked'}</dd>
       </dl>
@@ -399,9 +414,10 @@ function MeasurementsCard({ model }: { model: InspectorModel }): ReactNode {
       <h2>Measurements</h2>
       {diffSummary ? (
         <dl>
-          <dt>Pixel difference</dt>
+          <dt>Recorded metric</dt>
           <dd>
-            {diffSummary.value} <span className="muted">({diffSummary.metric}{diffSummary.ratio !== undefined ? `, ratio ${diffSummary.ratio}` : ''})</span>
+            {diffSummary.metric} {diffSummary.value}
+            {diffSummary.ratio !== undefined ? <span className="muted"> (ratio {diffSummary.ratio})</span> : null}
           </dd>
           <dt>Recorded threshold</dt>
           <dd>{diffSummary.threshold.length > 0 ? diffSummary.threshold.map((entry) => `${entry.name} ${entry.value}`).join(', ') : 'Not recorded'}</dd>
@@ -434,7 +450,7 @@ function MeasurementsCard({ model }: { model: InspectorModel }): ReactNode {
           {measurements.failing.length === 0 && measurements.passing.length === 0 ? <p className="muted">{measurements.total} measurements were recorded, with no detail.</p> : null}
         </>
       ) : (
-        <p className="muted">Detailed measurements: Not recorded.</p>
+        <p className="muted">{model.bundleRecordsMeasurements ? 'Detailed measurements: Not recorded.' : 'This release records pixel comparisons only, no detailed measurements.'}</p>
       )}
     </Card>
   );

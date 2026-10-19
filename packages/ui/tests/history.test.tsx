@@ -42,7 +42,7 @@ describe('the release history model', () => {
   it('describes a release the way the picker shows it', () => {
     const history = buildReleaseHistory({ bundles: [opened('a', '2.4.0', 'docs-site', 2, 'candidate')], archive: [makeArchiveSummary()] });
 
-    expect(history.projects[0]?.releases.map(describeRelease)).toEqual(['2.4.0 · build 2 · Candidate', '2.2.0 · build 1 · summary only']);
+    expect(history.projects[0]?.releases.map(describeRelease)).toEqual(['2.4.0 · build 2 · Release candidate', '2.2.0 · build 1 · summary only']);
   });
 });
 
@@ -61,7 +61,7 @@ describe('the release picker', () => {
 
     const select = await screen.findByLabelText('Change release');
     // Every bundle is read before it can be listed, so the list fills in.
-    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Candidate', '2.3.0 · build 1 · Released', '2.2.0 · build 1 · summary only']));
+    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Release candidate', '2.3.0 · build 1 · Released', '2.2.0 · build 1 · summary only']));
   });
 
   it('opens another bundle in full, and a summary as a summary', async () => {
@@ -205,7 +205,7 @@ describe('the design references page', () => {
     if (second?.reference) second.reference.approval = { state: 'lapsed', attestation: 'human', by: 'p', at: '2026-10-14T09:00:00.000Z' };
     if (third?.reference) delete (third as { reference?: unknown }).reference;
 
-    expect(summarizeDesignReferences(projection).approvals).toEqual({ byPerson: 3, byAgent: 1, lapsed: 1, none: 0, noReference: 1 });
+    expect(summarizeDesignReferences(projection).approvals).toEqual({ byPerson: 3, byPersonThroughAgent: 0, byAgent: 1, lapsed: 1, none: 0, noReference: 1 });
   });
 });
 
@@ -273,6 +273,6 @@ describe('releases that read the same', () => {
     renderApp(await makeCatalog([current, { ...current, id: 'current-copy' }]), '/bundles/current');
 
     const select = await screen.findByLabelText('Change release');
-    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Candidate (current)', '2.4.0 · build 1 · Candidate (current-copy)']));
+    await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['2.4.0 · build 1 · Release candidate (current)', '2.4.0 · build 1 · Release candidate (current-copy)']));
   });
 });

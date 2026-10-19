@@ -16,7 +16,7 @@ import { ExternalLink } from '../components/atoms/external-link';
 import type { ChangeKind } from 'reflection-projection';
 import { buildAttention, sortByAttention } from '../model/attention';
 import { countComparisons } from '../model/comparison-outcome';
-import { formatDate } from '../model/format';
+import { describeRun, describeRuns, formatDate, releaseStateLabel } from '../model/format';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
 import { paths, SECTION_TITLES, sectionOf, type Section } from './paths';
 
@@ -88,7 +88,7 @@ export function ReleaseOverviewPage(): ReactNode {
         <h1>
           {project.name} {release.release}
         </h1>
-        <Pill $tone={release.state === 'released' ? 'pass' : 'gap'}>{release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
+        <Pill $tone={release.state === 'released' ? 'pass' : 'gap'}>{releaseStateLabel(release.state)}</Pill>
       </Title>
       <Lead>Review what this release proves and what still needs attention.</Lead>
       <Facts aria-label="Provenance">
@@ -116,7 +116,15 @@ export function ReleaseOverviewPage(): ReactNode {
         {projection.runs.length > 0 ? (
           <div>
             <dt>{projection.runs.length === 1 ? 'Run' : 'Runs'}</dt>
-            <dd>{projection.runs.length === 1 && projection.runs[0] ? `${formatDate(projection.runs[0].finishedAt)} · ${projection.runs[0].engine.name}` : `${projection.runs.length} runs`}</dd>
+            <dd>{projection.runs.length === 1 && projection.runs[0] ? describeRun(projection.runs[0], release.builtAt) : describeRuns(projection.runs, release.builtAt)}</dd>
+          </div>
+        ) : null}
+        {projection.runs.length === 1 && projection.runs[0]?.nativeValidity ? (
+          <div>
+            <dt>Native validity</dt>
+            <dd>
+              {projection.runs[0].nativeValidity} <span className="muted">(the tool's own word, not trusted)</span>
+            </dd>
           </div>
         ) : null}
       </Facts>

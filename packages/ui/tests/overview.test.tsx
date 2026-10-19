@@ -167,7 +167,7 @@ describe('the release overview', () => {
 
     const facts = within(screen.getByLabelText('Provenance'));
     expect(facts.getByText('Reference screenshots, captured 14 Oct 2026')).toBeInTheDocument();
-    expect(facts.getByText('15 Oct 2026 · screenshot-compare')).toBeInTheDocument();
+    expect(facts.getByText('15 Oct 2026 · screenshot-compare 2.1.0 · 3 days before this build')).toBeInTheDocument();
     expect(facts.getByText('release/2.4 · abcdef1')).toBeInTheDocument();
   });
 });

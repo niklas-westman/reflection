@@ -6,8 +6,10 @@ import { useArtifactUrl } from '../../data/bundle-queries';
 import { useInView } from './use-in-view';
 
 // The frame has a fixed aspect so cards do not jump while images load. Images are contained, never stretched.
+// One track the size of the frame: an auto track would grow to a tall image's own height and crop it.
 const Frame = styled.div<{ $aspect: string }>`
   display: grid;
+  grid-template: 100% / 100%;
   place-items: center;
   overflow: hidden;
   width: 100%;

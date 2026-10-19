@@ -5,6 +5,7 @@ import { comparisonOutcome, countComparisons } from '../src/model/comparison-out
 import { availableDimensions, filterMatrix, NO_FILTERS } from '../src/model/filters';
 import { buildMatrix } from '../src/model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch } from '../src/model/search';
+import { describeRuns, releaseStateLabel, runAgeAtBuild } from '../src/model/format';
 import { groupBySubject } from '../src/model/subject-model';
 import { makeProjection } from './helpers/test-bundles';
 
@@ -193,5 +194,20 @@ describe('formatting dates', () => {
     expect(formatDate('2026-09-20T23:30:00.000Z')).toBe('20 Sep 2026');
     expect(formatDate('2026-01-01T00:00:00.000Z')).toBe('1 Jan 2026');
     expect(formatDate('2026-12-31T23:59:59.000Z')).toBe('31 Dec 2026');
+  });
+});
+
+describe('release and run wording', () => {
+  it('names the release state so it cannot be read as a page called Candidate', () => {
+    expect(releaseStateLabel('candidate')).toBe('Release candidate');
+    expect(releaseStateLabel('released')).toBe('Released');
+  });
+
+  it('says how much older the run is than the build, only from a whole day', () => {
+    expect(runAgeAtBuild('2026-10-14T08:00:00Z', '2026-10-19T09:00:00Z')).toBe('5 days before this build');
+    expect(runAgeAtBuild('2026-10-18T08:00:00Z', '2026-10-19T09:00:00Z')).toBe('1 day before this build');
+    expect(runAgeAtBuild('2026-10-19T01:00:00Z', '2026-10-19T09:00:00Z')).toBeUndefined();
+    expect(runAgeAtBuild('2026-10-20T01:00:00Z', '2026-10-19T09:00:00Z')).toBeUndefined();
+    expect(describeRuns([{ finishedAt: '2026-10-16T00:00:00Z' }, { finishedAt: '2026-10-14T00:00:00Z' }], '2026-10-19T00:00:00Z')).toBe('2 runs, the oldest 5 days before this build');
   });
 });

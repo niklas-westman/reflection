@@ -91,6 +91,86 @@ describe('the inspector model', () => {
   });
 });
 
+function modelFor(changed: typeof projection, id: string): InspectorModel {
+  const [changedSubject] = groupBySubject(changed);
+  const model = buildInspectorModel({ projection: changed, matrix: buildMatrix({ projection: changed, subject: changedSubject!, unusableComparisonIds: new Set() }), filters: NO_FILTERS, comparisonId: id, unusableComparisonIds: new Set(), bundleHash: 'f'.repeat(64) });
+  if (!model) throw new Error(`no model for ${id}`);
+  return model;
+}
+
+describe('what the inspector shows of a provider\'s own record', () => {
+  it('shows who approved the reference, who wrote it down, when, the words, and whether it is bound to the design source read', () => {
+    const delegated = structuredClone(projection);
+    const bound = 'c'.repeat(64);
+    delegated.snapshots[0]!.sha256 = bound;
+    const first = delegated.comparisons[0]!;
+    first.reference!.approval = { state: 'holds', attestation: 'delegated', by: 'Owner', recordedBy: 'Assistant', at: '2026-10-13T20:56:08.000Z', boundTo: bound, note: 'These are the approved Login frames.' };
+    const model = modelFor(delegated, 'btn.primary/react');
+
+    expect(model.caution).toBeUndefined();
+    expect(model.gaps).not.toContain('The reference approval is not confirmed by a person.');
+    expect(model.approvalFacts).toEqual([
+      { label: 'Approval', value: 'Approved by a person in conversation, recorded by an agent' },
+      { label: 'Approved by', value: 'Owner' },
+      { label: 'Recorded by', value: 'Assistant' },
+      { label: 'Approved on', value: '13 Oct 2026' },
+      { label: 'Bound to', value: bound, mono: true },
+      { label: 'Design source', value: 'Same content as the design source this comparison read' },
+      { label: 'Note', value: 'These are the approved Login frames.' }
+    ]);
+
+    first.reference!.approval = { state: 'holds', attestation: 'agent', by: 'Assistant', boundTo: 'd'.repeat(64) };
+    const agent = modelFor(delegated, 'btn.primary/react');
+    expect(agent.caution).toContain('recorded by an agent');
+    expect(agent.approvalFacts).toContainEqual({ label: 'Approval', value: 'Recorded by an agent, not confirmed by a person' });
+    expect(agent.approvalFacts).toContainEqual({ label: 'Design source', value: 'Differs from the design source this comparison read' });
+  });
+
+  it('says a lapsed approval no longer matches, and who had recorded it', () => {
+    const lapsed = structuredClone(projection);
+    lapsed.comparisons[0]!.reference!.approval = { state: 'lapsed', attestation: 'human', by: 'Owner', causes: ['the reference manifest changed'] };
+    const facts = modelFor(lapsed, 'btn.primary/react').approvalFacts;
+
+    expect(facts.slice(0, 2)).toEqual([
+      { label: 'Approval', value: 'No longer matches the current reference' },
+      { label: 'It was', value: 'Approved by a person' }
+    ]);
+    expect(facts).toContainEqual({ label: 'Changed since', value: 'the reference manifest changed' });
+  });
+
+  it('has no approval facts for a reference nobody approved', () => {
+    const none = structuredClone(projection);
+    none.comparisons[0]!.reference!.approval = { state: 'none' };
+    expect(modelFor(none, 'btn.primary/react').approvalFacts).toEqual([]);
+  });
+
+  it('carries the tool\'s own outcome and validity, labelled as native', () => {
+    const native = structuredClone(projection);
+    native.comparisons[0]!.nativeOutcome = 'passed';
+    native.runs[0]!.nativeValidity = 'current';
+    const model = modelFor(native, 'btn.primary/react');
+
+    expect(model.nativeOutcome).toBe('passed');
+    expect(model.provenance).toContainEqual({ label: 'Native validity (not trusted)', value: 'current' });
+    expect(modelOf('btn.primary/react').nativeOutcome).toBeUndefined();
+  });
+
+  it('does not list what a pixel-only provider without implementations never records', () => {
+    const pixelOnly = structuredClone(projection);
+    for (const comparison of pixelOnly.comparisons) {
+      delete comparison.measurements;
+      delete comparison.subject.adapter;
+    }
+    pixelOnly.comparisons = pixelOnly.comparisons.filter((comparison, index, all) => all.findIndex((other) => other.requirementId === comparison.requirementId) === index);
+    const model = modelFor(pixelOnly, 'btn.primary/react');
+
+    expect(model.gaps).not.toContain('Detailed measurements were not recorded.');
+    expect(model.bundleRecordsMeasurements).toBe(false);
+    expect(model.implementationsRecorded).toBe(false);
+    expect(modelOf('btn.primary/react').implementationsRecorded).toBe(true);
+  });
+});
+
 describe('moving between comparisons', () => {
   it('walks the subject in the order its matrix shows, failures first', () => {
     const { sequence } = modelOf('btn.primary/react');

@@ -1,4 +1,5 @@
 import type { ArchiveSummary, OpenBundleResult } from 'reflection-projection';
+import { releaseStateLabel } from './format';
 
 export interface BundleRelease {
   kind: 'bundle';
@@ -88,5 +89,5 @@ export function describeRelease(entry: ReleaseEntry): string {
   if (entry.kind === 'archive') {
     return `${entry.release} · build ${entry.build} · summary only`;
   }
-  return `${entry.release} · build ${entry.build} · ${entry.state === 'released' ? 'Released' : 'Candidate'}`;
+  return `${entry.release} · build ${entry.build} · ${releaseStateLabel(entry.state)}`;
 }

@@ -47,9 +47,13 @@ export interface InspectorModel {
   actualArtifact: Artifact | undefined;
   diffArtifact: Artifact | undefined;
   referenceApproval: { state: string; attestation: string | undefined } | undefined;
+  // Who approved the reference, who wrote it down, when, and what it was bound to; all as recorded.
+  approvalFacts: Fact[];
   // A reference nobody confirmed is a trust fact shown in warning colour.
   caution: string | undefined;
   verdict: string;
+  // The producing tool's own word, shown as "native" and never counted.
+  nativeOutcome: string | undefined;
   measurements: { total: number; passedCount: number; failing: MeasurementSample[]; passing: MeasurementSample[]; sentence: string | undefined } | undefined;
   diffSummary: { metric: string; value: number; ratio: number | undefined; threshold: Array<{ name: string; value: number }> } | undefined;
   facts: Fact[];
@@ -57,6 +61,10 @@ export interface InspectorModel {
   gaps: string[];
   limitations: string[];
   siblings: Sibling[];
+  // False when no comparison in the bundle records measurements: the provider measures pixels only.
+  bundleRecordsMeasurements: boolean;
+  // False when nothing in the bundle is split by implementation, so "no other implementation" says nothing.
+  implementationsRecorded: boolean;
   sequence: SequenceInfo;
 }
 
@@ -86,6 +94,7 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
   const measurements = comparison.measurements;
 
   const failing = (measurements?.samples ?? []).filter((sample) => !sample.passed).map(toSample);
+  const bundleRecordsMeasurements = projection.comparisons.some((entry) => entry.measurements !== undefined);
   return {
     comparison,
     row,
@@ -97,8 +106,10 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
     actualArtifact: comparison.actual,
     diffArtifact: comparison.diff?.artifact,
     referenceApproval: approval ? { state: approval.state, attestation: approval.attestation } : undefined,
+    approvalFacts: buildApprovalFacts(comparison, projection),
     caution: approvalCaution(approval),
     verdict: [comparison.verdict.status, comparison.verdict.severity, comparison.verdict.failureClass].filter(Boolean).join(' / '),
+    nativeOutcome: comparison.nativeOutcome,
     measurements: measurements
       ? {
           total: measurements.total,
@@ -118,9 +129,11 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
       : undefined,
     facts: buildFacts(comparison, projection),
     provenance: buildProvenance(comparison, projection, options.bundleHash),
-    gaps: buildGaps(comparison, row, unusable),
+    gaps: buildGaps(comparison, row, unusable, bundleRecordsMeasurements),
+    bundleRecordsMeasurements,
     limitations: comparison.limitations ?? [],
     siblings: siblingsOf(comparison, projection),
+    implementationsRecorded: projection.comparisons.some((entry) => entry.subject.adapter !== undefined) || projection.requirements.some((entry) => (entry.requiredImplementations ?? []).length > 0),
     sequence: buildSequence(options, rows)
   };
 }
@@ -140,6 +153,32 @@ function approvalCaution(approval: { state: string; attestation?: string | undef
   return undefined;
 }
 
+const ATTESTATION_TEXT: Record<string, string> = {
+  human: 'Approved by a person',
+  delegated: 'Approved by a person in conversation, recorded by an agent',
+  agent: 'Recorded by an agent, not confirmed by a person'
+};
+
+/** The reference approval as recorded: who, through whom, when, and whether it is bound to the design source it names. */
+function buildApprovalFacts(comparison: Comparison, projection: Projection): Fact[] {
+  const approval = comparison.reference?.approval;
+  if (!approval || approval.state === 'none') return [];
+  const facts: Fact[] = [];
+  if (approval.state === 'lapsed') facts.push({ label: 'Approval', value: 'No longer matches the current reference' });
+  if (approval.attestation) facts.push({ label: approval.state === 'lapsed' ? 'It was' : 'Approval', value: ATTESTATION_TEXT[approval.attestation] ?? approval.attestation });
+  if (approval.by) facts.push({ label: 'Approved by', value: approval.by });
+  if (approval.recordedBy) facts.push({ label: 'Recorded by', value: approval.recordedBy });
+  if (approval.at) facts.push({ label: 'Approved on', value: formatDate(approval.at) });
+  if (approval.boundTo) {
+    const snapshot = projection.snapshots.find((entry) => entry.id === comparison.snapshotId);
+    facts.push({ label: 'Bound to', value: approval.boundTo, mono: true });
+    if (snapshot?.sha256) facts.push({ label: 'Design source', value: snapshot.sha256 === approval.boundTo ? 'Same content as the design source this comparison read' : 'Differs from the design source this comparison read' });
+  }
+  for (const cause of approval.causes ?? []) facts.push({ label: 'Changed since', value: cause });
+  if (approval.note) facts.push({ label: 'Note', value: approval.note });
+  return facts;
+}
+
 function buildFacts(comparison: Comparison, projection: Projection): Fact[] {
   const run = projection.runs.find((entry) => entry.id === comparison.runId);
   const { subject } = comparison;
@@ -157,6 +196,7 @@ function buildProvenance(comparison: Comparison, projection: Projection, bundleH
   const facts: Fact[] = [];
   if (run) {
     facts.push({ label: 'Run', value: run.id, mono: true });
+    if (run.nativeValidity) facts.push({ label: 'Native validity (not trusted)', value: run.nativeValidity });
     for (const [key, value] of Object.entries(run.runner ?? {})) {
       if (typeof value === 'string' || typeof value === 'number') facts.push({ label: key, value: String(value) });
     }
@@ -185,7 +225,7 @@ function buildProvenance(comparison: Comparison, projection: Projection, bundleH
 const LAYER_TEXT: Record<string, string> = { 'not-run': 'did not run', unsupported: 'is unsupported', absent: 'was not recorded' };
 
 /** What this comparison did not prove, so a reader never mistakes a pass on one layer for all of them. */
-function buildGaps(comparison: Comparison, row: MatrixRow | undefined, unusable: boolean): string[] {
+function buildGaps(comparison: Comparison, row: MatrixRow | undefined, unusable: boolean, bundleRecordsMeasurements: boolean): string[] {
   const gaps: string[] = [];
   if (unusable) gaps.push('A file behind this comparison is unusable, so its result is unknown.');
   for (const layer of (row?.requirement.requiredProofs ?? []) as ProofLayer[]) {
@@ -197,7 +237,8 @@ function buildGaps(comparison: Comparison, row: MatrixRow | undefined, unusable:
   if (!comparison.reference) gaps.push('No reference image was recorded.');
   if (!comparison.actual) gaps.push('No implementation image was recorded.');
   if (!comparison.diff) gaps.push('No difference image or pixel metric was recorded.');
-  if (!comparison.measurements) gaps.push('Detailed measurements were not recorded.');
+  // Only a gap when this provider records measurements elsewhere; a pixel-only provider never had them.
+  if (!comparison.measurements && bundleRecordsMeasurements) gaps.push('Detailed measurements were not recorded.');
   if (approvalCaution(comparison.reference?.approval)) gaps.push('The reference approval is not confirmed by a person.');
   const requiredMissing = row ? missingImplementations(row.requirement, [...row.cells.values()].flatMap((cell) => cell.comparisons)) : [];
   if (requiredMissing.length > 0) gaps.push(`A required implementation was not compared, so the item is not proven: ${requiredMissing.join(', ')}.`);

@@ -10,6 +10,8 @@ export interface SnapshotUse {
 
 export interface ApprovalCounts {
   byPerson: number;
+  // A person's approval given in conversation and written down by an agent.
+  byPersonThroughAgent: number;
   byAgent: number;
   lapsed: number;
   none: number;
@@ -37,13 +39,14 @@ export function summarizeDesignReferences(projection: Projection): DesignReferen
     };
   });
 
-  const approvals: ApprovalCounts = { byPerson: 0, byAgent: 0, lapsed: 0, none: 0, noReference: 0 };
+  const approvals: ApprovalCounts = { byPerson: 0, byPersonThroughAgent: 0, byAgent: 0, lapsed: 0, none: 0, noReference: 0 };
   for (const comparison of projection.comparisons) {
     const approval = comparison.reference?.approval;
     if (!approval) approvals.noReference += 1;
     else if (approval.state === 'lapsed') approvals.lapsed += 1;
     else if (approval.state === 'none') approvals.none += 1;
     else if (approval.attestation === 'agent') approvals.byAgent += 1;
+    else if (approval.attestation === 'delegated') approvals.byPersonThroughAgent += 1;
     else approvals.byPerson += 1;
   }
   return { snapshots, approvals };

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { addDelegationIssues, attestationSchema } from './attestation.js';
 import type { Comparison, Verdict } from './comparison.js';
 import { idSchema, sha256Schema, timestampSchema } from './primitives.js';
 import type { Requirement } from './requirement.js';
@@ -36,11 +37,14 @@ export const decisionSchema = z
     kind: decisionKindSchema,
     // The bundle (build) the decision was made on. Used to say "carried forward from".
     bundleId: idSchema,
-    // A verified identity (the email claim of the signed-in person), never a value typed into a form.
+    // The person who decided: a verified identity (the email claim of the signed-in person), never a value
+    // typed into a form. For a delegated decision, the person who gave it in conversation.
     by: z.string().min(1),
     at: timestampSchema,
-    // Agents may stage a record; only a human decides. `agent` exists to import legacy records honestly.
-    attestation: z.enum(['human', 'agent']),
+    // A person decides, in the portal (`human`) or in conversation with an agent that records it (`delegated`,
+    // with `recordedBy` and the person's words in `comment`). `agent` exists only to import legacy records honestly.
+    attestation: attestationSchema,
+    recordedBy: z.string().min(1).optional(),
     scope: z
       .object({
         release: z.string().min(1).optional(),
@@ -69,8 +73,9 @@ export const decisionSchema = z
       context.addIssue({ code: 'custom', path: ['binding'], message: 'a decision must record what it is bound to' });
     }
     if (decision.attestation === 'agent' && decision.kind !== 'accept-reference') {
-      context.addIssue({ code: 'custom', path: ['attestation'], message: 'only a legacy reference approval may be agent-recorded; every other decision is human' });
+      context.addIssue({ code: 'custom', path: ['attestation'], message: 'only a legacy reference approval may be agent-recorded; every other decision is a person\'s' });
     }
+    if (decision.attestation === 'delegated') addDelegationIssues(decision, { path: 'comment', value: decision.comment }, context);
   });
 export type Decision = z.output<typeof decisionSchema>;
 

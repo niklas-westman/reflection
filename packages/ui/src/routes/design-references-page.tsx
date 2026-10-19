@@ -126,6 +126,8 @@ export function DesignReferencesPage(): ReactNode {
         <dl>
           <dt>Approved by a person</dt>
           <dd>{approvals.byPerson}</dd>
+          <dt>Approved by a person, recorded by an agent</dt>
+          <dd>{approvals.byPersonThroughAgent}</dd>
           <dt>Recorded by an agent</dt>
           <dd>{approvals.byAgent}</dd>
           <dt>Lapsed</dt>

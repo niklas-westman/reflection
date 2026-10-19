@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { idSchema, sha256Schema, timestampSchema } from './primitives.js';
 
-// Same shape the engine writes to report.inputs[].
+// Same shape the engine writes to report.inputs[]. A provider adds `composite`: one hash it computes itself over
+// a declared set of files (the key names the set, for example `app:src,public,index.html`), compared like any other.
 export const reportInputSchema = z.object({
   role: z.string().min(1),
   key: z.string().min(1),
-  hashKind: z.enum(['bytes', 'canonical-json']),
+  hashKind: z.enum(['bytes', 'canonical-json', 'composite']),
   sha256: sha256Schema.optional(),
   bytes: z.number().int().nonnegative().optional(),
   missing: z.boolean().optional()

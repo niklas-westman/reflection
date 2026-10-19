@@ -6,7 +6,7 @@ import { Pill } from '../components/atoms/pill';
 import { ValidityPill } from '../components/organisms/validity-pill';
 import { AppShell } from '../components/organisms/app-shell';
 import { prepareBundle } from '../model/bundle-state';
-import { formatDate } from '../model/format';
+import { formatDate, releaseStateLabel } from '../model/format';
 import { paths } from './paths';
 
 const Page = styled.main`
@@ -154,7 +154,7 @@ function BundleRow({ id, state, pending }: { id: string; state: OpenBundleResult
         <div style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{id}</div>
       </td>
       <td>
-        {manifest.release.release} · build {manifest.release.build} <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{manifest.release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
+        {manifest.release.release} · build {manifest.release.build} <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{releaseStateLabel(manifest.release.state)}</Pill>
       </td>
       <td>
         <ValidityPill validity={prepared.validity} />

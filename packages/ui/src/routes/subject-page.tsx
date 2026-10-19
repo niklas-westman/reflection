@@ -19,7 +19,7 @@ import { SubjectChanges } from '../components/organisms/subject-changes';
 import { useReleaseDiff, type ReleaseDiffState } from '../data/release-diff';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
 import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters } from '../model/filters';
-import { formatDate } from '../model/format';
+import { describeRun, describeRuns, formatDate, releaseStateLabel } from '../model/format';
 import { buildItemDetail, currentRow, dimensionChoices, orderedRows, pickRow, selectedColumns } from '../model/gallery-model';
 import { buildMatrix } from '../model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch, type SubjectView as SubjectViewState } from '../model/search';
@@ -143,11 +143,11 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
           {subject.kind === 'component' ? 'Component' : 'Page'}
           {subject.label !== subject.id ? ` · ${subject.id}` : ''}
         </span>
-        <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{manifest.release.state === 'released' ? 'Released' : 'Candidate'}</Pill>
+        <Pill $tone={manifest.release.state === 'released' ? 'pass' : 'gap'}>{releaseStateLabel(manifest.release.state)}</Pill>
       </Title>
       {subject.description ? <Description>{subject.description}</Description> : null}
       <Provenance aria-label="Provenance">
-        {describeSources(projection, subject).map((fact) => (
+        {describeSources(projection, subject, manifest.release.builtAt).map((fact) => (
           <div key={fact.label}>
             <dt>{fact.label}</dt>
             <dd>{fact.value}</dd>
@@ -240,7 +240,7 @@ interface Fact {
 }
 
 // Which design data the proof actually read, with its own date, and the run that produced it.
-function describeSources(projection: Projection, subject: SubjectGroup): Fact[] {
+function describeSources(projection: Projection, subject: SubjectGroup, builtAt: string): Fact[] {
   const snapshotIds = new Set(subject.comparisons.flatMap((comparison) => (comparison.snapshotId ? [comparison.snapshotId] : [])));
   const snapshots = projection.snapshots.filter((snapshot) => snapshotIds.has(snapshot.id));
   const runIds = new Set(subject.comparisons.flatMap((comparison) => (comparison.runId ? [comparison.runId] : [])));
@@ -251,9 +251,10 @@ function describeSources(projection: Projection, subject: SubjectGroup): Fact[] 
     facts.push({ label: 'Proof based on', value: snapshots.map((snapshot) => `${snapshot.label ?? snapshot.role}, captured ${formatDate(snapshot.capturedAt)}`).join('; ') });
   }
   if (runs.length === 1 && runs[0]) {
-    facts.push({ label: 'Run', value: `${formatDate(runs[0].finishedAt)} · ${runs[0].engine.name}${runs[0].engine.version ? ` ${runs[0].engine.version}` : ''}` });
+    facts.push({ label: 'Run', value: describeRun(runs[0], builtAt) });
+    if (runs[0].nativeValidity) facts.push({ label: 'Native validity', value: `${runs[0].nativeValidity} (the tool's own word, not trusted)` });
   } else if (runs.length > 1) {
-    facts.push({ label: 'Runs', value: `${runs.length} runs` });
+    facts.push({ label: 'Runs', value: describeRuns(runs, builtAt) });
   }
   return facts.length > 0 ? facts : [{ label: 'Proof based on', value: 'No source or run is recorded for this subject' }];
 }

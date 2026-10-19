@@ -43,7 +43,7 @@ describe('the release-first shell', () => {
     const release = sidebar().getByText('Docs site');
     expect(release).toBeInTheDocument();
     expect(sidebar().getByText(/2\.4\.0 · build 1/)).toBeInTheDocument();
-    expect(sidebar().getByText('Candidate')).toBeInTheDocument();
+    expect(sidebar().getByText('Release candidate')).toBeInTheDocument();
   });
 
   it('offers the other releases and moves to the one chosen', async () => {

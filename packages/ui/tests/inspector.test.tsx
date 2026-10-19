@@ -171,6 +171,35 @@ describe('the rail and the panels below', () => {
     expect(within(screen.getByLabelText('Measurements')).getByText('Detailed measurements: Not recorded.')).toBeInTheDocument();
   });
 
+  it('shows a provider\'s own words as native, the metric by its own name, and who recorded the approval', async () => {
+    const projection = makeInspectorProjection();
+    projection.comparisons[0]!.nativeOutcome = 'passed';
+    projection.comparisons[0]!.reference!.approval = { state: 'holds', attestation: 'delegated', by: 'Owner', recordedBy: 'Assistant', note: 'Approved in review.' };
+    await openInspector(failing, projection);
+
+    expect(within(screen.getByLabelText('Verification result')).getByText('passed')).toBeInTheDocument();
+    const measurements = within(screen.getByLabelText('Measurements'));
+    expect(measurements.getByText('Recorded metric')).toBeInTheDocument();
+    expect(measurements.queryByText('Pixel difference')).not.toBeInTheDocument();
+    const provenance = within(screen.getByLabelText('Reference provenance'));
+    expect(provenance.getByText('Approved by a person in conversation, recorded by an agent')).toBeInTheDocument();
+    expect(provenance.getByText('Assistant')).toBeInTheDocument();
+    expect(provenance.getByText('Approved in review.')).toBeInTheDocument();
+  });
+
+  it('says a pixel-only release with no implementations records neither, instead of listing them as missing', async () => {
+    const projection = makeInspectorProjection();
+    for (const comparison of projection.comparisons) {
+      delete comparison.measurements;
+      delete comparison.subject.adapter;
+    }
+    projection.comparisons = projection.comparisons.filter((comparison, index, all) => all.findIndex((other) => other.requirementId === comparison.requirementId) === index);
+    await openInspector(`${base}/${encodeURIComponent('btn.primary/react')}`, projection);
+
+    expect(within(screen.getByLabelText('Measurements')).getByText('This release records pixel comparisons only, no detailed measurements.')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Related')).getByText('This release records no implementations to relate.')).toBeInTheDocument();
+  });
+
   it('says the result is as recorded and that freshness cannot be rechecked offline', async () => {
     await openInspector();
 

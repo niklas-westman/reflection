@@ -473,10 +473,15 @@
                     "type": "string",
                     "enum": [
                       "human",
+                      "delegated",
                       "agent"
                     ]
                   },
                   "by": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "recordedBy": {
                     "type": "string",
                     "minLength": 1
                   },
@@ -867,7 +872,8 @@
                   "type": "string",
                   "enum": [
                     "bytes",
-                    "canonical-json"
+                    "canonical-json",
+                    "composite"
                   ]
                 },
                 "sha256": {
@@ -950,8 +956,13 @@
             "type": "string",
             "enum": [
               "human",
+              "delegated",
               "agent"
             ]
+          },
+          "recordedBy": {
+            "type": "string",
+            "minLength": 1
           },
           "scope": {
             "type": "object",

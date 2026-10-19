@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (the viewer is built and checked; `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 are published; the Sourcer adapter trial is waiting for feedback)
+Last updated: 2026-10-19 (Sourcer round 1 feedback received; fixing it for `reflection-projection` 0.2.0)
 
 ## How to keep this alive
 
@@ -42,11 +42,16 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Sourcer adapter trial, round 1: waiting for `sourcer-feedback-01.md`.** The Sourcer session builds the Login provider from `handoff/reflection-feedback/01-sourcer-brief.md` (in the Eagle's Eye folder) and writes its feedback there. When the file exists: read it, turn every finding into a fix in `reflection-projection`, its guide or the viewer, publish a new version (`docs/releasing.md`, the owner runs `npm publish`), and tell the Sourcer session what to retry. Nothing else is waiting on code here.
+- [ ] **Sourcer round 1 fixes** (feedback in `handoff/reflection-feedback/sourcer-feedback-01.md`; proposal accepted 2026-10-19). Then publish `reflection-projection` 0.2.0 and tell the Sourcer session what to retry.
+  - [x] Projection: `delegated` attestation (with `recordedBy` and the person's words, both required) on reference approvals and decisions; `composite` input `hashKind`; tests and JSON Schema. 142 tests.
+  - [x] Guide: approval fields (`by`, `at`, `note`, `boundTo`, `causes`, `recordedBy`), what `boundTo` and snapshot `sha256` hash, `composite` inputs, `enrolled` without the concept, native values.
+  - [x] Viewer: who and when for an approval (by, recorded by, at, note, bound hash); `delegated` counts as a person's approval and is labelled so; `nativeOutcome` and `nativeValidity` shown as native; measurement and implementation gaps only where the bundle has them; "Release candidate" from one helper; tall thumbnails fit; the metric row labelled by its own name; run age against the build. (Unknown counts were checked: they are never drawn as 0, nothing to fix.) 247 tests, mutation-checked; the thumbnail fix measured with a 393x1268 image (cropped at 1103px before, fits at 214px after).
+  - [~] Gates: tests, build and `a11y` (no findings) pass; `reflect` is pass-with-review with 12 visual differences from the intended label and layout changes, proposed by dry run. Left: the owner approves promoting the baselines.
+  - [ ] Release: prepare 0.2.0 (`docs/releasing.md`); the owner publishes.
 
 ## Next (in order)
 
-1. Sourcer round 2 (and 3 if needed): the retry after fixes.
+1. Sourcer round 2 (and 3 if needed): the retry after fixes. Sourcer switches its chat-given approvals to `delegated`; structural proof waits.
 2. Marwes round 1, with what Sourcer taught us (R1 `.figma` upgrade and the R2 provider live in the Marwes repository and need the owner's go-ahead and a session there; the Marwes provider should declare `requiredImplementations`).
 3. The release portal: publish step and `index.json` (R3), release list and ping (R4), decisions and notes backend (R5, R5b), retention (R6). Each outward-facing step needs the owner's go-ahead.
 4. Open viewer items: dark-theme baselines, Linux baselines and the gate in CI, a hands-on screen-reader pass by a person.
@@ -78,6 +83,10 @@ The briefs are untracked because they hold local paths. If a brief and this file
 | 2026-10-19 | An item is proven in all its **required implementations** only where the provider declares `requiredImplementations`; undeclared keeps the recorded-comparisons rule | readiness, viewer |
 | 2026-10-19 | Publish and test on adapters, starting with Sourcer: the owner publishes (`docs/releasing.md`), the adapter session builds a provider and writes feedback, Reflection fixes and republishes, two or three rounds. `reflection-projection` is published under the unscoped name; `reflection-ui` stays a private app that adapters run from this repository | adapter trials |
 | 2026-10-19 | The v5 design set is the accepted direction, not a literal spec; where a mock and `context.md` or the product rules disagree, the text and rules win | viewer |
+| 2026-10-19 | An agent may record an approval or decision a person gave in conversation, as `attestation: 'delegated'` (`by` the person, `recordedBy` the agent, the person's words in the note). It counts as the person's and is shown as recorded by the agent. `agent` stays for records with no person behind them. Replaces the 2026-10-18 rule that only a person decides | approvals, R5 |
+| 2026-10-19 | The release state reads "Release candidate", not "Candidate" (clashed with a Sourcer page name) | viewer |
+| 2026-10-19 | `run.inputs[]` gains `hashKind: 'composite'`: one provider-computed hash over a declared set of files | validity |
+| 2026-10-19 | Sourcer's email states stay under the Login page, separated by the `surface` dimension. Structural proof waits until after round 2 | Sourcer |
 
 Rules every screen follows: two units never one ratio (required items versus comparisons); unknown is not zero; a reference is never a result; invalid evidence shows unknown, not a result; no percentages that read as compliance; no green comfort while items are missing; status is glyph plus text plus colour; one banner at a time; read-only until the decisions work starts.
 
@@ -214,7 +223,7 @@ Viewer quality:
 
 **Adapter trials** (decided 2026-10-19: publish, try on one adapter, collect feedback, fix, repeat two or three times; Sourcer first, Marwes next). Feedback lives in the Eagle's Eye handoff folder `handoff/reflection-feedback/` (brief, template, one feedback file per round).
 - [x] Published 2026-10-19: `reflection-check` 0.7.0 and `reflection-projection` 0.1.0. Verified by installing both into an empty folder and running a provider flow (write a bundle, open it, count it).
-- [ ] Sourcer round 1: the Sourcer session builds the Login provider (step 1: show Sourcer in the viewer, no behaviour change) and writes `sourcer-feedback-01.md`.
+- [x] Sourcer round 1: the Sourcer session built the Login provider (30 required, 30 proven, counts match Sourcer's own; identical decision binding across two builds) and wrote `sourcer-feedback-01.md`.
 - [ ] Reflection session reads the feedback, fixes the toolkit or viewer, publishes a new version.
 - [ ] Sourcer round 2 (and 3 if needed).
 - [ ] Marwes round 1, with what Sourcer taught us.
@@ -232,7 +241,7 @@ Viewer quality:
 - [ ] R4: release list and the candidate-published ping (Discord or email). Needs go-ahead.
 - [ ] R5: decisions backend: Lambda, DynamoDB, JWT verification, approver list, CSRF, one Discord post per decision.
 - [ ] R5b: notes API and UI.
-- [ ] Decision UI: Approve, Require changes, carried-forward display (`evaluateDecision` already exists).
+- [ ] Decision UI: a clear Approve button, Require changes, carried-forward display (`evaluateDecision` already exists). Agents may also record a person's decision given in chat, as `delegated`.
 - [ ] R6: retention: two slots, archive summary on exit, content-addressed GC, dry-run pruning with an audit entry.
 - [ ] R7: AI analysis artifact: structured inputs only, labelled, never changes an outcome.
 
@@ -266,7 +275,7 @@ Viewer quality:
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (139 tests), then ui (228 tests, build)
+pnpm check:packages                            # projection (142 tests), then ui (247 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -277,6 +286,8 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: round 1 fixes built: `delegated` attestation and `composite` inputs in the projection, guide updated, viewer shows approval details, native values, "Release candidate", run age, the metric by name, and drops gaps a provider never had; tall thumbnails fit. Projection tests 139 to 142, UI tests 238 to 247.
+- 2026-10-19: Sourcer round 1 feedback read; fixes proposed and accepted; decisions on `delegated` attestation, "Release candidate", composite inputs, email states.
 - 2026-10-19: `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 published and verified from the registry.
 - 2026-10-19: pushed `main`; prepared `reflection-check` 0.7.0 and `reflection-projection` 0.1.0 for the owner to publish; added `docs/releasing.md`; brief for the Sourcer adapter trial.
 - 2026-10-19: accessibility pass: audit script, fixes (decorative glyphs, label, button contrast, page titles, focus after navigation, live regions, group roles), dark variants of every route in the gate; the two comparison baselines were updated for the new breadcrumb (intended, approved). UI tests 228 to 238.
