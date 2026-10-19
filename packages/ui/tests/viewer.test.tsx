@@ -5,7 +5,8 @@ import { collectArtifactRefs } from 'reflection-projection';
 import { makeCatalog, makeProjection, overwrite } from './helpers/test-bundles';
 import { renderApp } from './helpers/render-app';
 
-const subjectPath = '/bundles/docs-site/pages/pricing';
+// These tests are about the full inventory, so they open the "All required items" view.
+const subjectPath = '/bundles/docs-site/pages/pricing?view=items';
 
 // A number from one of the summary panels, by panel and label.
 function stat(panel: 'Required items' | 'Comparisons', label: string): string {
@@ -99,7 +100,7 @@ describe('the subject page', () => {
   });
 
   it('filters from the address and keeps the totals visible', async () => {
-    await openSubject(`${subjectPath}?q=phone`);
+    await openSubject(`${subjectPath}&q=phone`);
 
     expect(screen.getByText('Showing 1 of 6 items')).toBeInTheDocument();
     expect(screen.getByText('hero.phone')).toBeInTheDocument();
@@ -108,7 +109,7 @@ describe('the subject page', () => {
   });
 
   it('removes an outcome filter with its chip', async () => {
-    await openSubject(`${subjectPath}?outcome=failed`);
+    await openSubject(`${subjectPath}&outcome=failed`);
     expect(screen.queryByText('hero.desktop')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove filter Failed' }));
@@ -117,7 +118,7 @@ describe('the subject page', () => {
   });
 
   it('explains an empty result and offers to clear the filters', async () => {
-    await openSubject(`${subjectPath}?q=nothing-matches-this`);
+    await openSubject(`${subjectPath}&q=nothing-matches-this`);
 
     expect(screen.getByText('No items match these filters.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
@@ -125,7 +126,7 @@ describe('the subject page', () => {
   });
 
   it('shows only a glyph per cell in status-only density, still named for assistive technology', async () => {
-    await openSubject(`${subjectPath}?density=status-only`);
+    await openSubject(`${subjectPath}&density=status-only`);
 
     const cell = screen.getByRole('link', { name: 'hero.phone, chrome: Failed' });
     // The only text is the glyph's own name; there is no visible label beside it.

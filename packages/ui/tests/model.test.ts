@@ -4,7 +4,7 @@ import { prepareBundle } from '../src/model/bundle-state';
 import { comparisonOutcome, countComparisons } from '../src/model/comparison-outcome';
 import { availableDimensions, filterMatrix, NO_FILTERS } from '../src/model/filters';
 import { buildMatrix } from '../src/model/matrix-model';
-import { parseSubjectSearch, toSubjectSearch } from '../src/model/search';
+import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch } from '../src/model/search';
 import { groupBySubject } from '../src/model/subject-model';
 import { makeProjection } from './helpers/test-bundles';
 
@@ -139,15 +139,24 @@ describe('filters', () => {
 
 describe('the address of a view', () => {
   it('round-trips and omits defaults', () => {
-    const view = { filters: { search: 'hero', outcomes: ['failed' as const], dimensions: { viewport: ['phone'] } }, density: 'compact' as const };
+    const view = {
+      mode: 'items' as const,
+      item: 'hero.phone',
+      adapters: ['chrome'],
+      filters: { search: 'hero', outcomes: ['failed' as const], dimensions: { viewport: ['phone'] } },
+      density: 'compact' as const
+    };
 
-    expect(toSubjectSearch(view)).toEqual({ q: 'hero', outcome: 'failed', dims: { viewport: ['phone'] }, density: 'compact' });
+    expect(toSubjectSearch(view)).toEqual({ view: 'items', item: 'hero.phone', adapters: 'chrome', q: 'hero', outcome: 'failed', dims: { viewport: ['phone'] }, density: 'compact' });
     expect(parseSubjectSearch(toSubjectSearch(view))).toEqual(view);
-    expect(toSubjectSearch({ filters: NO_FILTERS, density: 'comfortable' })).toEqual({});
+    expect(toSubjectSearch(DEFAULT_SUBJECT_VIEW)).toEqual({});
   });
 
   it('falls back to defaults for a hand-edited link', () => {
-    expect(parseSubjectSearch({ density: 'huge', outcome: 'failed,bogus', dims: 'x', q: 7 })).toEqual({ filters: { search: '', outcomes: ['failed'], dimensions: {} }, density: 'comfortable' });
+    expect(parseSubjectSearch({ density: 'huge', view: 'sideways', outcome: 'failed,bogus', dims: 'x', q: 7, item: '', adapters: '' })).toEqual({
+      ...DEFAULT_SUBJECT_VIEW,
+      filters: { search: '', outcomes: ['failed'], dimensions: {} }
+    });
   });
 });
 

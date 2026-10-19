@@ -41,6 +41,8 @@ One sidebar for every route in a release: the release picker (project, release, 
 
 A subject opened under the wrong section is redirected to its own.
 
+**A subject** has views: the visual gallery (default), all required items, and Changes (disabled until it exists). For a component the gallery shows one required item: dimension selectors pick it (a change keeps that value and as many others as an existing item allows), then the reference and one card per chosen implementation, verification details and a light pairwise comparison. For a page it shows the recorded page checks, failed and unproven first, with a link to the full inventory. The item, the implementations and the filters are in the URL.
+
 **The release overview** shows the release identity and every design source with its own date, the two summary panels, a "Needs attention" card derived from the recorded data (each item opens its subjects filtered to the right outcome group), a "Since <release>" card only when the bundle has a delta against a previous release, and one card per component or page with a single coverage line in required items. It shows no percentages and no comparison totals on cards.
 
 ## How it behaves
@@ -70,6 +72,7 @@ tests/         model tests and viewer tests that read real bundles written by th
 
 - The bundle list reads each bundle's entry files only, so it does not show a tampered image; open the bundle to see that.
 - The full background verification reads every file once. That is cheap locally and for demo bundles; a very large bundle may want lazy or opt-in verification.
+- An item compared in only some implementations can read Proven; the gallery says which were not compared. Whether an implementation can be mandatory is an open decision (see `PLAN.md`).
 - The matrix renders all rows of an open group without virtualization. Measure before adding it.
 - Object URLs for loaded images are not revoked; fine for a viewing session.
 - Summary-only (archived) releases and the release overview are not built yet.

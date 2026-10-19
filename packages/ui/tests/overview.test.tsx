@@ -121,9 +121,9 @@ describe('the release overview', () => {
     expect(attention().getByText('1 required item needs a design selection')).toBeInTheDocument();
     expect(attention().getByText('2 required items not proven')).toBeInTheDocument();
     const failureItem = attention().getByText('1 comparison failure').closest('li') as HTMLElement;
-    expect(within(failureItem).getByRole('link', { name: 'pricing' })).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing?outcome=failed');
+    expect(within(failureItem).getByRole('link', { name: 'pricing' })).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing?view=items&outcome=failed');
     const designItem = attention().getByText('1 required item needs a design selection').closest('li') as HTMLElement;
-    expect(within(designItem).getByRole('link', { name: 'pricing' })).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing?outcome=missing');
+    expect(within(designItem).getByRole('link', { name: 'pricing' })).toHaveAttribute('href', '#/bundles/docs-site/pages/pricing?view=items&outcome=missing');
   });
 
   it('warns about references a person has not confirmed', async () => {

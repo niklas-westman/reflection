@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react';
 import { useBundleView } from '../../data/bundle-context';
+import type { SubjectGroup } from '../../model/subject-model';
 import { Banner } from '../molecules/banner';
 
-/** At most one banner, and only when something needs attention. */
-export function EvidenceNotice(): ReactNode {
+/**
+ * At most one banner, and only when something needs attention. On a subject page it can also say that the
+ * reference approvals behind that subject were not confirmed by a person.
+ */
+export function EvidenceNotice({ subject }: { subject?: SubjectGroup }): ReactNode {
   const { prepared } = useBundleView();
   if (prepared.validity.state === 'invalid') {
     const shown = prepared.problems.slice(0, 3);
@@ -25,6 +29,16 @@ export function EvidenceNotice(): ReactNode {
     return (
       <Banner tone="gap" title="Only checks that ran are listed">
         <p style={{ margin: '0.25rem 0 0' }}>This provider cannot declare required items, so anything that did not run is not visible here and the counts are a lower bound.</p>
+      </Banner>
+    );
+  }
+  const unconfirmed = subject ? subject.comparisons.filter((comparison) => comparison.reference?.approval.attestation === 'agent' || comparison.reference?.approval.state === 'lapsed').length : 0;
+  if (unconfirmed > 0) {
+    return (
+      <Banner tone="gap" title="Reference approval is not confirmed by a person">
+        <p style={{ margin: '0.25rem 0 0' }}>
+          {unconfirmed} {unconfirmed === 1 ? 'reference was' : 'references were'} approved by an agent or no longer match the approved version. A passing comparison does not grant that approval.
+        </p>
       </Banner>
     );
   }

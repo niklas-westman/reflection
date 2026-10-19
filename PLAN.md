@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (v5 steps 1 and 2 done)
+Last updated: 2026-10-19 (v5 steps 1 to 3 done)
 
 ## How to keep this alive
 
@@ -42,13 +42,12 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **v5 step 3: family and page overview** (see "Viewer" below). Not started.
+- [ ] **v5 step 4: comparison inspector** (see "Viewer" below). Not started. Cell and card links already land on a placeholder comparison route.
 
 ## Next (in order)
 
-1. v5 step 4: comparison inspector.
-2. v5 step 5: Changes screen (needs three decisions, see "Open questions").
-3. v5 step 6: release and history picker, Design references, error states.
+1. v5 step 5: Changes screen (needs three decisions, see "Open questions").
+2. v5 step 6: release and history picker, Design references, error states.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -102,6 +101,7 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [ ] Optional per-change note supplied by a provider.
 - [ ] Approver-list configuration schema (N3).
 - [ ] Discord message formatters for Approve and Require changes (N3).
+- [ ] Decide whether a requirement can declare **required implementations**. Today only recorded comparisons count, so an item compared in one of three implementations can read Proven (the gallery says "Not compared in: ..." beside it). The v5 text says a missing mandatory implementation must block Proven.
 - [ ] Decide the package names and npm scope for `reflection-projection` and `reflection-ui`.
 
 ### 3. Bundles (`packages/projection`)
@@ -144,13 +144,15 @@ Built so far:
 - [x] "Designer review" card dropped: it was process copy, and the data it would need (changed references) does not exist until `diffProjections`.
 - [x] 73 tests, mutation-checked; browser check light and dark; demo `docs-site` bundle carries an illustrative delta.
 
-**Step 3: family and page overview**
-- [ ] Dimension selectors that pick one required item (generic over subject dimensions).
-- [ ] Reference card plus data-driven adapter cards (1, 2, 3 or N; no fabricated adapters; horizontal scroll beyond a minimum width).
-- [ ] Verification details for the selected item (recorded threshold, viewports, last captured).
-- [ ] Inline compare preview leading to the inspector.
-- [ ] Page overview with recorded page checks and a stated selection rule (failed and not proven first, then a few, always "View all N").
-- [ ] Views: Visual gallery, All required items, Changes.
+**Step 3: family and page overview** (done 2026-10-19)
+- [x] Dimension selectors that pick one required item, generic over subject dimensions; a change keeps that value and as many others as an existing item allows, so the view always shows a real item. A direct "Required item" picker too.
+- [x] Reference card plus one card per chosen implementation, from the data: 1, 2, 3 or N, no invented cards, never narrower than a readable preview (the row scrolls sideways). An implementation with no comparison shows "Not compared".
+- [x] Implementation chooser (never fewer than one); item and implementations are in the URL.
+- [x] Verification details: status, viewports, recorded threshold (a fact, not a control), run and reference dates, the item's own comparison count, required proofs by implementation, and which implementations were not compared.
+- [x] Inline comparison: reference against one implementation, side by side or overlay with an opacity control; leads to the full comparison.
+- [x] Page overview: recorded page checks with a stated selection rule (a check needs a recorded comparison; failed and not proven first; at least three, at most six; "View all N required items"); each implementation's result shown separately; one banner when reference approvals are not confirmed by a person.
+- [x] Views: Visual gallery, All required items; Changes is disabled until step 5. Attention links open the inventory already filtered.
+- [x] 119 tests, mutation-checked; browser check with interaction (dimension change, implementation toggle, open comparison) in light and dark, no console errors.
 
 **Step 4: comparison inspector**
 - [ ] Full-width route with a stable URL; previous and next through the current filter.
@@ -228,13 +230,14 @@ Viewer quality:
 - [ ] **v5, "Before and After"**: proposed to mean the reference image from the previous retained bundle.
 - [ ] **v5, "Compare against"**: proposed to offer only the previous release (retention keeps two).
 - [ ] **v5, no percentages anywhere**: proposed.
+- [ ] **Mandatory implementations**: should an item compared in only some implementations be Proven? (Needs a provider rule or a field on the requirement.)
 - [ ] **Verification cost**: full background verification reads every file; is that acceptable for the largest Marwes bundles, or opt-in?
 
 ## Verification baseline (all passing on 2026-10-19)
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (109 tests), then ui (73 tests, build)
+pnpm check:packages                            # projection (109 tests), then ui (119 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -245,6 +248,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: v5 step 3: component gallery (dimension selectors, reference and implementation cards, verification details, inline compare), page overview with recorded checks, view switcher, subject banner for unconfirmed reference approvals. UI tests 73 to 119.
 - 2026-10-19: v5 step 2: designed Release Overview (header facts, panels, needs-attention and changes-since cards, subject cards with view-all). UI tests 57 to 73.
 - 2026-10-19: v5 step 1: release-first shell and routes (sidebar, release picker, evidence state on every route, overview and changes stubs, section routes). UI tests 41 to 57.
 - 2026-10-19: plan created in the repository; v5 design set evaluated and added as the viewer's build order.

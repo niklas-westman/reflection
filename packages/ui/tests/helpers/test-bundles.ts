@@ -93,7 +93,7 @@ export async function makeCatalog(bundles: TestBundle[]): Promise<BundleCatalog>
 
   for (const bundle of bundles) {
     const files: BundleFileInput[] = [...new Set(collectArtifactRefs(bundle.projection).map((artifact) => artifact.path))].map((path) => ({ path, kind: 'artifact', content: png(path) }));
-    await writeBundle({ directory: join(root, bundle.id), projection: bundle.projection, release: { ...release, ...bundle.release }, generator: { name: 'ui-tests' }, files });
+    await writeBundle({ directory: join(root, bundle.id), projection: bundle.projection, release: { ...release, snapshotIds: bundle.projection.snapshots.map((snapshot) => snapshot.id), ...bundle.release }, generator: { name: 'ui-tests' }, files });
     await bundle.damage?.(join(root, bundle.id));
   }
 
@@ -105,4 +105,69 @@ export async function makeCatalog(bundles: TestBundle[]): Promise<BundleCatalog>
 
 export async function overwrite(directory: string, path: string, content: string | Uint8Array): Promise<void> {
   await writeFile(join(directory, path), content);
+}
+
+interface ComponentCase {
+  variant: string;
+  state: string;
+  mode: string;
+  // Outcome per implementation; an implementation left out was not compared.
+  results: Record<string, 'passed' | 'failed' | 'not-run'>;
+  design?: 'missing';
+}
+
+const BUTTON_CASES: ComponentCase[] = [
+  { variant: 'primary', state: 'default', mode: 'light', results: { react: 'passed', vue: 'passed', svelte: 'passed' } },
+  { variant: 'primary', state: 'hover', mode: 'light', results: { react: 'failed', vue: 'passed', svelte: 'passed' } },
+  { variant: 'secondary', state: 'default', mode: 'light', results: { react: 'passed' } },
+  { variant: 'secondary', state: 'hover', mode: 'light', results: { react: 'passed', vue: 'not-run' } },
+  { variant: 'primary', state: 'default', mode: 'dark', results: {}, design: 'missing' }
+];
+
+/**
+ * One component family with three implementations and a deliberately incomplete grid: not every combination of
+ * variant, state and mode exists, one item fails in one implementation, one has no design, and some
+ * implementations were never compared.
+ */
+export function makeComponentProjection(): Projection {
+  const requirements = BUTTON_CASES.map((entry) => {
+    const id = `button.${entry.variant}.${entry.state}.${entry.mode}`;
+    return {
+      id,
+      label: `${entry.variant} ${entry.state} ${entry.mode}`,
+      subject: { kind: 'component', id: 'button', variant: entry.variant, state: entry.state, mode: entry.mode },
+      requiredProofs: ['structural', 'visual'],
+      enrolled: entry.design !== 'missing',
+      ...(entry.design === 'missing' ? { design: { availability: 'missing', reason: 'No dark design exists yet' } } : {})
+    };
+  });
+  const comparisons = BUTTON_CASES.flatMap((entry) =>
+    Object.entries(entry.results).map(([adapter, outcome]) => {
+      const requirementId = `button.${entry.variant}.${entry.state}.${entry.mode}`;
+      const proof = outcome === 'not-run' ? {} : { structural: outcome, visual: outcome };
+      return {
+        id: `${requirementId}/${adapter}`,
+        requirementId,
+        subject: { kind: 'component', id: 'button', variant: entry.variant, state: entry.state, mode: entry.mode, adapter, viewport: '1440x900' },
+        snapshotId: 'design-sync',
+        runId: 'run-1',
+        reference: { artifact: { role: 'reference', path: `artifacts/${requirementId}-reference.png` }, baselineCreatedAt: '2026-10-12T09:00:00.000Z', approval: { state: 'holds', attestation: 'human', by: 'reviewer@example.com', at: '2026-10-14T09:00:00.000Z' } },
+        actual: { role: 'actual', path: `artifacts/${requirementId}-${adapter}.png` },
+        ...(outcome === 'failed' ? { diff: { metric: { name: 'diff-pixels', value: 12 }, threshold: { ratio: 0.01 } } } : {}),
+        proof,
+        verdict: { status: outcome === 'passed' ? 'pass' : outcome === 'failed' ? 'fail' : 'skipped', severity: 'blocking' }
+      };
+    })
+  );
+  return projectionSchema.parse({
+    schemaVersion: 1,
+    project: { id: 'marwes-like', name: 'Components' },
+    provider: { name: 'test-provider', readinessConcepts: { needsDesign: true, notEnrolled: true } },
+    generatedAt: '2026-10-18T09:00:00.000Z',
+    inventory: 'full',
+    snapshots: [{ id: 'design-sync', kind: 'design-file', role: 'design-source', label: 'Design file', capturedAt: '2026-10-14T08:00:00.000Z' }],
+    runs: [{ id: 'run-1', finishedAt: '2026-10-16T08:00:00.000Z', engine: { name: 'reflection-check', version: '0.6.0' } }],
+    requirements,
+    comparisons
+  });
 }

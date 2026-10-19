@@ -8,12 +8,17 @@ import { Spacer } from '../components/atoms/spacer';
 import { CoverageBar } from '../components/molecules/coverage-bar';
 import { FilterBar, type Density } from '../components/molecules/filter-bar';
 import { SummaryGroups } from '../components/molecules/summary-groups';
+import { ItemGallery } from '../components/organisms/item-gallery';
 import { MatrixTable } from '../components/organisms/matrix-table';
+import { PageChecks } from '../components/organisms/page-checks';
+import { Banner } from '../components/molecules/banner';
+import { ViewSwitcher } from '../components/molecules/view-switcher';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
 import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters } from '../model/filters';
 import { formatDate } from '../model/format';
+import { buildItemDetail, currentRow, dimensionChoices, orderedRows, pickRow, selectedColumns } from '../model/gallery-model';
 import { buildMatrix } from '../model/matrix-model';
-import { parseSubjectSearch, toSubjectSearch } from '../model/search';
+import { parseSubjectSearch, toSubjectSearch, type SubjectView as SubjectViewState } from '../model/search';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
 import { isSection, paths, sectionOf } from './paths';
 
@@ -99,8 +104,25 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
   const total = subject.requirements.length;
   const filtersActive = hasActiveFilters(view.filters);
 
-  const update = (next: { filters?: MatrixFilters; density?: Density }): void => {
-    void navigate({ to: '.', replace: true, search: toSubjectSearch({ filters: next.filters ?? view.filters, density: next.density ?? view.density }) as never });
+  const update = (next: Partial<SubjectViewState>): void => {
+    void navigate({ to: '.', replace: true, search: toSubjectSearch({ ...view, ...next }) as never });
+  };
+
+  const rows = useMemo(() => orderedRows(matrix), [matrix]);
+  const choices = useMemo(() => dimensionChoices(rows), [rows]);
+  const row = currentRow(rows, view.item);
+  const chosenColumns = selectedColumns(matrix.columns, view.adapters);
+  const detail = useMemo(
+    () => (row ? buildItemDetail({ row, projection, columns: chosenColumns, unusableComparisonIds: prepared.unusableComparisonIds }) : undefined),
+    // chosenColumns is derived from the two values below, so they are the real inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [row, projection, matrix.columns, view.adapters, prepared]
+  );
+
+  const pickDimension = (name: string, value: string): void => {
+    if (!row) return;
+    const next = pickRow(rows, { ...row.dimensions, [name]: value }, name);
+    if (next) update({ item: next.requirement.id });
   };
 
   return (
@@ -119,36 +141,63 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
         ))}
       </Provenance>
       <Spacer />
-      <EvidenceNotice />
+      <EvidenceNotice subject={subject} />
       <Spacer $size="sm" />
       <SummaryGroups items={subject.summary} comparisons={subject.comparisonCounts} lowerBound={projection.inventory === 'executed-only'} />
       <Spacer $size="sm" />
       <CoverageBar summary={subject.summary} />
       <Spacer />
-      <FilterBar
-        filters={view.filters}
-        onFiltersChange={(filters) => update({ filters })}
-        dimensions={dimensions}
-        density={view.density}
-        onDensityChange={(density) => update({ density })}
-        shown={shown}
-        total={total}
-      />
+      <ViewSwitcher mode={view.mode} onChange={(mode) => update({ mode })} />
       <Spacer $size="sm" />
       {total === 0 ? (
         <Empty>This subject has comparisons but no required items. They are listed in the data but not counted against anything.</Empty>
-      ) : shown === 0 ? (
-        <Empty role="status">
-          <strong>No items match these filters.</strong>
-          <p>
-            All {total} items are still counted above.{' '}
-            <button type="button" onClick={() => update({ filters: { search: '', outcomes: [], dimensions: {} } })}>
-              Clear filters
-            </button>
-          </p>
-        </Empty>
+      ) : view.mode === 'gallery' && detail ? (
+        subject.kind === 'component' ? (
+          <ItemGallery
+            bundleId={bundleId}
+            subject={{ id: subject.id, kind: subject.kind }}
+            rows={rows}
+            choices={choices}
+            columns={matrix.columns}
+            chosenColumns={chosenColumns}
+            detail={detail}
+            onPickDimension={pickDimension}
+            onPickItem={(item) => update({ item })}
+            onPickAdapters={(ids) => update({ adapters: ids.length === 0 ? undefined : ids })}
+          />
+        ) : (
+          <PageChecks bundleId={bundleId} subject={{ id: subject.id, kind: subject.kind }} rows={rows} columns={matrix.columns} onShowAll={() => update({ mode: 'items' })} />
+        )
+      ) : view.mode === 'changes' ? (
+        <Banner tone="idle" title="Changes are not available yet">
+          <p style={{ margin: '0.25rem 0 0' }}>Changes compare this subject with the previous release. That comparison is not built yet.</p>
+        </Banner>
       ) : (
-        <MatrixTable matrix={filtered} comparisonHref={(comparisonId) => paths.comparison(bundleId, subject.kind, subject.id, comparisonId)} density={view.density} filtersActive={filtersActive} />
+        <>
+          <FilterBar
+            filters={view.filters}
+            onFiltersChange={(filters) => update({ filters })}
+            dimensions={dimensions}
+            density={view.density}
+            onDensityChange={(density) => update({ density })}
+            shown={shown}
+            total={total}
+          />
+          <Spacer $size="sm" />
+          {shown === 0 ? (
+            <Empty role="status">
+              <strong>No items match these filters.</strong>
+              <p>
+                All {total} items are still counted above.{' '}
+                <button type="button" onClick={() => update({ filters: { search: '', outcomes: [], dimensions: {} } })}>
+                  Clear filters
+                </button>
+              </p>
+            </Empty>
+          ) : (
+            <MatrixTable matrix={filtered} comparisonHref={(comparisonId) => paths.comparison(bundleId, subject.kind, subject.id, comparisonId)} density={view.density} filtersActive={filtersActive} />
+          )}
+        </>
       )}
     </>
   );

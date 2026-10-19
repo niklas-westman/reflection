@@ -2,7 +2,8 @@ import { useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { joinDimensions } from '../../model/format';
 import type { Matrix, MatrixCell, MatrixColumn, MatrixGroup, MatrixRow, ReferenceSummary } from '../../model/matrix-model';
-import { StatusGlyph, type GlyphKind } from '../atoms/status-glyph';
+import { cellDisplay } from '../atoms/outcome-status';
+import { StatusGlyph } from '../atoms/status-glyph';
 import { Thumbnail } from '../atoms/thumbnail';
 import { OUTCOME_TITLES, type Density } from '../molecules/filter-bar';
 
@@ -179,14 +180,6 @@ const Dashed = styled.span`
   padding: 0.125rem ${({ theme }) => theme.space.xs};
 `;
 
-const CELL_TEXT: Record<MatrixCell['outcome'] | 'unusable', { glyph: GlyphKind; text: string }> = {
-  passed: { glyph: 'passed', text: 'Passed' },
-  failed: { glyph: 'failed', text: 'Failed' },
-  'not-run': { glyph: 'not-run', text: 'Not run' },
-  none: { glyph: 'not-run', text: 'Not compared' },
-  unusable: { glyph: 'unknown', text: 'Unknown: evidence unusable' }
-};
-
 export interface MatrixTableProps {
   matrix: Matrix;
   comparisonHref: (comparisonId: string) => string;
@@ -343,8 +336,7 @@ function describeApproval(reference: ReferenceSummary): string {
 }
 
 function ResultCell({ cell, row, column, comparisonHref, density }: { cell: MatrixCell; row: MatrixRow; column: MatrixColumn; comparisonHref: (comparisonId: string) => string; density: Density }): ReactNode {
-  const key = cell.unusable ? 'unusable' : cell.outcome;
-  const { glyph, text } = CELL_TEXT[key];
+  const { glyph, text } = cellDisplay(cell.outcome, cell.unusable);
   const more = cell.comparisons.length > 1 ? ` (${cell.comparisons.length} comparisons)` : '';
 
   if (!cell.primary) {
