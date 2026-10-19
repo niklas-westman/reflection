@@ -29,6 +29,9 @@ jobs:
       - name: Build Reflection
         run: corepack pnpm build
 
+      - name: Check the workspace packages
+        run: corepack pnpm check:packages
+
       - name: Run Reflection in CI mode
         # Equivalent package command: reflection run --ci --mode design
         run: node dist/cli.js run --ci --mode design

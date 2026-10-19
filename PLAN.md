@@ -89,7 +89,8 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [x] Export `hashReportInputs` and `computeResultHash` from the package entry. (`b9cc37c`)
 - [x] Docs for the additions in `docs/configuration.md` and `docs/upgrading.md`.
 - [ ] Export `listCaseBaselineFiles` from the engine (only if a consumer needs it).
-- [ ] Release `reflection-check` as a minor version for E0 (bump, changelog, publish). Needs go-ahead.
+- [~] Release `reflection-check` 0.7.0 for E0. Prepared 2026-10-19 (version bumped, upgrade notes named, package and install smoke pass, input hashing moved after the setup hooks); not published. Needs `npm login` by the owner and a go-ahead.
+- [ ] Run ids have one-second resolution, so two runs into the same report directory within a second would collide. Rare; make ids unique when a provider runs several configs in parallel.
 - [ ] Push the local commits. Needs go-ahead.
 
 ### 2. Projection contract (`packages/projection`, private `reflection-projection`)

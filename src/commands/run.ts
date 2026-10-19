@@ -97,26 +97,11 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     throw error;
   }
   const configDir = options.config ? dirname(resolve(options.config)) : process.cwd();
-  let inputs: Awaited<ReturnType<typeof hashReportInputs>> | undefined;
-  if (config) {
-    try {
-      inputs = await hashReportInputs({
-        configDir,
-        ...(options.config ? { configFile: resolve(options.config) } : {}),
-        declared: config.inputs,
-        baselineFiles: listCaseBaselineFiles(config, mode)
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(message);
-      throw new CommanderError(ExitCode.ToolOrConfigError, 'reflection.inputs', message);
-    }
-  }
-
   const store = await createArtifactStore({ rootDir, runId });
   const checks: CheckResult[] = [];
   let server: ManagedServer | undefined;
   let browserIdentity: { name: string; version: string } | undefined;
+  let inputs: Awaited<ReturnType<typeof hashReportInputs>> | undefined;
 
   try {
     const browserConfig = config?.contracts.browser;
@@ -130,6 +115,23 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
 
     if (config?.lifecycle.beforeRun && config.lifecycle.beforeRun.length > 0) {
       checks.push(...(await runBeforeRunHooks({ hooks: config.lifecycle.beforeRun, store, cwd: process.cwd() })));
+    }
+
+    // Inputs are hashed after the setup hooks, because a hook may generate a file the run depends on (a design
+    // snapshot, a fixture), and before any contract runs, so the hashes are what the contracts will read.
+    if (config) {
+      try {
+        inputs = await hashReportInputs({
+          configDir,
+          ...(options.config ? { configFile: resolve(options.config) } : {}),
+          declared: config.inputs,
+          baselineFiles: listCaseBaselineFiles(config, mode)
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(message);
+        throw new CommanderError(ExitCode.ToolOrConfigError, 'reflection.inputs', message);
+      }
     }
 
     const hasBlockingSetupFailure = checks.some(

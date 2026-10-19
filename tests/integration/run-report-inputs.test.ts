@@ -41,7 +41,7 @@ interface Project {
   baselinePath: string;
 }
 
-async function createProject(): Promise<Project> {
+async function createProject(options: { generatedByHook?: boolean } = {}): Promise<Project> {
   const root = await mkdtemp(join(tmpdir(), 'reflection-run-inputs-'));
   const port = await getFreePort();
   await mkdir(join(root, 'baselines'), { recursive: true });
@@ -63,7 +63,10 @@ async function createProject(): Promise<Project> {
   const configPath = join(root, 'reflection.config.mjs');
   const config = {
     project: 'run-inputs-fixture',
-    inputs: [{ role: 'source', path: 'tokens.json', canonical: 'json' }],
+    inputs: [{ role: 'source', path: 'tokens.json', canonical: 'json' }, ...(options.generatedByHook ? [{ role: 'generated', path: 'generated.json', canonical: 'json' }] : [])],
+    ...(options.generatedByHook
+      ? { lifecycle: { beforeRun: [{ id: 'generate', command: `node -e "require('fs').writeFileSync('generated.json', JSON.stringify({ generated: true }))"`, cwd: root, timeoutMs: 20_000, blocking: true }] } }
+      : {}),
     meta: { provider: 'fixture' },
     contracts: {
       component: {
@@ -112,10 +115,23 @@ async function runVisual(project: Project, reportName: string): Promise<{ report
 }
 
 describe('run report inputs, ref, browser identity and result hash', () => {
+  it('hashes an input that a setup hook generates, as the hook left it', async () => {
+    const project = await createProject({ generatedByHook: true });
+
+    const run = await runVisual(project, 'generated');
+
+    const generated = run.report.inputs?.find((input) => input.role === 'generated');
+    expect(generated).toMatchObject({ key: 'generated.json', hashKind: 'canonical-json' });
+    expect(generated?.missing).not.toBe(true);
+    expect(generated?.sha256).toMatch(/^[a-f0-9]{64}$/);
+  }, 60_000);
+
   it('records what the run depended on and a verdict hash that is stable across identical runs', async () => {
     const project = await createProject();
 
     const first = await runVisual(project, 'first');
+    // Run ids have one-second resolution, so wait out the second to get two different ids.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
     const second = await runVisual(project, 'second');
 
     expect(first.report.status).toBe('pass');

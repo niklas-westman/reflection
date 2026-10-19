@@ -1,10 +1,11 @@
 # Upgrading
 
-## 0.6.x to the next release (unreleased)
+## 0.6.x to 0.7.0
 
 Additive. No existing config or report changes meaning.
 
 - **`report.inputs[]`, `report.meta` and `report.resultHash`** are new optional report fields (schema version stays 2). Reports from earlier versions still validate. A consumer on an older version that re-parses a new report drops these fields.
+- **When inputs are hashed:** after the `lifecycle.beforeRun` hooks and before any contract runs, so a hook can generate a declared input (a design snapshot, a fixture) and the report records the file as the hook left it.
 - **Config:** optional top-level `inputs` and `meta`, and an optional `ref` on component visual cases and route `visualSmoke` cases. See `docs/configuration.md`, "Run inputs, metadata and case refs". Unknown fields stay invalid.
 - **`environment.browser`** (`{ name, version }`) is now also recorded in `--mode visual` runs, which launch their browser outside the browser contract. It stays absent when no browser was launched.
 - **Join fix.** Report-level artifacts are attached to a scenario's evidence group only when a whole path segment equals the scenario id. Before, any path containing the id as a substring matched (`a` matched `scenarios/abc/shot.png`). This can remove an artifact that was wrongly grouped.
