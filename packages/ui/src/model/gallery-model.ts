@@ -1,4 +1,4 @@
-import { type Comparison, type Projection, type ProofLayer, type ProofOutcome } from 'reflection-projection';
+import { missingImplementations, type Comparison, type Projection, type ProofLayer, type ProofOutcome } from 'reflection-projection';
 import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
 import { formatDate } from './format';
 import type { Matrix, MatrixColumn, MatrixRow, ReferenceSummary } from './matrix-model';
@@ -62,6 +62,8 @@ export interface AdapterCard {
   outcome: ComparisonOutcome | 'none';
   unusable: boolean;
   artifactPath: string | undefined;
+  // The requirement names this implementation as one that must pass.
+  required: boolean;
 }
 
 export interface LayerRow {
@@ -81,8 +83,10 @@ export interface ItemFacts {
 
 export interface ItemDetail {
   row: MatrixRow;
-  // Implementations of this subject that have no comparison for this item, whatever is chosen for display.
-  notComparedIn: string[];
+  // Required implementations with no comparison for this item: these keep it from being proven.
+  requiredNotCompared: string[];
+  // Other implementations of this subject with no comparison for this item. They are not part of the status.
+  otherNotCompared: string[];
   reference: ReferenceCard;
   adapters: AdapterCard[];
   layerRows: LayerRow[];
@@ -107,14 +111,15 @@ export function buildItemDetail({ row, projection, columns, unusableComparisonId
   const adapters = columns.map((column): AdapterCard => {
     const cell = row.cells.get(column.id);
     const comparison = cell?.primary;
-    return { column, comparison, outcome: cell?.outcome ?? 'none', unusable: cell?.unusable ?? false, artifactPath: comparison?.actual?.path };
+    return { column, comparison, outcome: cell?.outcome ?? 'none', unusable: cell?.unusable ?? false, artifactPath: comparison?.actual?.path, required: (row.requirement.requiredImplementations ?? []).includes(column.id) };
   });
 
   const outcomes = all.map(comparisonOutcome);
   const thresholdSource = all.find((comparison) => comparison.diff?.threshold);
   return {
     row,
-    notComparedIn: [...row.cells.entries()].filter(([, cell]) => cell.outcome === 'none').map(([id]) => allColumnLabel(id)),
+    requiredNotCompared: missingImplementations(row.requirement, all),
+    otherNotCompared: [...row.cells.entries()].filter(([id, cell]) => cell.outcome === 'none' && !(row.requirement.requiredImplementations ?? []).includes(id)).map(([id]) => allColumnLabel(id)),
     reference: {
       availability: row.reference.availability,
       approval: row.reference.approval,

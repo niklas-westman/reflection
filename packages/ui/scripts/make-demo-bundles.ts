@@ -29,6 +29,8 @@ const demos: Demo[] = [
   { id: 'docs-site', projection: docsSite },
   // The release docs-site is compared with: released, with one reference drawn differently, one item the current
   // release added, one it removed, and a page that no longer exists.
+  // The same site, but every item must pass in Chrome, Firefox and Safari. Nothing was ever compared in Safari.
+  { id: 'docs-site-strict', projection: strictOf(docsSite) },
   { id: 'docs-site-previous', projection: previousOf(docsSite), release: { release: 'demo-0', state: 'released', previousRelease: null }, oldLook: 'hero.tablet' }
 ];
 
@@ -48,6 +50,12 @@ function withDemoCatalog(projection: Projection): Projection {
     ...projection,
     subjects: [{ id: 'pricing', kind: 'page', label: 'Pricing page', description: 'Plans and prices', sourceUrl: 'https://example.com/design/pricing', changeNote: 'Tablet hero redrawn, mobile FAQ added' }]
   });
+}
+
+// Every requirement now names the implementations that must pass. Illustrative.
+function strictOf(projection: Projection): Projection {
+  const copy = structuredClone(projection);
+  return projectionSchema.parse({ ...copy, requirements: copy.requirements.map((requirement) => ({ ...requirement, requiredImplementations: ['chrome', 'firefox', 'safari'] })) });
 }
 
 // The previous release of the docs site, derived from the current one. Illustrative.

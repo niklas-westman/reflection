@@ -23,6 +23,9 @@ export const requirementSchema = z.object({
   label: z.string().min(1).optional(),
   subject: subjectSchema,
   requiredProofs: z.array(proofLayerSchema).min(1),
+  // The implementations (adapters) that must each pass before the item counts as proven. Absent: only the
+  // comparisons that were recorded count, which is what a provider without a fixed set of implementations wants.
+  requiredImplementations: z.array(z.string().min(1)).min(1).optional(),
   // A comparison is set up for this requirement (a fixture exists and is wired in).
   enrolled: z.boolean(),
   design: z
@@ -46,9 +49,19 @@ export interface ReadinessConcepts {
 }
 
 /**
+ * The required implementations that have no comparison at all. Empty when the requirement declares none.
+ * A comparison without an adapter never satisfies a named implementation.
+ */
+export function missingImplementations(requirement: Requirement, comparisons: Comparison[]): string[] {
+  const compared = new Set(comparisons.filter((comparison) => comparison.requirementId === requirement.id).flatMap((comparison) => (comparison.subject.adapter ? [comparison.subject.adapter] : [])));
+  return (requirement.requiredImplementations ?? []).filter((implementation) => !compared.has(implementation));
+}
+
+/**
  * Readiness of one requirement, derived from the requirement and its comparisons. Never stored.
  * proven needs every required proof layer to have passed in every comparison; a layer that is not-run or
- * unsupported can never count as a pass.
+ * unsupported can never count as a pass. When the requirement names required implementations, each of them must
+ * also have been compared: a missing one leaves the item not proven (a failure still reads as failing).
  */
 export function deriveReadiness(requirement: Requirement, comparisons: Comparison[], concepts: ReadinessConcepts): Readiness {
   if (requirement.design?.availability === 'missing') {
@@ -64,6 +77,9 @@ export function deriveReadiness(requirement: Requirement, comparisons: Compariso
   }
   if (own.some((comparison) => requirement.requiredProofs.some((layer) => comparison.proof[layer] === 'failed'))) {
     return 'failing';
+  }
+  if (missingImplementations(requirement, own).length > 0) {
+    return 'unknown';
   }
   return own.every((comparison) => requirement.requiredProofs.every((layer) => comparison.proof[layer] === 'passed')) ? 'proven' : 'unknown';
 }

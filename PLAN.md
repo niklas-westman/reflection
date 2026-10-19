@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (v5 steps 1 to 5 done)
+Last updated: 2026-10-19 (v5 steps 1 to 5 and the required-implementations rule done)
 
 ## How to keep this alive
 
@@ -46,8 +46,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Next (in order)
 
-1. Decide how a missing implementation counts toward Proven (required implementations), then build it.
-2. Viewer quality: dogfood Reflection on the viewer, keyboard and screen-reader pass, dark parity.
+1. Viewer quality: dogfood Reflection on the viewer, keyboard and screen-reader pass, dark parity.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -75,6 +74,7 @@ Providers and the release portal follow once the viewer can open a real bundle. 
 | 2026-10-19 | On the Changes screen, Before and After are the **reference (design) image** from the previous bundle; "Updated" means the reference hash changed | step 5 |
 | 2026-10-19 | The baseline for Changes is the **latest released version before this build**, recorded in the bundle (`release.previousRelease`) and fixed; no baseline picker | step 5 |
 | 2026-10-19 | **No percentages anywhere** in the viewer; counts with their unit only | all screens |
+| 2026-10-19 | An item is proven in all its **required implementations** only where the provider declares `requiredImplementations`; undeclared keeps the recorded-comparisons rule | readiness, viewer |
 | 2026-10-19 | The v5 design set is the accepted direction, not a literal spec; where a mock and `context.md` or the product rules disagree, the text and rules win | viewer |
 
 Rules every screen follows: two units never one ratio (required items versus comparisons); unknown is not zero; a reference is never a result; invalid evidence shows unknown, not a result; no percentages that read as compliance; no green comfort while items are missing; status is glyph plus text plus colour; one banner at a time; read-only until the decisions work starts.
@@ -104,7 +104,7 @@ Rules every screen follows: two units never one ratio (required items versus com
 - [x] Optional per-change note supplied by a provider (`subjects[].changeNote`).
 - [ ] Approver-list configuration schema (N3).
 - [ ] Discord message formatters for Approve and Require changes (N3).
-- [ ] Decide whether a requirement can declare **required implementations**. Today only recorded comparisons count, so an item compared in one of three implementations can read Proven (the gallery says "Not compared in: ..." beside it). The v5 text says a missing mandatory implementation must block Proven.
+- [x] **Required implementations**: a requirement can name them (`requiredImplementations`); each must have a comparison and pass, a missing one leaves the item not proven, a failure still reads failing. Without it, only recorded comparisons count. Built 2026-10-19.
 - [ ] Decide the package names and npm scope for `reflection-projection` and `reflection-ui`.
 
 ### 3. Bundles (`packages/projection`)
@@ -195,6 +195,7 @@ Viewer quality:
 - [ ] R1: `.figma` upgrade: snapshot archive, node classification, stable keys, net diff, read-only MCP tools, two-tier source currency.
 - [ ] Confirm node identity survives the per-snapshot Figma copy (name and type, not only the id).
 - [ ] R2: emit a projection: separated signals (never forward `blocked`), per-family provenance, archive copy of the manifest and inventory at release time, delta, bundle written with `writeBundle`.
+- [ ] Declare `requiredImplementations` (react, vue, svelte) on each requirement, if those are the fixed set.
 - [ ] Run the provider checklist (builds twice identical; `openBundle` returns opened with no problems).
 
 **Sourcer (Penpot)**
@@ -237,14 +238,14 @@ Viewer quality:
 - [x] **v5, "Before and After"**: the reference image from the previous bundle. Decided 2026-10-19.
 - [x] **v5, "Compare against"**: the latest released version before this build, fixed, no picker. Decided 2026-10-19.
 - [x] **v5, no percentages anywhere**. Decided 2026-10-19.
-- [ ] **Mandatory implementations**: should an item compared in only some implementations be Proven? (Needs a provider rule or a field on the requirement.)
+- [x] **Mandatory implementations**: decided 2026-10-19 as an optional provider-declared list per requirement; the rule applies only where declared.
 - [ ] **Verification cost**: full background verification reads every file; is that acceptable for the largest Marwes bundles, or opt-in?
 
 ## Verification baseline (all passing on 2026-10-19)
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build      # engine: 436 tests in 41 files (about 100 s)
-pnpm check:packages                            # projection (130 tests), then ui (189 tests, build)
+pnpm check:packages                            # projection (139 tests), then ui (200 tests, build)
 pnpm --filter reflection-projection run schema # regenerate schema/projection.v1.schema.json; no drift expected
 node dist/cli.js doctor --config examples/basic-react/reflection.config.ts
 node dist/cli.js run --config examples/basic-react/reflection.config.ts --mode smoke   # ends fail by design (two intentional failing routes)
@@ -255,6 +256,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: required implementations: `requiredImplementations` on a requirement, `missingImplementations`, the readiness rule, columns and cards for implementations nobody compared, a needs-attention item, inspector gaps, a `docs-site-strict` demo. Projection tests 130 to 139, UI tests 189 to 200.
 - 2026-10-19: v5 step 5: `diffProjections`, subject catalog and source links in the projection; Changes screen, overview badges and design-changes card, per-subject Changes view in the viewer. Projection tests 109 to 130, UI tests 163 to 189.
 - 2026-10-19: v5 step 4: comparison inspector (three-up and single-stage modes, zoom with synced scroll, measurements rail, provenance, gaps, related, honest states, keyboard). UI tests 119 to 163.
 - 2026-10-19: v5 step 3: component gallery (dimension selectors, reference and implementation cards, verification details, inline compare), page overview with recorded checks, view switcher, subject banner for unconfirmed reference approvals. UI tests 73 to 119.

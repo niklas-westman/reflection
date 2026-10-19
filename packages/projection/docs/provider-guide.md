@@ -32,6 +32,7 @@ A requirement is something that must be proven, whether or not anything has run 
 - `id` is stable across runs and builds. Use a logical key (`button/primary/medium/hover/light`), never a transient node id or a run id. A decision binds to these ids, so an id that changes lapses every decision.
 - `enrolled: false` means a comparison is not set up yet. `design.availability` is `missing` (no design exists) or `unmapped` (one may exist but is not linked to this requirement).
 - Put dimensions in `subject` (`variant`, `mode`, `adapter`, `viewport`, `state`) and the rest in `subject.dimensions`. The UI groups and filters by these without knowing what they mean.
+- `requiredImplementations` (optional) names the implementations (adapters) that must each have a comparison and pass before the item is proven. A project with a fixed set of implementations, such as React, Vue and Svelte, should declare it: otherwise an item compared in only one of them reads as proven. A comparison with no `subject.adapter` never satisfies a named implementation, and a failure still reads as failing even when another implementation is missing. Leave it out when implementations are not a fixed set, and only recorded comparisons count.
 - `requiredProofs` lists the layers that must pass before the item counts as proven. A layer that is `not-run` or `unsupported` can never count as a pass.
 
 ### Readiness concepts
@@ -152,6 +153,7 @@ Read a bundle back, as the viewer will, with `openBundle(source, { verifyFiles: 
 
 - [ ] `inventory` says `full` or `executed-only` and is true.
 - [ ] Every required item is a requirement, whether or not it has a design or a test.
+- [ ] If the project has a fixed set of implementations, every requirement names them in `requiredImplementations`.
 - [ ] `readinessConcepts` match what the project can really say; no bucket reported as 0 that is actually unknown.
 - [ ] Each snapshot has its own date; comparisons name the snapshot that backed them.
 - [ ] No folded word in any `verdict` or `proof`.

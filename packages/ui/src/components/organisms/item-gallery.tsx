@@ -322,7 +322,10 @@ function AdapterPreview({ card, itemLabel, href }: { card: AdapterCard; itemLabe
   return (
     <CardBox aria-label={card.column.label} $tone={card.outcome === 'failed' && !card.unusable ? 'fail' : undefined}>
       <header>
-        <h3>{card.column.label}</h3>
+        <h3>
+          {card.column.label}
+          {card.required ? <span className="meta"> · required</span> : null}
+        </h3>
         <span className="meta">
           <StatusLabel display={display} />
         </span>
@@ -346,8 +349,11 @@ function VerificationDetails({ detail }: { detail: ItemDetail }): ReactNode {
         <dd>
           <StatusLabel display={status} />
           {row.reason || row.detail ? <div className="reason">{row.detail ?? row.reason}</div> : null}
-          {detail.notComparedIn.length > 0 && row.readiness !== 'needs-design' && row.readiness !== 'not-enrolled' ? (
-            <div className="reason">Not compared in: {detail.notComparedIn.join(', ')}. The status covers only what was compared.</div>
+          {detail.requiredNotCompared.length > 0 ? (
+            <div className="reason">Not proven until each required implementation passes. Not compared in: {detail.requiredNotCompared.join(', ')}.</div>
+          ) : null}
+          {detail.otherNotCompared.length > 0 && row.readiness !== 'needs-design' && row.readiness !== 'not-enrolled' ? (
+            <div className="reason">Not compared in: {detail.otherNotCompared.join(', ')}. The status covers only what was compared.</div>
           ) : null}
         </dd>
         <dt>Viewports</dt>

@@ -58,6 +58,7 @@ const ATTENTION_TEXT: Record<AttentionKind, { title: (count: number) => string; 
   'unusable-evidence': { title: (count) => `${plural(count, 'comparison has', 'comparisons have')} unusable evidence`, detail: 'Counted as unknown until the files are restored.' },
   'needs-design': { title: (count) => `${plural(count, 'required item needs', 'required items need')} a design selection`, detail: 'No design has been chosen to compare against.' },
   'not-enrolled': { title: (count) => `${plural(count, 'required item is', 'required items are')} not enrolled`, detail: 'No comparison is set up for it yet.' },
+  'missing-implementations': { title: (count) => `${plural(count, 'required item is', 'required items are')} not compared in every required implementation`, detail: 'Not proven until each required implementation passes. Also counted as not proven below.' },
   'not-proven': { title: (count) => `${plural(count, 'required item', 'required items')} not proven`, detail: 'Not every required proof has run.' },
   'unconfirmed-references': { title: (count) => `${plural(count, 'reference approval', 'reference approvals')} not confirmed by a person`, detail: 'Recorded by an agent, or no longer matching the current reference.' }
 };

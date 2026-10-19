@@ -1,4 +1,4 @@
-import { deriveReadiness, type Comparison, type Projection, type ReferenceApproval, type Readiness, type Requirement, type Subject } from 'reflection-projection';
+import { deriveReadiness, missingImplementations, type Comparison, type Projection, type ReferenceApproval, type Readiness, type Requirement, type Subject } from 'reflection-projection';
 import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
 import type { SubjectGroup } from './subject-model';
 
@@ -68,7 +68,7 @@ export interface BuildMatrixOptions {
 /** The table for one subject: one row per required item, grouped by outcome so failures are never buried. */
 export function buildMatrix({ projection, subject, unusableComparisonIds }: BuildMatrixOptions): Matrix {
   const concepts = projection.provider.readinessConcepts;
-  const columns = buildColumns(subject.comparisons);
+  const columns = buildColumns(subject.comparisons, subject.requirements);
   const snapshotLabels = new Map(projection.snapshots.map((snapshot) => [snapshot.id, snapshot.label ?? snapshot.version ?? snapshot.role]));
   const byRequirement = new Map<string, Comparison[]>();
   for (const comparison of subject.comparisons) {
@@ -88,7 +88,7 @@ export function buildMatrix({ projection, subject, unusableComparisonIds }: Buil
       readiness,
       group,
       reason: reasonFor(readiness, comparisons, requirement, unusableComparisonIds),
-      detail: readiness === 'needs-design' || readiness === 'not-enrolled' ? requirement.design?.reason : undefined,
+      detail: detailFor(readiness, requirement, comparisons),
       reference: summarizeReference(requirement, comparisons, snapshotLabels),
       referenceIsCommon: false,
       cells: buildCells(columns, comparisons, unusableComparisonIds)
@@ -124,8 +124,11 @@ export function referenceKey(reference: ReferenceSummary): string {
   return [reference.availability, reference.source ?? '', reference.approval ?? '', reference.attestation ?? ''].join('|');
 }
 
-function buildColumns(comparisons: Comparison[]): MatrixColumn[] {
-  const adapters = [...new Set(comparisons.map((comparison) => comparison.subject.adapter ?? NO_ADAPTER))].sort();
+// One column per implementation: those with a comparison, and those a requirement names as required even if
+// nothing was ever compared in them, so a missing implementation is visible as an empty column, not as no column.
+function buildColumns(comparisons: Comparison[], requirements: Requirement[]): MatrixColumn[] {
+  const required = requirements.flatMap((requirement) => requirement.requiredImplementations ?? []);
+  const adapters = [...new Set([...comparisons.map((comparison) => comparison.subject.adapter ?? NO_ADAPTER), ...required])].sort();
   if (adapters.length === 0) {
     return [{ id: NO_ADAPTER, label: 'Result' }];
   }
@@ -156,8 +159,15 @@ function reasonFor(readiness: Readiness, comparisons: Comparison[], requirement:
   if (readiness === 'not-enrolled') return 'Not enrolled';
   if (readiness !== 'unknown') return undefined;
   if (comparisons.some((comparison) => unusable.has(comparison.id))) return 'Evidence file unusable';
+  if (missingImplementations(requirement, comparisons).length > 0) return 'Not compared in every required implementation';
   if (comparisons.length === 0) return requirement.enrolled ? 'No comparison recorded' : 'Not covered';
   return 'Not every required proof ran';
+}
+
+function detailFor(readiness: Readiness, requirement: Requirement, comparisons: Comparison[]): string | undefined {
+  if (readiness === 'needs-design' || readiness === 'not-enrolled') return requirement.design?.reason;
+  const missing = readiness === 'unknown' ? missingImplementations(requirement, comparisons) : [];
+  return missing.length > 0 ? `Required implementations not compared: ${missing.join(', ')}` : undefined;
 }
 
 export function countReasons(rows: MatrixRow[]): Array<{ reason: string; count: number }> {

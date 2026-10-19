@@ -1,4 +1,4 @@
-import type { Artifact, Comparison, Projection, ProofLayer } from 'reflection-projection';
+import { missingImplementations, type Artifact, type Comparison, type Projection, type ProofLayer } from 'reflection-projection';
 import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
 import { formatDate } from './format';
 import { rowMatches, type MatrixFilters } from './filters';
@@ -199,7 +199,9 @@ function buildGaps(comparison: Comparison, row: MatrixRow | undefined, unusable:
   if (!comparison.diff) gaps.push('No difference image or pixel metric was recorded.');
   if (!comparison.measurements) gaps.push('Detailed measurements were not recorded.');
   if (approvalCaution(comparison.reference?.approval)) gaps.push('The reference approval is not confirmed by a person.');
-  const notCompared = [...(row?.cells.entries() ?? [])].filter(([, cell]) => cell.outcome === 'none').map(([id]) => (id === '' ? 'Result' : id));
+  const requiredMissing = row ? missingImplementations(row.requirement, [...row.cells.values()].flatMap((cell) => cell.comparisons)) : [];
+  if (requiredMissing.length > 0) gaps.push(`A required implementation was not compared, so the item is not proven: ${requiredMissing.join(', ')}.`);
+  const notCompared = [...(row?.cells.entries() ?? [])].filter(([id, cell]) => cell.outcome === 'none' && !requiredMissing.includes(id)).map(([id]) => (id === '' ? 'Result' : id));
   if (notCompared.length > 0) gaps.push(`This item was not compared in: ${notCompared.join(', ')}.`);
   return gaps;
 }

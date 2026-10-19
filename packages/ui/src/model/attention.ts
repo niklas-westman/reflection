@@ -1,8 +1,8 @@
-import type { Projection } from 'reflection-projection';
+import { deriveReadiness, missingImplementations, type Projection } from 'reflection-projection';
 import type { OutcomeGroupId } from './matrix-model';
 import type { SubjectGroup } from './subject-model';
 
-export type AttentionKind = 'failures' | 'unusable-evidence' | 'needs-design' | 'not-enrolled' | 'not-proven' | 'unconfirmed-references';
+export type AttentionKind = 'failures' | 'unusable-evidence' | 'needs-design' | 'not-enrolled' | 'missing-implementations' | 'not-proven' | 'unconfirmed-references';
 
 export interface AttentionSubject {
   id: string;
@@ -43,6 +43,13 @@ export function buildAttention({ projection, subjects, unusableComparisonIds }: 
   add('unusable-evidence', 'not-proven', (subject) => subject.comparisons.filter((comparison) => unusableComparisonIds.has(comparison.id)).length);
   add('needs-design', 'missing', (subject) => subject.summary.needsDesign ?? 0);
   add('not-enrolled', 'missing', (subject) => subject.summary.notEnrolled ?? 0);
+  add('missing-implementations', 'not-proven', (subject) =>
+    // Only items that are otherwise waiting on evidence: not those that fail, or need a design, or are not enrolled.
+    subject.requirements.filter((requirement) => {
+      const own = subject.comparisons.filter((comparison) => comparison.requirementId === requirement.id);
+      return deriveReadiness(requirement, own, projection.provider.readinessConcepts) === 'unknown' && missingImplementations(requirement, own).length > 0;
+    }).length
+  );
   add('not-proven', 'not-proven', (subject) => subject.summary.unknown);
   add('unconfirmed-references', undefined, (subject) => subject.comparisons.filter((comparison) => isUnconfirmed(comparison.reference?.approval)).length);
 

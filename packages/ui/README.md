@@ -22,6 +22,7 @@ The demo bundles are written from the projection package's fixtures, with genera
 | `marwes-button` | A large family: 273 required, 203 proven, 14 needs design, 56 not enrolled |
 | `sourcer-login` | A provider with no "needs design" or "not enrolled" concept: those buckets read as unknown |
 | `native-basic-react` | A native Reflection report: only what ran is listed, so the count is a lower bound |
+| `docs-site-strict` | The same site, but every item must pass in Chrome, Firefox and Safari. Nothing was compared in Safari, so no item is proven and Safari is an empty column |
 | `docs-site-previous` | The release `docs-site` is compared with: one reference drawn differently, an item the current release added, one it removed and a page that no longer exists |
 | `docs-site` | A project unrelated to either, with a failure, two browsers and items that were never compared. The only demo with an (illustrative) delta, so the "Since" card shows |
 | `docs-site-tampered-image` | One image no longer matches its hash: evidence invalid, that comparison counted as unknown |
@@ -77,7 +78,7 @@ tests/         model tests and viewer tests that read real bundles written by th
 
 - The bundle list reads each bundle's entry files only, so it does not show a tampered image; open the bundle to see that.
 - The full background verification reads every file once. That is cheap locally and for demo bundles; a very large bundle may want lazy or opt-in verification.
-- An item compared in only some implementations can read Proven; the gallery says which were not compared. Whether an implementation can be mandatory is an open decision (see `PLAN.md`).
+- Only a provider that declares `requiredImplementations` gets the rule that every named implementation must pass. Without it, an item compared in only some implementations can read Proven, and the gallery says which were not compared.
 - The matrix renders all rows of an open group without virtualization. Measure before adding it.
 - Object URLs for loaded images are not revoked; fine for a viewing session.
 - Summary-only (archived) releases and the release overview are not built yet.

@@ -19,6 +19,7 @@ A provider turns its own evidence into a `Projection`. The reader never needs to
 ## Rules the schema enforces
 
 - **Five signals stay separate:** proof (`passed`, `failed`, `not-run`, `unsupported`), readiness (derived), validity (computed on read), reference approval, review (decisions).
+- **A requirement may name required implementations.** Then each must have a comparison and pass; a missing one leaves the item not proven (a failure still reads as failing).
 - **Coverage never appears in proof.** A required layer that is `not-run` or `unsupported` can never make a requirement `proven`.
 - **A bucket the provider has no concept of is `null`, never 0.** `required` always equals the sum of the buckets.
 - **An approval that holds or lapsed says who recorded it** (`human` or `agent`). Only a legacy reference approval may be agent-recorded.

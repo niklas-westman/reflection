@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverageSummarySchema, deriveReadiness, summarizeReadiness, type Comparison, type Requirement } from '../src/index.js';
+import { coverageSummarySchema, deriveReadiness, missingImplementations, requirementSchema, summarizeReadiness, type Comparison, type Requirement } from '../src/index.js';
 
 const both = { needsDesign: true, notEnrolled: true };
 
@@ -102,5 +102,58 @@ describe('coverageSummarySchema', () => {
 
   it('accepts null buckets as zero in the sum', () => {
     expect(coverageSummarySchema.parse({ required: 3, proven: 3, failing: 0, needsDesign: null, notEnrolled: null, unknown: 0 }).required).toBe(3);
+  });
+});
+
+describe('required implementations', () => {
+  const adapterComparison = (adapter: string, outcome: 'passed' | 'failed' = 'passed'): Comparison =>
+    comparison({ id: `cmp-${adapter}`, subject: { kind: 'component', id: 'button', adapter }, proof: { visual: outcome } });
+  const required = requirement({ requiredImplementations: ['react', 'vue', 'svelte'] });
+
+  it('is proven when every required implementation was compared and passed', () => {
+    expect(deriveReadiness(required, ['react', 'vue', 'svelte'].map((adapter) => adapterComparison(adapter)), both)).toBe('proven');
+  });
+
+  it('is not proven when a required implementation was never compared, even if the others passed', () => {
+    expect(deriveReadiness(required, [adapterComparison('react'), adapterComparison('vue')], both)).toBe('unknown');
+  });
+
+  it('is still failing when one implementation failed and another is missing', () => {
+    expect(deriveReadiness(required, [adapterComparison('react', 'failed'), adapterComparison('vue')], both)).toBe('failing');
+  });
+
+  it('does not let a comparison without an adapter stand in for a named implementation', () => {
+    expect(deriveReadiness(requirement({ requiredImplementations: ['react'] }), [comparison()], both)).toBe('unknown');
+  });
+
+  it('ignores implementations that are compared but not required', () => {
+    const onlyReact = requirement({ requiredImplementations: ['react'] });
+
+    expect(deriveReadiness(onlyReact, [adapterComparison('react'), adapterComparison('vue')], both)).toBe('proven');
+  });
+
+  it('keeps today\'s rule when none are declared: only recorded comparisons count', () => {
+    expect(deriveReadiness(requirement(), [adapterComparison('react')], both)).toBe('proven');
+  });
+
+  it('lists the missing required implementations, and none when none are declared', () => {
+    expect(missingImplementations(required, [adapterComparison('react')])).toEqual(['vue', 'svelte']);
+    expect(missingImplementations(requirement(), [])).toEqual([]);
+    expect(missingImplementations(required, [adapterComparison('react'), adapterComparison('vue'), adapterComparison('svelte')])).toEqual([]);
+  });
+
+  it('counts such an item as not proven in the summary, with the buckets still adding up', () => {
+    const summary = summarizeReadiness([required], [adapterComparison('react')], both);
+
+    expect(summary).toMatchObject({ required: 1, proven: 0, failing: 0, unknown: 1 });
+    expect(coverageSummarySchema.safeParse(summary).success).toBe(true);
+  });
+
+  it('is part of the requirement schema, and an empty list is refused', () => {
+    const base = { id: 'r', subject: { kind: 'component', id: 'button' }, requiredProofs: ['visual'], enrolled: true };
+
+    expect(requirementSchema.safeParse({ ...base, requiredImplementations: ['react'] }).success).toBe(true);
+    expect(requirementSchema.safeParse({ ...base, requiredImplementations: [] }).success).toBe(false);
+    expect(requirementSchema.safeParse({ ...base, requiredImplementations: [''] }).success).toBe(false);
   });
 });
