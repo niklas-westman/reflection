@@ -107,7 +107,7 @@ const CardBox = styled.article<{ $tone?: 'fail' | undefined }>`
 
 const Lower = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
 `;
 

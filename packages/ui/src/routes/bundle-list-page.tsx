@@ -45,6 +45,12 @@ const Page = styled.main`
   }
 `;
 
+// On a narrow screen a table scrolls sideways inside its own frame, never the whole page.
+const TableScroll = styled.div`
+  overflow-x: auto;
+  max-width: 100%;
+`;
+
 export function BundleListPage(): ReactNode {
   const list = useBundleList();
   const opened = useOpenedBundles(list.data ?? []);
@@ -60,6 +66,7 @@ export function BundleListPage(): ReactNode {
         {list.isError ? <p role="alert">{list.error.message}</p> : null}
         {list.data && list.data.length === 0 ? <p>No bundles were found. Create the demo bundles with <code>pnpm --filter reflection-ui demo-bundles</code>.</p> : null}
         {list.data && list.data.length > 0 ? (
+          <TableScroll tabIndex={0} role="region" aria-label="Bundles, as a table">
           <table>
             <thead>
               <tr>
@@ -78,6 +85,7 @@ export function BundleListPage(): ReactNode {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         ) : null}
         {summaries.length > 0 || (archive.data?.unreadable ?? 0) > 0 ? (
           <section aria-label="Earlier releases">
@@ -85,6 +93,7 @@ export function BundleListPage(): ReactNode {
             <p>Their evidence was removed to save space. What remains is a summary, not evidence.</p>
             {(archive.data?.unreadable ?? 0) > 0 ? <p role="status">{archive.data?.unreadable} archive {archive.data?.unreadable === 1 ? 'entry' : 'entries'} could not be read and {archive.data?.unreadable === 1 ? 'is' : 'are'} not listed.</p> : null}
             {summaries.length > 0 ? (
+              <TableScroll tabIndex={0} role="region" aria-label="Earlier releases, as a table">
               <table>
                 <thead>
                   <tr>
@@ -116,6 +125,7 @@ export function BundleListPage(): ReactNode {
                   ))}
                 </tbody>
               </table>
+              </TableScroll>
             ) : null}
           </section>
         ) : null}

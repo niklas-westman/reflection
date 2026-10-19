@@ -32,7 +32,7 @@ const Title = styled.div`
 
 const Summary = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
 
   section {
@@ -77,7 +77,7 @@ const Tools = styled.div`
 
 const Cards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
 `;
 

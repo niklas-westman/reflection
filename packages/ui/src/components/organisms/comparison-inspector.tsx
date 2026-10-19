@@ -123,7 +123,7 @@ const Workspace = styled.div`
 
 const Rail = styled.aside`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
   align-items: start;
 
@@ -201,7 +201,7 @@ const Card = styled.section<{ $caution?: boolean }>`
 
 const Lower = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
   margin-top: ${({ theme }) => theme.space.md};
 `;

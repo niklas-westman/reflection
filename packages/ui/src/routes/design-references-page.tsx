@@ -7,7 +7,7 @@ import { formatDate } from '../model/format';
 
 const Cards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
   margin-top: ${({ theme }) => theme.space.sm};
 `;

@@ -95,7 +95,9 @@ try {
       { id: 'gallery with the implementations menu open', route: 'component-gallery', steps: async () => void (await page.getByText(/Show implementations/).click()) },
       { id: 'inspector in overlay mode', route: 'comparison', steps: async () => void (await page.getByRole('button', { name: 'Overlay' }).click()) },
       { id: 'inspector in wipe mode', route: 'comparison', steps: async () => void (await page.getByRole('button', { name: 'Wipe' }).click()) },
-      { id: 'inspector in diff mode with the checkerboard', route: 'comparison', steps: async () => { await page.getByRole('button', { name: 'Diff' }).click(); await page.getByRole('button', { name: 'Checkerboard' }).click(); } }
+      { id: 'inspector in diff mode with the checkerboard', route: 'comparison', steps: async () => { await page.getByRole('button', { name: 'Diff', exact: true }).click(); await page.getByRole('button', { name: 'Checkerboard' }).click(); } },
+      { id: 'inspector with the difference large', route: 'comparison', steps: async () => void (await page.getByRole('button', { name: 'Difference large' }).click()) },
+      { id: 'inspector with provenance open and the navigation shown', route: 'comparison', steps: async () => { await page.getByText('Provenance', { exact: true }).click(); await page.getByRole('button', { name: 'Navigation' }).click(); } }
     ];
     for (const scenario of scenarios) {
       const route = routes.find((entry) => entry.id === scenario.route);

@@ -42,7 +42,7 @@ const Content = styled.main`
 
 const Cards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
   gap: ${({ theme }) => theme.space.sm};
   margin-top: ${({ theme }) => theme.space.sm};
 `;

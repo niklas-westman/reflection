@@ -1,11 +1,11 @@
 import { defineReflection } from '../../src/core/define-reflection';
 
-// Reflection run on its own viewer: every route is opened against the demo bundles in two desktop widths,
-// and must render its heading, stay free of console errors and of sideways page scroll.
+// Reflection run on its own viewer: every route is opened against the demo bundles in two desktop widths and a
+// phone width, and must render its heading, stay free of console errors and of sideways page scroll.
 // Commands run from the repository root, so they name the package. Run it with: pnpm --filter reflection-ui reflect
 const port = 5174;
 const baseUrl = `http://127.0.0.1:${port}`;
-const viewports = ['desktop', { name: 'desktop-narrow', width: 1100, height: 800 }];
+const viewports = ['desktop', { name: 'desktop-narrow', width: 1100, height: 800 }, { name: 'phone', width: 390, height: 844 }];
 const quiet = [{ noConsoleErrors: true }, { noHorizontalOverflow: true }, { screenshot: 'final' }] as const;
 
 // Baselines are made on one platform, and font rendering differs between platforms, so the file name says which.
@@ -46,7 +46,9 @@ const lightRoutes = [
   { id: 'design-references', name: 'Design references', path: '/#/bundles/docs-site/design-references', viewports, expects: [{ role: 'heading', name: 'Design references' }, { text: 'Reference approvals' }, ...quiet] },
   { id: 'summary-only', name: 'A release that is only a summary', path: '/#/archive/docs-site/demo-older', viewports, expects: [{ text: 'Historical release: its evidence was removed' }, { text: 'Decision' }, ...quiet] },
   { id: 'invalid-evidence', name: 'A bundle with an image that does not match its hash', path: '/#/bundles/docs-site-tampered-image/pages/pricing', viewports, expects: [{ text: 'Some evidence in this bundle is unusable' }, ...quiet] },
-  { id: 'rejected-bundle', name: 'A bundle that cannot be trusted', path: '/#/bundles/docs-site-rejected', viewports, expects: [{ text: 'This bundle is invalid and cannot be shown' }, ...quiet] }
+  { id: 'rejected-bundle', name: 'A bundle that cannot be trusted', path: '/#/bundles/docs-site-rejected', viewports, expects: [{ text: 'This bundle is invalid and cannot be shown' }, ...quiet] },
+  { id: 'presented-page', name: 'A page of 200 items laid out by its provider', path: '/#/bundles/checkout-200/pages/checkout', viewports, expects: [{ role: 'heading', name: 'Checkout' }, { text: 'laid out as the provider describes them' }, ...quiet] },
+  { id: 'all-failing', name: 'A release where every check fails', path: '/#/bundles/signup-all-failing', viewports, expects: [{ role: 'heading', name: 'Release status' }, { text: 'Needs attention' }, ...quiet] }
 ];
 
 // The same routes in the dark theme. They have no baselines yet: they must render, log no error and not scroll
