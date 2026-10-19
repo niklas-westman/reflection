@@ -61,7 +61,7 @@ export function DesignReferencesPage(): ReactNode {
       {snapshots.length === 0 ? (
         <p role="status">This bundle records no design source.</p>
       ) : (
-        <Cards aria-label="Design sources">
+        <Cards role="group" aria-label="Design sources">
           {snapshots.map(({ snapshot, usedByRelease, comparisons, subjects }) => (
             <Card key={snapshot.id} aria-label={snapshot.label ?? snapshot.role}>
               <h2>{snapshot.label ?? snapshot.role}</h2>

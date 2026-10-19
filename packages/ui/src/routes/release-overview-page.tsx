@@ -135,7 +135,7 @@ export function ReleaseOverviewPage(): ReactNode {
       <Spacer $size="sm" />
       <CoverageBar summary={prepared.summary} />
       <Spacer />
-      <Cards aria-label="Release highlights">
+      <Cards role="group" aria-label="Release highlights">
         {comparableDelta ? <ChangesCard delta={comparableDelta} /> : null}
         {diffState.status === 'ready' ? <DesignChangesCard bundleId={bundleId} diff={diffState.diff} previousRelease={diffState.previousRelease} /> : null}
         <AttentionCard bundleId={bundleId} items={attention} />

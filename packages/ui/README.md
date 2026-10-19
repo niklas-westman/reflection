@@ -77,7 +77,17 @@ pnpm --filter reflection-ui reflect     # smoke: every route, two desktop widths
 node dist/cli.js review --json
 ```
 
-`reflection.config.ts` lists the routes. It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. 14 routes also have visual baselines (`tests/visual-baselines`, lossless WebP, named `chromium-darwin` for the platform they were made on). A difference is a review item, not a failure. The page-level overflow check cannot see overflow inside the scrolling content pane; the baselines do. On another platform there is no baseline, which is also a review item. To accept an intended change, inspect it, run `reflection update --config packages/ui/reflection.config.ts --all --from-run latest --dry-run`, and promote it only with approval.
+`reflection.config.ts` lists the routes; each also runs in the dark theme (without baselines). It rebuilds the demo bundles first, starts the Vite dev server on port 5174 (or reuses one), and fails a route that lacks its heading, logs a console error or scrolls sideways. 14 routes also have visual baselines (`tests/visual-baselines`, lossless WebP, named `chromium-darwin` for the platform they were made on). A difference is a review item, not a failure. The page-level overflow check cannot see overflow inside the scrolling content pane; the baselines do. On another platform there is no baseline, which is also a review item. To accept an intended change, inspect it, run `reflection update --config packages/ui/reflection.config.ts --all --from-run latest --dry-run`, and promote it only with approval.
+
+## Accessibility
+
+```bash
+pnpm demo-bundles && pnpm a11y
+```
+
+`scripts/a11y-audit.ts` visits every route in light and dark and runs axe-core's WCAG A and AA rules, plus five states that exist only after an action (the filter menu, the implementations menu, and the inspector's overlay, wipe and diff modes). It also walks the page with the Tab key: every stop must have a name and a visible focus ring, and every page must have its own title. It exits non-zero on any finding. It finds structural problems; it does not replace listening to the viewer with a screen reader.
+
+What the viewer does for it: each page is titled by where the reader is (newest first); after moving to another page focus goes to the page content (not after a filter or mode change); counts and the comparison position are announced; decorative status shapes are hidden and a status shape that stands alone is named; labelled containers are groups; the comparison keys never fire while typing in a control; blinking is off under reduced motion.
 
 ## Layout
 

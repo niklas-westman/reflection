@@ -219,7 +219,7 @@ export function ItemGallery(props: ItemGalleryProps): ReactNode {
   return (
     <>
       <ItemControls {...props} />
-      <Cards aria-label="Reference and implementations">
+      <Cards role="group" aria-label="Reference and implementations">
         <ReferencePreview reference={detail.reference} itemLabel={detail.row.label} />
         {detail.adapters.map((card) => (
           <AdapterPreview key={card.column.id} card={card} itemLabel={detail.row.label} href={card.comparison ? paths.comparison(props.bundleId, props.subject.kind, props.subject.id, card.comparison.id) : undefined} />
@@ -270,7 +270,7 @@ function ItemControls({ rows, choices, columns, chosenColumns, detail, onPickDim
       </label>
       {columns.length > 1 ? (
         <details>
-          <summary aria-label="Show implementations">
+          <summary>
             Show implementations: {chosenColumns.length === columns.length ? `all (${columns.length})` : `${chosenColumns.length} of ${columns.length}`}
           </summary>
           <div role="group" aria-label="Implementations">

@@ -147,7 +147,7 @@ function Changes({ diff }: { diff: ProjectionDiff }): ReactNode {
 
   return (
     <>
-      <Summary aria-label="Summary of changes">
+      <Summary role="group" aria-label="Summary of changes">
         <section aria-label="Added">
           <h2>Added</h2>
           <div className="count">{diff.totals.items.added}</div>
@@ -183,7 +183,7 @@ function Changes({ diff }: { diff: ProjectionDiff }): ReactNode {
       {visible.length === 0 ? (
         <p role="status">{diff.subjects.length - diff.totals.subjects.unchanged === 0 ? 'Nothing changed in the catalog of required items or their design references.' : 'No change matches these filters.'}</p>
       ) : (
-        <Cards aria-label="Changes to inspect">
+        <Cards role="group" aria-label="Changes to inspect">
           {visible.map((change) => {
             const subject = subjects.find((entry) => entry.kind === change.kind && entry.id === change.id);
             return (

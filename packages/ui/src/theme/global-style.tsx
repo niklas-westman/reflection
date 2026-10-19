@@ -31,6 +31,8 @@ export const GlobalStyle = createGlobalStyle`
   button { font: inherit; color: inherit; cursor: pointer; }
   a { color: var(--accent); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  /* The page content takes focus after navigation so reading starts there; it is not a control, so no ring. */
+  main:focus { outline: none; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }

@@ -111,7 +111,7 @@ export interface SummaryGroupsProps {
 /** Two panels with one unit each: required items, and comparisons. They are never shown as one ratio. */
 export function SummaryGroups({ items, comparisons, lowerBound }: SummaryGroupsProps): ReactNode {
   return (
-    <Panels aria-label="Summary">
+    <Panels role="group" aria-label="Summary">
       <RequiredItemsPanel items={items} lowerBound={lowerBound} />
       <Panel aria-label="Comparisons">
         <h2>Comparisons</h2>

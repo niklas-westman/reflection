@@ -233,7 +233,7 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
         <span className="grow" />
         <nav className="pager" aria-label="Move between comparisons">
           {hrefs.previous ? <a href={hrefs.previous} rel="prev">Previous</a> : <span aria-disabled="true">Previous</span>}
-          <span>
+          <span aria-live="polite">
             {sequence.index + 1} of {sequence.ids.length}
             {sequence.filtered ? '' : ' (whole subject)'}
           </span>

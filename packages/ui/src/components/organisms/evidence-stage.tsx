@@ -230,7 +230,7 @@ export function EvidenceStage(props: EvidenceStageProps): ReactNode {
         </p>
       ) : null}
       {mode === 'side-by-side' ? (
-        <ThreeUp aria-label="Reference, implementation and difference">
+        <ThreeUp role="group" aria-label="Reference, implementation and difference">
           <Panel>
             <figcaption>
               <strong>Reference</strong>

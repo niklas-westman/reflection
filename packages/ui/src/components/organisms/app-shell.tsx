@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useRouterState } from '@tanstack/react-router';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { applyColorScheme, readColorScheme, type ColorScheme } from '../../theme/color-scheme';
 import { paths } from '../../routes/paths';
@@ -66,6 +67,25 @@ export interface AppShellProps {
 
 export function AppShell({ crumbs, status, children }: AppShellProps): ReactNode {
   const [scheme, setScheme] = useState<ColorScheme>(() => document.documentElement.dataset.theme === 'dark' ? 'dark' : readColorScheme());
+
+  // The page is titled by where the reader is, newest crumb first, so a tab, a history entry and a screen reader
+  // all say which page this is.
+  const title = [...crumbs.map((crumb) => crumb.label)].reverse().join(' · ');
+  useEffect(() => {
+    document.title = title ? `${title} · Reflection` : 'Reflection';
+  }, [title]);
+
+  // After a move to another page, focus goes to the page content so a keyboard or screen-reader user starts
+  // there instead of at the point they left. Changing a filter or a mode on the same page does not move focus.
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const previousPath = useRef(pathname);
+  useEffect(() => {
+    if (previousPath.current === pathname) return;
+    previousPath.current = pathname;
+    const main = document.querySelector('main');
+    main?.setAttribute('tabindex', '-1');
+    main?.focus({ preventScroll: true });
+  }, [pathname]);
 
   const toggle = (): void => {
     const next = scheme === 'dark' ? 'light' : 'dark';

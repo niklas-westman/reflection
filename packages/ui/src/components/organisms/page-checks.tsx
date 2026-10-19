@@ -5,6 +5,7 @@ import { joinDimensions } from '../../model/format';
 import type { MatrixColumn, MatrixRow } from '../../model/matrix-model';
 import { paths, type SubjectKind } from '../../routes/paths';
 import { ArtifactImage } from '../atoms/artifact-image';
+import { Button } from '../atoms/button';
 import { cellDisplay, READINESS_DISPLAY, StatusLabel } from '../atoms/outcome-status';
 import { StatusGlyph } from '../atoms/status-glyph';
 
@@ -82,7 +83,7 @@ export function PageChecks({ bundleId, subject, rows, columns, onShowAll }: Page
     <>
       <Heading>Recorded page checks</Heading>
       <Note style={{ marginTop: 0 }}>Whole-page captures of each recorded state and viewport, not checks of the elements inside them.</Note>
-      <Grid aria-label="Recorded page checks">
+      <Grid role="group" aria-label="Recorded page checks">
         {shown.map((row) => {
           const primary = [...row.cells.values()].find((cell) => cell.outcome === 'failed')?.primary ?? [...row.cells.values()].find((cell) => cell.primary)?.primary;
           const display = READINESS_DISPLAY[row.readiness];
@@ -115,9 +116,9 @@ export function PageChecks({ bundleId, subject, rows, columns, onShowAll }: Page
       </Grid>
       <Note>
         Showing {shown.length} of {total} required items, failures and unproven items first.{' '}
-        <button type="button" onClick={onShowAll}>
+        <Button type="button" onClick={onShowAll}>
           View all {total} required items
-        </button>
+        </Button>
       </Note>
     </>
   );

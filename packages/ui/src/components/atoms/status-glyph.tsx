@@ -52,10 +52,22 @@ export function glyphLabel(kind: GlyphKind): string {
   return LABELS[kind];
 }
 
+/**
+ * A status shape. With a label it is an image that says the status; with an empty label it is decoration beside
+ * words that already say it, and is hidden from assistive technology rather than announced as an unnamed image.
+ */
 export function StatusGlyph({ kind, label }: { kind: GlyphKind; label?: string }): ReactNode {
+  const name = label ?? LABELS[kind];
+  if (name === '') {
+    return (
+      <Svg $kind={kind} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        {SHAPES[kind]}
+      </Svg>
+    );
+  }
   return (
-    <Svg $kind={kind} viewBox="0 0 16 16" role="img" aria-label={label ?? LABELS[kind]}>
-      <title>{label ?? LABELS[kind]}</title>
+    <Svg $kind={kind} viewBox="0 0 16 16" role="img" aria-label={name}>
+      <title>{name}</title>
       {SHAPES[kind]}
     </Svg>
   );

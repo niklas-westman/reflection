@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import type { Projection } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
+import { Button } from '../components/atoms/button';
 import { ExternalLink } from '../components/atoms/external-link';
 import { Pill } from '../components/atoms/pill';
 import { Spacer } from '../components/atoms/spacer';
@@ -219,9 +220,9 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
               <strong>No items match these filters.</strong>
               <p>
                 All {total} items are still counted above.{' '}
-                <button type="button" onClick={() => update({ filters: { search: '', outcomes: [], dimensions: {} } })}>
+                <Button type="button" onClick={() => update({ filters: { search: '', outcomes: [], dimensions: {} } })}>
                   Clear filters
-                </button>
+                </Button>
               </p>
             </Empty>
           ) : (

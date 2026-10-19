@@ -2,7 +2,7 @@
 
 **This file is where we are.** Read it first in every session. It says what the product is, what is done, what is being worked on, what is next, and what is blocked or undecided. The long-form reasoning lives in the briefs; this file is the checklist.
 
-Last updated: 2026-10-19 (the v5 design is built; steps 1 to 6 and the required-implementations rule are done)
+Last updated: 2026-10-19 (the v5 design is built and checked: smoke gate, visual baselines, accessibility audit, dark theme)
 
 ## How to keep this alive
 
@@ -42,12 +42,11 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Viewer quality: keyboard and screen-reader pass, then dark-theme parity for every screen.** Not started. The v5 build order is finished and the smoke gate on the viewer is in place.
+- [ ] **Decide what happens to what is built: publishing (package names, npm scope, version bump, push) and the first provider.** The viewer, projection and bundles are complete locally; the Marwes provider (R1, R2) and the Sourcer provider (R2b) live in other repositories and need your go-ahead and a session in each. Nothing is waiting on code in this repository except the items marked open below.
 
 ## Next (in order)
 
-1. Keyboard and screen-reader pass, dark-theme parity for every screen.
-2. Decide publishing: package names and npm scope, version bump, push.
+1. Providers: Marwes (R1 `.figma` upgrade, R2 provider) and Sourcer (R2b), each in its own repository.
 
 Providers and the release portal follow once the viewer can open a real bundle. They need the owner's go-ahead and sessions in other repositories.
 
@@ -194,9 +193,11 @@ Viewer quality:
 - [x] Visual baselines for 14 stable routes (`visualSmoke`), approved by the owner on 2026-10-19: lossless WebP, 568 KB, in `packages/ui/tests/visual-baselines`, named `chromium-darwin` because they were made on macOS. Run-to-run noise on that machine is 0 pixels, so the threshold is `maxDiffPixels: 50` (a ratio would hide real changes in a mostly empty screen). Mutations (a 3000px table, a changed colour) are caught. A difference is review-only.
 - [ ] Linux baselines for CI: a run on another platform finds no baseline and reports a review item. Make them on Linux (a container) and approve them the same way.
 - [ ] Run the gate in CI (the generated demo bundles, a Vite dev server and Linux baselines are the needs).
-- [ ] Keyboard, focus and screen-reader pass.
+- [x] Keyboard, focus and screen-reader pass, done with an automated audit (`pnpm --filter reflection-ui a11y`): axe-core's WCAG A and AA rules on 11 routes in light and dark and on five open-menu and inspector-mode states, plus a keyboard walk that checks every stop has a name and a visible focus ring, and that every page has its own title. The first run found: decorative status shapes exposed as unnamed images, a label that did not contain its visible text, bare buttons with unreadable dark-theme contrast, and no page titles. All fixed. Also added: a title per page, focus moves to the page content after navigation (not on a filter or mode change), counts and the comparison position are announced, labelled containers have a group role. 238 viewer tests cover these.
+- [ ] A hands-on screen-reader pass (VoiceOver or NVDA) by a person: the audit finds structural problems, not whether the experience reads well.
 - [ ] Virtualization, only if measured as needed.
-- [ ] Dark theme parity for every screen.
+- [x] Dark-theme parity: every route also runs in the dark theme in the gate (heading, no console error, no sideways scroll) and in the audit (contrast), with zero findings.
+- [ ] Dark-theme visual baselines. They would be a second set of baselines for the owner to approve.
 - [ ] Release the viewer as an installable package or static build (decision below).
 
 ### 5. Providers (other repositories; each needs the owner's go-ahead and a session there)
@@ -266,6 +267,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-19: accessibility pass: audit script, fixes (decorative glyphs, label, button contrast, page titles, focus after navigation, live regions, group roles), dark variants of every route in the gate; the two comparison baselines were updated for the new breadcrumb (intended, approved). UI tests 228 to 238.
 - 2026-10-19: visual baselines for the viewer (14 routes, approved by the owner); threshold `maxDiffPixels: 50`; the overflow gap is closed by the baselines.
 - 2026-10-19: proved the viewer gate with two mutations: a console error is caught on both widths; sideways overflow inside the content pane is not (recorded as a gap).
 - 2026-10-19: dogfooding: Reflection smoke gate on the viewer (`packages/ui/reflection.config.ts`, `pnpm --filter reflection-ui reflect`); visible headings added to the page checks and the changes list; AGENTS.md documents the viewer gate.

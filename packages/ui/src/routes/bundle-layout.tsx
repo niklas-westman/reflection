@@ -72,7 +72,7 @@ export function BundleLayout(): ReactNode {
 type OpenedResult = Extract<NonNullable<ReturnType<typeof useBundle>['data']>, { status: 'opened' }>;
 
 function OpenLayout({ bundleId, result, verifying, verificationFailed }: { bundleId: string; result: OpenedResult; verifying: boolean; verificationFailed: string | undefined }): ReactNode {
-  const { section, subjectId } = useParams({ strict: false });
+  const { section, subjectId, comparisonId } = useParams({ strict: false });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const view = useMemo(
     () => ({ bundleId, manifest: result.bundle.manifest, unusablePaths: result.bundle.unusablePaths, prepared: prepareBundle(result.bundle, result.problems), verifying, verificationFailed }),
@@ -85,7 +85,12 @@ function OpenLayout({ bundleId, result, verifying, verificationFailed }: { bundl
   const crumbs: Crumb[] = [{ label: `${project.name} ${release.release}`, href: paths.bundle(bundleId) }];
   if (location.page === 'subject') {
     const current = subjects.find((subject) => subject.id === location.subjectId);
-    crumbs.push({ label: SECTION_TITLES[location.section] }, { label: current?.label ?? location.subjectId });
+    crumbs.push({ label: SECTION_TITLES[location.section] }, { label: current?.label ?? location.subjectId, href: comparisonId ? paths.subject(bundleId, current?.kind ?? 'page', location.subjectId) : undefined } as Crumb);
+    const comparison = comparisonId ? view.prepared.projection.comparisons.find((entry) => entry.id === comparisonId) : undefined;
+    if (comparisonId) {
+      const requirement = view.prepared.projection.requirements.find((entry) => entry.id === comparison?.requirementId);
+      crumbs.push({ label: [requirement?.label ?? comparison?.id ?? comparisonId, comparison?.subject.adapter].filter(Boolean).join(' · ') });
+    }
   } else if (location.page === 'changes') {
     crumbs.push({ label: 'Changes' });
   } else if (location.page === 'design-references') {

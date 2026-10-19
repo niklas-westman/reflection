@@ -12,7 +12,8 @@
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "demo-bundles": "vite-node scripts/make-demo-bundles.ts",
-    "reflect": "pnpm --dir ../.. exec node dist/cli.js run --config packages/ui/reflection.config.ts --mode smoke"
+    "reflect": "pnpm --dir ../.. exec node dist/cli.js run --config packages/ui/reflection.config.ts --mode smoke",
+    "a11y": "vite-node scripts/a11y-audit.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
@@ -31,6 +32,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.1",
+    "axe-core": "^4.14.0",
     "jsdom": "^26.1.0",
     "pngjs": "^7.0.0",
     "typescript": "^5.6.3",

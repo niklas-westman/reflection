@@ -185,7 +185,7 @@ export function FilterBar({ filters, onFiltersChange, dimensions, density, onDen
           </Chip>
         ))
       )}
-      <Count>{active ? `Showing ${shown} of ${total} items` : `${total} items`}</Count>
+      <Count aria-live="polite">{active ? `Showing ${shown} of ${total} items` : `${total} items`}</Count>
       <Grow />
       <Segmented role="group" aria-label="Density">
         {DENSITIES.map((entry) => (
