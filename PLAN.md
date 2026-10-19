@@ -47,7 +47,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
   - [x] Guide: approval fields (`by`, `at`, `note`, `boundTo`, `causes`, `recordedBy`), what `boundTo` and snapshot `sha256` hash, `composite` inputs, `enrolled` without the concept, native values.
   - [x] Viewer: who and when for an approval (by, recorded by, at, note, bound hash); `delegated` counts as a person's approval and is labelled so; `nativeOutcome` and `nativeValidity` shown as native; measurement and implementation gaps only where the bundle has them; "Release candidate" from one helper; tall thumbnails fit; the metric row labelled by its own name; run age against the build. (Unknown counts were checked: they are never drawn as 0, nothing to fix.) 247 tests, mutation-checked; the thumbnail fix measured with a 393x1268 image (cropped at 1103px before, fits at 214px after).
   - [~] Gates: tests, build and `a11y` (no findings) pass; `reflect` is pass-with-review with 12 visual differences from the intended label and layout changes, proposed by dry run. Left: the owner approves promoting the baselines.
-  - [ ] Release: prepare 0.2.0 (`docs/releasing.md`); the owner publishes.
+  - [~] Release: 0.2.0 prepared and pushed (all checks, package smoke and pack contents verified). Left: the owner runs `npm publish`, then verify from the registry.
 
 ## Next (in order)
 
