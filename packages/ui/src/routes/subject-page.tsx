@@ -109,7 +109,7 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
   const view = parseSubjectSearch(useSearch({ strict: false }) as Record<string, unknown>);
 
   const diffState = useReleaseDiff();
-  const matrix = useMemo(() => buildMatrix({ projection, subject, unusableComparisonIds: prepared.unusableComparisonIds }), [projection, subject, prepared]);
+  const matrix = useMemo(() => buildMatrix({ projection, subject, unusableComparisonIds: prepared.unusableComparisonIds, supersededComparisonIds: prepared.supersededComparisonIds }), [projection, subject, prepared]);
   const filtered = useMemo(() => filterMatrix(matrix, view.filters), [matrix, view.filters]);
   const dimensions = useMemo(() => availableDimensions(matrix), [matrix]);
   const shown = filtered.groups.reduce((sum, group) => sum + group.rows.length, 0);

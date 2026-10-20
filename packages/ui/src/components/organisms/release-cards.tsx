@@ -62,6 +62,7 @@ function plural(count: number, one: string, many: string): string {
 
 const ATTENTION_TEXT: Record<AttentionKind, { title: (count: number) => string; detail: string }> = {
   failures: { title: (count) => `${plural(count, 'comparison failure', 'comparison failures')}`, detail: 'A required comparison did not pass.' },
+  'superseded-source': { title: (count) => `${plural(count, 'comparison proved', 'comparisons proved')} a superseded design source`, detail: 'The design moved on after these checks ran, so they are counted as unknown until they run against the current source.' },
   'unusable-evidence': { title: (count) => `${plural(count, 'comparison has', 'comparisons have')} unusable evidence`, detail: 'Counted as unknown until the files are restored.' },
   'needs-design': { title: (count) => `${plural(count, 'required item needs', 'required items need')} a design selection`, detail: 'No design has been chosen to compare against.' },
   'not-enrolled': { title: (count) => `${plural(count, 'required item is', 'required items are')} not enrolled`, detail: 'No comparison is set up for it yet.' },

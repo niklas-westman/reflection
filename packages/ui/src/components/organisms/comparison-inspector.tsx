@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import type { InspectorModel } from '../../model/inspector-model';
 import { INSPECTOR_MODES, ZOOMS, type InspectorMode, type InspectorView, type Zoom } from '../../model/inspector-state';
 import { Segmented } from '../atoms/segmented';
-import { cellDisplay, StatusLabel } from '../atoms/outcome-status';
+import { CELL_DISPLAY, cellDisplay, StatusLabel } from '../atoms/outcome-status';
 import { StatusGlyph } from '../atoms/status-glyph';
 import { EvidenceStage, useBlink, type Size } from './evidence-stage';
 import { FreshnessFacts } from '../molecules/freshness-facts';
@@ -109,6 +109,15 @@ const Controls = styled.div`
 // The images are the evidence, so they take the width. The rail sits beside them only on a very wide screen;
 // otherwise its cards line up below the images.
 const WIDE_ENOUGH_FOR_RAIL = '(min-width: 1700px)';
+
+const SupersededNotice = styled.p`
+  margin: 0 0 ${({ theme }) => theme.space.sm};
+  padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
+  background: var(--gap-bg);
+  color: var(--gap);
+  border-radius: ${({ theme }) => theme.radius.md};
+  font-weight: 600;
+`;
 
 const Workspace = styled.div`
   display: grid;
@@ -244,7 +253,7 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const display = cellDisplay(model.unusable ? 'not-run' : model.outcome, model.unusable);
+  const display = cellDisplay(model.unusable ? 'not-run' : model.outcome, model.unusable, model.superseded !== undefined);
   const diffMetricText = model.diffSummary ? `${model.diffSummary.label}: ${model.diffSummary.valueText}${model.diffSummary.ratio !== undefined ? ` (ratio ${model.diffSummary.ratio})` : ''}` : undefined;
   const { sequence } = model;
 
@@ -280,6 +289,11 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
           </div>
         ) : null}
       </Strip>
+      {model.superseded ? (
+        <SupersededNotice role="status">
+          ▲ Evidence from a superseded design source. This check proved {model.superseded.source}; the design moved on to {model.superseded.replacedBy}. It counts as not proven.
+        </SupersededNotice>
+      ) : null}
       <Controls role="toolbar" aria-label="Comparison view">
         <Segmented role="group" aria-label="Comparison mode">
           {INSPECTOR_MODES.map((entry, index) => (
@@ -426,7 +440,7 @@ function FactRow({ fact }: { fact: { label: string; value: string; mono?: boolea
 }
 
 function ResultCard({ model, offline }: { model: InspectorModel; offline: boolean }): ReactNode {
-  const display = cellDisplay(model.unusable ? 'not-run' : model.outcome, model.unusable);
+  const display = cellDisplay(model.unusable ? 'not-run' : model.outcome, model.unusable, model.superseded !== undefined);
   return (
     <Card aria-label="Verification result">
       <h2>Verification result</h2>
@@ -434,7 +448,12 @@ function ResultCard({ model, offline }: { model: InspectorModel; offline: boolea
         <StatusLabel display={display} />
       </p>
       <p className="muted">
-        {model.unusable ? 'A file behind this comparison is unusable, so the recorded result cannot be trusted.' : 'As recorded in this bundle.'} {offline ? 'Freshness cannot be rechecked offline.' : ''}
+        {model.unusable
+          ? 'A file behind this comparison is unusable, so the recorded result cannot be trusted.'
+          : model.superseded
+            ? `Recorded as ${CELL_DISPLAY[model.superseded.recordedOutcome].text.toLowerCase()} against a design source that was superseded, so it is not counted.`
+            : 'As recorded in this bundle.'}{' '}
+        {offline ? 'Freshness cannot be rechecked offline.' : ''}
       </p>
       <dl>
         <dt>Required item</dt>

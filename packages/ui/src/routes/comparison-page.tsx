@@ -25,9 +25,9 @@ export function ComparisonPage(): ReactNode {
   const comparison = projection.comparisons.find((entry) => entry.id === comparisonId);
   // The comparison's own subject, which can differ from the one in a hand-edited address.
   const owner = comparison ? subjects.find((subject) => subject.comparisons.some((entry) => entry.id === comparison.id)) : undefined;
-  const matrix = useMemo(() => (owner ? buildMatrix({ projection, subject: owner, unusableComparisonIds: prepared.unusableComparisonIds }) : undefined), [projection, owner, prepared]);
+  const matrix = useMemo(() => (owner ? buildMatrix({ projection, subject: owner, unusableComparisonIds: prepared.unusableComparisonIds, supersededComparisonIds: prepared.supersededComparisonIds }) : undefined), [projection, owner, prepared]);
   const model = useMemo(
-    () => (matrix ? buildInspectorModel({ projection, matrix, filters, comparisonId, unusableComparisonIds: prepared.unusableComparisonIds, bundleHash: manifest.bundleHash, builtAt: manifest.release.builtAt, validity: prepared.validity }) : undefined),
+    () => (matrix ? buildInspectorModel({ projection, matrix, filters, comparisonId, unusableComparisonIds: prepared.unusableComparisonIds, bundleHash: manifest.bundleHash, builtAt: manifest.release.builtAt, validity: prepared.validity, supersededComparisonIds: prepared.supersededComparisonIds, recordedComparisons: prepared.recordedComparisons }) : undefined),
     // The filters object is rebuilt on every render; its content is what matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [projection, matrix, JSON.stringify(filters), comparisonId, prepared, manifest.bundleHash]

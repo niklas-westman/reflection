@@ -19,6 +19,8 @@ export interface MatrixCell {
   primary: Comparison | undefined;
   // Some evidence behind this cell could not be used, so its outcome is unknown.
   unusable: boolean;
+  // Some evidence behind this cell read a superseded design source, so its outcome is unknown.
+  superseded: boolean;
 }
 
 export interface ReferenceSummary {
@@ -63,10 +65,14 @@ export interface BuildMatrixOptions {
   projection: Projection;
   subject: SubjectGroup;
   unusableComparisonIds: ReadonlySet<string>;
+  supersededComparisonIds?: ReadonlySet<string>;
 }
 
+const NONE_SUPERSEDED: ReadonlySet<string> = new Set();
+const SUPERSEDED_DETAIL = 'Checked against a design source that was later superseded; it needs a run against the current source.';
+
 /** The table for one subject: one row per required item, grouped by outcome so failures are never buried. */
-export function buildMatrix({ projection, subject, unusableComparisonIds }: BuildMatrixOptions): Matrix {
+export function buildMatrix({ projection, subject, unusableComparisonIds, supersededComparisonIds = NONE_SUPERSEDED }: BuildMatrixOptions): Matrix {
   const concepts = projection.provider.readinessConcepts;
   const columns = buildColumns(subject.comparisons, subject.requirements);
   const snapshotLabels = new Map(projection.snapshots.map((snapshot) => [snapshot.id, snapshot.label ?? snapshot.version ?? snapshot.role]));
@@ -87,11 +93,11 @@ export function buildMatrix({ projection, subject, unusableComparisonIds }: Buil
       dimensions: dimensionsOf(requirement.subject),
       readiness,
       group,
-      reason: reasonFor(readiness, comparisons, requirement, unusableComparisonIds),
-      detail: detailFor(readiness, requirement, comparisons),
+      reason: reasonFor(readiness, comparisons, requirement, unusableComparisonIds, supersededComparisonIds),
+      detail: detailFor(readiness, requirement, comparisons) ?? (comparisons.some((comparison) => supersededComparisonIds.has(comparison.id)) ? SUPERSEDED_DETAIL : undefined),
       reference: summarizeReference(requirement, comparisons, snapshotLabels),
       referenceIsCommon: false,
-      cells: buildCells(columns, comparisons, unusableComparisonIds)
+      cells: buildCells(columns, comparisons, unusableComparisonIds, supersededComparisonIds)
     };
   });
 
@@ -135,14 +141,14 @@ function buildColumns(comparisons: Comparison[], requirements: Requirement[]): M
   return adapters.map((adapter) => ({ id: adapter, label: adapter === NO_ADAPTER ? 'Result' : adapter }));
 }
 
-function buildCells(columns: MatrixColumn[], comparisons: Comparison[], unusable: ReadonlySet<string>): Map<string, MatrixCell> {
+function buildCells(columns: MatrixColumn[], comparisons: Comparison[], unusable: ReadonlySet<string>, superseded: ReadonlySet<string>): Map<string, MatrixCell> {
   return new Map(
     columns.map((column) => {
       const here = comparisons.filter((comparison) => (comparison.subject.adapter ?? NO_ADAPTER) === column.id);
       const outcomes = here.map(comparisonOutcome);
       const outcome: MatrixCell['outcome'] = outcomes.includes('failed') ? 'failed' : outcomes.includes('not-run') ? 'not-run' : outcomes.length > 0 ? 'passed' : 'none';
       const primary = here.find((comparison) => comparisonOutcome(comparison) === 'failed') ?? here[0];
-      return [column.id, { outcome, comparisons: here, primary, unusable: here.some((comparison) => unusable.has(comparison.id)) }];
+      return [column.id, { outcome, comparisons: here, primary, unusable: here.some((comparison) => unusable.has(comparison.id)), superseded: here.some((comparison) => superseded.has(comparison.id)) }];
     })
   );
 }
@@ -154,11 +160,12 @@ function groupOf(readiness: Readiness): OutcomeGroupId {
   return 'not-proven';
 }
 
-function reasonFor(readiness: Readiness, comparisons: Comparison[], requirement: Requirement, unusable: ReadonlySet<string>): string | undefined {
+function reasonFor(readiness: Readiness, comparisons: Comparison[], requirement: Requirement, unusable: ReadonlySet<string>, superseded: ReadonlySet<string>): string | undefined {
   if (readiness === 'needs-design') return 'No design selected';
   if (readiness === 'not-enrolled') return 'Not enrolled';
   if (readiness !== 'unknown') return undefined;
   if (comparisons.some((comparison) => unusable.has(comparison.id))) return 'Evidence file unusable';
+  if (comparisons.some((comparison) => superseded.has(comparison.id))) return 'Proved a superseded design source';
   if (missingImplementations(requirement, comparisons).length > 0) return 'Not compared in every required implementation';
   if (comparisons.length === 0) return requirement.enrolled ? 'No comparison recorded' : 'Not covered';
   return 'Not every required proof ran';

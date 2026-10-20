@@ -2,7 +2,7 @@ import { deriveReadiness, missingImplementations, type Projection } from 'reflec
 import type { OutcomeGroupId } from './matrix-model';
 import type { SubjectGroup } from './subject-model';
 
-export type AttentionKind = 'failures' | 'unusable-evidence' | 'needs-design' | 'not-enrolled' | 'missing-implementations' | 'not-proven' | 'unconfirmed-references';
+export type AttentionKind = 'failures' | 'unusable-evidence' | 'superseded-source' | 'needs-design' | 'not-enrolled' | 'missing-implementations' | 'not-proven' | 'unconfirmed-references';
 
 export interface AttentionSubject {
   id: string;
@@ -12,7 +12,7 @@ export interface AttentionSubject {
 
 export interface AttentionItem {
   kind: AttentionKind;
-  // In the unit of the kind: comparisons for failures, unusable evidence and references; required items otherwise.
+  // In the unit of the kind: comparisons for failures, unusable or superseded evidence and references; required items otherwise.
   count: number;
   // The matrix group that holds these rows, so a link can open the subject already filtered.
   outcome: OutcomeGroupId | undefined;
@@ -23,13 +23,14 @@ export interface BuildAttentionOptions {
   projection: Projection;
   subjects: SubjectGroup[];
   unusableComparisonIds: ReadonlySet<string>;
+  supersededComparisonIds?: ReadonlySet<string>;
 }
 
 /**
  * What a reader should look at first, derived only from recorded data. Each item names the subjects it comes
  * from. A count the provider has no concept of is left out, never reported as zero.
  */
-export function buildAttention({ projection, subjects, unusableComparisonIds }: BuildAttentionOptions): AttentionItem[] {
+export function buildAttention({ projection, subjects, unusableComparisonIds, supersededComparisonIds = new Set() }: BuildAttentionOptions): AttentionItem[] {
   const items: AttentionItem[] = [];
   const add = (kind: AttentionKind, outcome: OutcomeGroupId | undefined, countFor: (subject: SubjectGroup) => number): void => {
     const affected = subjects.filter((subject) => countFor(subject) > 0);
@@ -41,6 +42,7 @@ export function buildAttention({ projection, subjects, unusableComparisonIds }: 
 
   add('failures', 'failed', (subject) => subject.comparisonCounts.failed);
   add('unusable-evidence', 'not-proven', (subject) => subject.comparisons.filter((comparison) => unusableComparisonIds.has(comparison.id)).length);
+  add('superseded-source', 'not-proven', (subject) => subject.comparisons.filter((comparison) => supersededComparisonIds.has(comparison.id)).length);
   add('needs-design', 'missing', (subject) => subject.summary.needsDesign ?? 0);
   add('not-enrolled', 'missing', (subject) => subject.summary.notEnrolled ?? 0);
   add('missing-implementations', 'not-proven', (subject) =>

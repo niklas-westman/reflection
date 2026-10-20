@@ -333,7 +333,7 @@ function describeApproval(reference: ReferenceSummary): string {
 }
 
 function ResultCell({ cell, row, column, comparisonHref, density }: { cell: MatrixCell; row: MatrixRow; column: MatrixColumn; comparisonHref: (comparisonId: string) => string; density: Density }): ReactNode {
-  const { glyph, text } = cellDisplay(cell.outcome, cell.unusable);
+  const { glyph, text } = cellDisplay(cell.outcome, cell.unusable, cell.superseded);
   const more = cell.comparisons.length > 1 ? ` (${cell.comparisons.length} comparisons)` : '';
 
   if (!cell.primary) {

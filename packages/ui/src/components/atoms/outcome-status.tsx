@@ -8,13 +8,17 @@ export interface StatusDisplay {
   text: string;
 }
 
-/** How a result cell reads. An unusable file makes the outcome unknown, whatever was recorded. */
-export const CELL_DISPLAY: Record<MatrixCell['outcome'] | 'unusable', StatusDisplay> = {
+/**
+ * How a result cell reads. An unusable file, or a superseded design source, makes the outcome unknown, whatever
+ * was recorded.
+ */
+export const CELL_DISPLAY: Record<MatrixCell['outcome'] | 'unusable' | 'superseded', StatusDisplay> = {
   passed: { glyph: 'passed', text: 'Passed' },
   failed: { glyph: 'failed', text: 'Failed' },
   'not-run': { glyph: 'not-run', text: 'Not run' },
   none: { glyph: 'not-run', text: 'Not compared' },
-  unusable: { glyph: 'unknown', text: 'Unknown: evidence unusable' }
+  unusable: { glyph: 'unknown', text: 'Unknown: evidence unusable' },
+  superseded: { glyph: 'unknown', text: 'Unknown: superseded design source' }
 };
 
 export const READINESS_DISPLAY: Record<Readiness, StatusDisplay> = {
@@ -25,8 +29,8 @@ export const READINESS_DISPLAY: Record<Readiness, StatusDisplay> = {
   unknown: { glyph: 'unknown', text: 'Not proven' }
 };
 
-export function cellDisplay(outcome: MatrixCell['outcome'], unusable: boolean): StatusDisplay {
-  return CELL_DISPLAY[unusable ? 'unusable' : outcome];
+export function cellDisplay(outcome: MatrixCell['outcome'], unusable: boolean, superseded = false): StatusDisplay {
+  return CELL_DISPLAY[unusable ? 'unusable' : superseded ? 'superseded' : outcome];
 }
 
 /** A glyph with its words: status is never colour or shape alone. */

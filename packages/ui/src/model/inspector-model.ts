@@ -57,6 +57,8 @@ export interface InspectorModel {
   implementation: string | undefined;
   outcome: ComparisonOutcome;
   unusable: boolean;
+  // Set when the comparison read a superseded design source: what it read, what replaced it, and what it recorded.
+  superseded: { source: string; replacedBy: string; recordedOutcome: ComparisonOutcome } | undefined;
   referenceArtifact: Artifact | undefined;
   actualArtifact: Artifact | undefined;
   diffArtifact: Artifact | undefined;
@@ -94,6 +96,9 @@ export interface BuildInspectorOptions {
   bundleHash: string;
   builtAt: string;
   validity: Validity;
+  supersededComparisonIds?: ReadonlySet<string>;
+  // Comparisons as the provider recorded them, before an unusable file or a superseded source set their proof aside.
+  recordedComparisons?: ReadonlyMap<string, Comparison>;
 }
 
 /** Everything the inspector shows, derived from one recorded comparison. Pure; nothing here is invented. */
@@ -107,6 +112,7 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
   const rows = matrix.groups.flatMap((group) => group.rows);
   const row = rows.find((entry) => entry.requirement.id === comparison.requirementId);
   const unusable = unusableComparisonIds.has(comparison.id);
+  const superseded = options.supersededComparisonIds?.has(comparison.id) ? describeSuperseded(comparison, projection, options.recordedComparisons?.get(comparison.id) ?? comparison) : undefined;
   const implementation = comparison.subject.adapter;
   const approval = comparison.reference?.approval;
   const measurements = comparison.measurements;
@@ -120,6 +126,7 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
     implementation,
     outcome: comparisonOutcome(comparison),
     unusable,
+    superseded,
     referenceArtifact: comparison.reference?.artifact,
     actualArtifact: comparison.actual,
     diffArtifact: comparison.diff?.artifact,
@@ -146,7 +153,7 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
       validity: options.validity
     }),
     provenance: buildProvenance(comparison, projection, options.bundleHash),
-    gaps: buildGaps(comparison, row, unusable, bundleRecordsMeasurements),
+    gaps: superseded ? [`It proved ${superseded.source}, which was superseded by ${superseded.replacedBy}. Its result is not counted until it runs against the current source.`] : buildGaps(comparison, row, unusable, bundleRecordsMeasurements),
     bundleRecordsMeasurements,
     limitations: comparison.limitations ?? [],
     siblings: siblingsOf(comparison, projection),
@@ -173,6 +180,15 @@ function describeMetricMeaning(direction: 'higher-is-better' | 'lower-is-better'
   if (!direction) return undefined;
   if (passAt === undefined) return direction === 'higher-is-better' ? 'Higher is better' : 'Lower is better';
   return `Passes at ${passAt} or ${direction === 'higher-is-better' ? 'more' : 'less'}`;
+}
+
+function describeSuperseded(comparison: Comparison, projection: Projection, recorded: Comparison): NonNullable<InspectorModel['superseded']> {
+  const snapshotName = (id: string | undefined): string => {
+    const snapshot = projection.snapshots.find((entry) => entry.id === id);
+    return snapshot ? `${snapshot.label ?? snapshot.role}, captured ${formatDate(snapshot.capturedAt)}` : 'an unknown design source';
+  };
+  const read = projection.snapshots.find((entry) => entry.id === comparison.snapshotId);
+  return { source: snapshotName(read?.id), replacedBy: snapshotName(read?.supersededBy), recordedOutcome: comparisonOutcome(recorded) };
 }
 
 function toSample(sample: { part: string; property: string; expected: string; actual: string; delta?: string | undefined; tolerance?: string | undefined; passed: boolean }): MeasurementSample {

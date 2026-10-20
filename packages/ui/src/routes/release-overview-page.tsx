@@ -77,7 +77,7 @@ export function ReleaseOverviewPage(): ReactNode {
   const { projection } = prepared;
   const subjects = useMemo(() => groupBySubject(projection), [projection]);
   const comparisons = useMemo(() => countComparisons(projection.comparisons), [projection]);
-  const attention = useMemo(() => buildAttention({ projection, subjects, unusableComparisonIds: prepared.unusableComparisonIds }), [projection, subjects, prepared]);
+  const attention = useMemo(() => buildAttention({ projection, subjects, unusableComparisonIds: prepared.unusableComparisonIds, supersededComparisonIds: prepared.supersededComparisonIds }), [projection, subjects, prepared]);
   const delegatedApprovals = countDelegatedApprovals(projection);
   const { release, project } = manifest;
   const diffState = useReleaseDiff();

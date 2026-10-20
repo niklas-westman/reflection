@@ -319,7 +319,7 @@ function describeApproval(reference: ReferenceCard): string {
 }
 
 function AdapterPreview({ card, itemLabel, href }: { card: AdapterCard; itemLabel: string; href: string | undefined }): ReactNode {
-  const display = cellDisplay(card.outcome, card.unusable);
+  const display = cellDisplay(card.outcome, card.unusable, card.superseded);
   return (
     <CardBox aria-label={card.column.label} $tone={card.outcome === 'failed' && !card.unusable ? 'fail' : undefined}>
       <header>

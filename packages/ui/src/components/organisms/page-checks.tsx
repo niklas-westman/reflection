@@ -190,7 +190,7 @@ function CheckCard({ bundleId, subject, row, columns }: { bundleId: string; subj
         <div className="impls">
           {columns.map((column) => {
             const cell = row.cells.get(column.id);
-            const status = cellDisplay(cell?.outcome ?? 'none', cell?.unusable ?? false);
+            const status = cellDisplay(cell?.outcome ?? 'none', cell?.unusable ?? false, cell?.superseded ?? false);
             return (
               <span key={column.id}>
                 <StatusGlyph kind={status.glyph} label={`${column.label}: ${status.text}`} />
