@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { openBundle, recordDecision, type BundleCatalog, type Decision } from 'reflection-projection';
+import { openBundle, recordDecision, type Decision } from 'reflection-projection';
+import type { BundleCatalog } from '../src/data/bundle-catalog';
 import { makeCatalog, makeProjection } from './helpers/test-bundles';
 import { renderApp } from './helpers/render-app';
 

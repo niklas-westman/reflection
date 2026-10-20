@@ -47,7 +47,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
   - [x] Hosting doc in the package: paths, `reflection-config.json`, `index.json`, the decision API contract (request, response, server duties).
   - [x] Viewer: `reflection-config.json` (`bundlesUrl`, `decisionsUrl`) read at start, so one build runs under any base path; the plain-path redirect fixed for a base path; richer `index.json` with a missing `latest` shown, never replaced; decisions read from the API and shown with their standing. No Approve or Require changes controls yet.
   - [x] Packaging: the built viewer ships as static files in `reflection-projection/viewer/` (built at pack time; 256 kB packed in all). Checked by the package smoke and by serving the packed viewer under `/reflection/` from a plain static server with a config, an `index.json` and three bundles.
-  - [ ] Gates, then release 0.5.0 (owner publishes) and a reply to Marwes.
+  - [~] Gates pass: projection 157 and viewer 280 tests, build, package smoke (viewer included), `reflect` (no blocking failures; one review item: the bundle list baseline differs by the new Latest markers), `a11y` (no findings). Left: the owner approves that one baseline, bump to 0.5.0 and push, the owner publishes, then the reply to Marwes.
 
 ## Next (in order)
 
@@ -301,6 +301,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-21: 0.5.0 built: `index.json`, decision request and list schemas, `recordDecision`, `docs/hosting.md`; viewer runs under any base path with `reflection-config.json`, marks the latest bundle, reads decisions; the built viewer ships in the package. Projection tests 151 to 157, UI tests 268 to 280.
 - 2026-10-20: `reflection-projection` 0.4.0 published; Marwes's hosting ask read; 0.5.0 scoped (contract plus read side; viewer shipped in the package).
 - 2026-10-20: 0.4.0 built: superseded design sources count as not proven, imported accepted deviations shown apart from proof, delegated approvals counted by record, smaller fixes from both providers. Projection tests 145 to 151, UI tests 259 to 268.
 - 2026-10-20: `reflection-projection` 0.3.0 published; Sourcer round 3 and Marwes round 1 read; 0.4.0 scoped.
