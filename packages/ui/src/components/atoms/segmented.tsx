@@ -1,15 +1,16 @@
 import styled from 'styled-components';
 
 /**
- * A small row of mutually exclusive buttons. Pressed state is announced with aria-pressed. Labels never wrap;
- * on a narrow screen the row scrolls sideways inside itself.
+ * A small row of mutually exclusive buttons. Pressed state is announced with aria-pressed. A label never wraps
+ * inside itself; when the row is too wide, the buttons wrap onto another line, so none is hidden.
  */
 export const Segmented = styled.div`
   display: inline-flex;
+  flex-wrap: wrap;
   max-width: 100%;
   border: 1px solid var(--border-strong);
   border-radius: ${({ theme }) => theme.radius.md};
-  overflow-x: auto;
+  overflow: hidden;
 
   button {
     flex: none;

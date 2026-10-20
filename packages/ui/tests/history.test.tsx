@@ -219,7 +219,7 @@ describe('the design references page', () => {
 
     renderApp(await makeCatalog([{ id: 'x', projection }]), '/bundles/x/design-references');
     const approvals = within(await screen.findByLabelText('Reference approvals'));
-    expect(approvals.getByText(`Owner, written down by Assistant, 13 Oct 2026 · ${covered} comparisons`)).toBeInTheDocument();
+    expect(approvals.getByText(`Owner, written down by Assistant, 13 Oct 2026 · one record, covering ${covered} comparisons`)).toBeInTheDocument();
     expect(approvals.getByText('Looks solid.')).toBeInTheDocument();
     expect(approvals.getByText('Approved and recorded by a person').closest('li')).toHaveClass('zero');
     expect(approvals.getByText('Approved by a person, written down by an agent').closest('li')).not.toHaveClass('zero');

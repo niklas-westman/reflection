@@ -45,6 +45,16 @@ describe('choosing an item', () => {
     expect(pickRow(rows, { ...hoverPrimary.dimensions, mode: 'dark' }, 'mode')?.label).toBe('primary default dark');
   });
 
+  it('offers "no value" for an item without a dimension, so it can be picked like any other', () => {
+    const missing = structuredClone(projection);
+    const requirement = missing.requirements.find((entry) => entry.id === 'button.primary.default.dark')!;
+    delete requirement.subject.mode;
+    const sparse = orderedRows(matrixOf(missing));
+
+    expect(dimensionChoices(sparse).find((choice) => choice.name === 'mode')?.values).toEqual(['', 'light']);
+    expect(pickRow(sparse, { variant: 'primary', mode: '', state: 'default' }, 'mode')?.requirement.id).toBe('button.primary.default.dark');
+  });
+
   it('always returns a real item, even for a value nothing has', () => {
     expect(pickRow(rows, { variant: 'tertiary' }, 'variant')).toBeDefined();
     expect(pickRow([], { variant: 'primary' }, 'variant')).toBeUndefined();

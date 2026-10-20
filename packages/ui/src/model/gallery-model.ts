@@ -13,13 +13,17 @@ export function orderedRows(matrix: Matrix): MatrixRow[] {
   return matrix.groups.flatMap((group) => group.rows);
 }
 
-/** The dimensions a reader can choose between: only those with more than one value. */
+// The value of a dimension an item does not have, so such items can still be chosen ("(none)" in the picker).
+export const NO_DIMENSION_VALUE = '';
+
+const valueOf = (row: MatrixRow, name: string): string => row.dimensions[name] ?? NO_DIMENSION_VALUE;
+
+/** The dimensions a reader can choose between: only those with more than one value, counting "no value" as one. */
 export function dimensionChoices(rows: MatrixRow[]): DimensionChoice[] {
+  const names = new Set(rows.flatMap((row) => Object.keys(row.dimensions)));
   const values = new Map<string, Set<string>>();
-  for (const row of rows) {
-    for (const [name, value] of Object.entries(row.dimensions)) {
-      values.set(name, (values.get(name) ?? new Set()).add(value));
-    }
+  for (const name of names) {
+    values.set(name, new Set(rows.map((row) => valueOf(row, name))));
   }
   return [...values.entries()]
     .filter(([, set]) => set.size > 1)
@@ -31,8 +35,8 @@ export function dimensionChoices(rows: MatrixRow[]): DimensionChoice[] {
  * dimension keeps that value and as many of the others as an existing item allows. There is always a real item.
  */
 export function pickRow(rows: MatrixRow[], wanted: Record<string, string>, pinned?: string): MatrixRow | undefined {
-  const candidates = pinned !== undefined && rows.some((row) => row.dimensions[pinned] === wanted[pinned]) ? rows.filter((row) => row.dimensions[pinned] === wanted[pinned]) : rows;
-  const overlap = (row: MatrixRow): number => Object.entries(wanted).filter(([name, value]) => row.dimensions[name] === value).length;
+  const candidates = pinned !== undefined && rows.some((row) => valueOf(row, pinned) === wanted[pinned]) ? rows.filter((row) => valueOf(row, pinned) === wanted[pinned]) : rows;
+  const overlap = (row: MatrixRow): number => Object.entries(wanted).filter(([name, value]) => valueOf(row, name) === value).length;
   return candidates.reduce<MatrixRow | undefined>((best, row) => (best === undefined || overlap(row) > overlap(best) ? row : best), undefined);
 }
 

@@ -67,8 +67,14 @@ function isUnconfirmed(approval: { state: string; attestation?: string | undefin
  * Reference approvals a person gave in conversation and an agent wrote down. They count as the person's, so they
  * are not a warning, but a reader should be able to find the notes until the person confirms them directly.
  */
-export function countDelegatedApprovals(projection: Projection): number {
-  return projection.comparisons.filter((comparison) => comparison.reference?.approval.state === 'holds' && comparison.reference.approval.attestation === 'delegated').length;
+export function countDelegatedApprovals(projection: Projection): { records: number; comparisons: number } {
+  const delegated = projection.comparisons.flatMap((comparison) => {
+    const approval = comparison.reference?.approval;
+    return approval?.state === 'holds' && approval.attestation === 'delegated' ? [approval] : [];
+  });
+  // One record is one person's statement, however many references it covers.
+  const records = new Set(delegated.map((approval) => JSON.stringify([approval.by, approval.recordedBy, approval.at, approval.note])));
+  return { records: records.size, comparisons: delegated.length };
 }
 
 /** Subjects that most need a look first: failing, then unresolved, then by name. */

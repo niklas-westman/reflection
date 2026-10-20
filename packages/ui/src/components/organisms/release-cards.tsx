@@ -73,7 +73,7 @@ const ATTENTION_TEXT: Record<AttentionKind, { title: (count: number) => string; 
 
 const SHOWN_SUBJECTS = 4;
 
-export function AttentionCard({ bundleId, items, delegatedApprovals = 0, deviations = { provenItems: 0, lapsed: 0 } }: { bundleId: string; items: AttentionItem[]; delegatedApprovals?: number; deviations?: { provenItems: number; lapsed: number } }): ReactNode {
+export function AttentionCard({ bundleId, items, delegatedApprovals = { records: 0, comparisons: 0 }, deviations = { provenItems: 0, lapsed: 0 } }: { bundleId: string; items: AttentionItem[]; delegatedApprovals?: { records: number; comparisons: number }; deviations?: { provenItems: number; lapsed: number } }): ReactNode {
   return (
     <Card aria-label="Needs attention">
       <h2>Needs attention</h2>
@@ -108,9 +108,10 @@ export function AttentionCard({ bundleId, items, delegatedApprovals = 0, deviati
           ▲ {deviations.lapsed} accepted {deviations.lapsed === 1 ? 'deviation no longer holds' : 'deviations no longer hold'}: a result, reference or capture setting changed after the owner accepted it.
         </p>
       ) : null}
-      {delegatedApprovals > 0 ? (
+      {delegatedApprovals.records > 0 ? (
         <p className="note">
-          {delegatedApprovals} reference {delegatedApprovals === 1 ? 'approval was' : 'approvals were'} written down by an agent on a person's words. <a href={paths.designReferences(bundleId)}>Read the notes</a>
+          {delegatedApprovals.records === 1 ? '1 reference approval' : `${delegatedApprovals.records} reference approvals`} written down by an agent on a person's words {delegatedApprovals.records === 1 ? 'covers' : 'cover'} {delegatedApprovals.comparisons}{' '}
+          {delegatedApprovals.comparisons === 1 ? 'comparison' : 'comparisons'}. <a href={paths.designReferences(bundleId)}>Read the notes</a>
         </p>
       ) : null}
     </Card>

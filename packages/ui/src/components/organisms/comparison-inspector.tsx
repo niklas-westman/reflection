@@ -180,6 +180,20 @@ const Card = styled.section<{ $caution?: boolean }>`
     text-align: right;
     overflow-wrap: anywhere;
   }
+  dd.long {
+    text-align: left;
+  }
+  dd .more {
+    display: block;
+    margin-top: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
   /* A tool's id breaks only where BreakableKey allows, between its words. */
   dd .key {
     overflow-wrap: normal;
@@ -442,11 +456,23 @@ function BreakableKey({ text }: { text: string }): ReactNode {
   );
 }
 
-function FactRow({ fact }: { fact: { label: string; value: string; mono?: boolean } }): ReactNode {
+// Past this many characters a long fact starts clamped; the full text stays one click away.
+const CLAMP_AFTER = 180;
+
+function FactRow({ fact }: { fact: { label: string; value: string; mono?: boolean; long?: boolean } }): ReactNode {
+  const [open, setOpen] = useState(false);
+  const clamp = fact.long === true && fact.value.length > CLAMP_AFTER;
   return (
     <>
       <dt>{fact.label}</dt>
-      <dd className={fact.mono ? 'mono' : undefined}>{fact.value}</dd>
+      <dd className={fact.mono ? 'mono' : clamp ? 'long' : undefined}>
+        {clamp && !open ? `${fact.value.slice(0, CLAMP_AFTER).trimEnd()}…` : fact.value}
+        {clamp ? (
+          <button type="button" className="more" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {open ? 'Show less' : 'Show all'}
+          </button>
+        ) : null}
+      </dd>
     </>
   );
 }

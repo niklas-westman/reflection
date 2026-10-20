@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import type { ProofOutcome } from 'reflection-projection';
-import type { ItemDetail, DimensionChoice, AdapterCard, ReferenceCard } from '../../model/gallery-model';
+import { NO_DIMENSION_VALUE, type ItemDetail, type DimensionChoice, type AdapterCard, type ReferenceCard } from '../../model/gallery-model';
 import { describeDate } from '../../model/gallery-model';
 import type { MatrixColumn, MatrixRow } from '../../model/matrix-model';
 import { paths, type SubjectKind } from '../../routes/paths';
@@ -249,10 +249,9 @@ function ItemControls({ rows, choices, columns, chosenColumns, detail, onPickDim
         <label key={choice.name}>
           {titleCase(choice.name)}
           <select value={detail.row.dimensions[choice.name] ?? ''} onChange={(event) => onPickDimension(choice.name, event.target.value)}>
-            {detail.row.dimensions[choice.name] === undefined ? <option value="">—</option> : null}
             {choice.values.map((value) => (
               <option key={value} value={value}>
-                {value}
+                {value === NO_DIMENSION_VALUE ? '(none)' : value}
               </option>
             ))}
           </select>

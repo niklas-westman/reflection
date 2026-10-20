@@ -22,7 +22,7 @@ import { availableDimensions, filterMatrix, hasActiveFilters, type MatrixFilters
 import { releaseStateLabel } from '../model/format';
 import { buildFreshness, type FreshnessLine } from '../model/freshness';
 import { FreshnessFacts } from '../components/molecules/freshness-facts';
-import { buildItemDetail, currentRow, dimensionChoices, orderedRows, pickRow, selectedColumns } from '../model/gallery-model';
+import { buildItemDetail, currentRow, dimensionChoices, NO_DIMENSION_VALUE, orderedRows, pickRow, selectedColumns } from '../model/gallery-model';
 import { buildMatrix } from '../model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch, type SubjectView as SubjectViewState } from '../model/search';
 import { groupBySubject, type SubjectGroup } from '../model/subject-model';
@@ -133,7 +133,7 @@ function SubjectView({ subject }: { subject: SubjectGroup }): ReactNode {
 
   const pickDimension = (name: string, value: string): void => {
     if (!row) return;
-    const next = pickRow(rows, { ...row.dimensions, [name]: value }, name);
+    const next = pickRow(rows, { ...Object.fromEntries(choices.map((choice) => [choice.name, row.dimensions[choice.name] ?? NO_DIMENSION_VALUE])), [name]: value }, name);
     if (next) update({ item: next.requirement.id });
   };
 

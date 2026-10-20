@@ -193,7 +193,7 @@ export function DesignReferencesPage(): ReactNode {
                 <li key={`${entry.at ?? ''}|${entry.note}`}>
                   <div className="who">
                     {entry.by ?? 'A person'}, written down by {entry.recordedBy ?? 'an agent'}
-                    {entry.at ? `, ${formatDate(entry.at)}` : ''} · {entry.comparisons} {entry.comparisons === 1 ? 'comparison' : 'comparisons'}
+                    {entry.at ? `, ${formatDate(entry.at)}` : ''} · one record, covering {entry.comparisons} {entry.comparisons === 1 ? 'comparison' : 'comparisons'}
                   </div>
                   <blockquote>{entry.note}</blockquote>
                 </li>

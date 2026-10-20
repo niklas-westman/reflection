@@ -195,6 +195,18 @@ describe('the rail and the panels below', () => {
     expect(provenance.getByText('Approved in review.')).toBeInTheDocument();
   });
 
+  it('clamps a long approval note and opens it on request', async () => {
+    const projection = makeInspectorProjection();
+    const note = `${'The owner said these frames are right. '.repeat(8)}End of the note.`;
+    projection.comparisons[0]!.reference!.approval = { state: 'holds', attestation: 'delegated', by: 'Owner', recordedBy: 'Assistant', note };
+    await openInspector(failing, projection);
+
+    const provenance = within(screen.getByLabelText('Reference provenance'));
+    expect(provenance.queryByText(/End of the note\./)).not.toBeInTheDocument();
+    await userEvent.click(provenance.getByRole('button', { name: 'Show all' }));
+    expect(provenance.getByText(/End of the note\./)).toBeInTheDocument();
+  });
+
   it('says a pixel-only release with no implementations records neither, instead of listing them as missing', async () => {
     const projection = makeInspectorProjection();
     for (const comparison of projection.comparisons) {

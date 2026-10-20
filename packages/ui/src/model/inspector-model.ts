@@ -20,6 +20,8 @@ export interface Fact {
   value: string;
   // Hashes and ids read better in a fixed-width face.
   mono?: boolean;
+  // Free text that can run long, such as a recorded note: shown clamped, with a way to read it all.
+  long?: boolean;
 }
 
 export interface SequenceInfo {
@@ -248,10 +250,14 @@ function buildApprovalFacts(comparison: Comparison, projection: Projection): Fac
   if (approval.boundTo) {
     const snapshot = projection.snapshots.find((entry) => entry.id === comparison.snapshotId);
     facts.push({ label: 'Bound to', value: approval.boundTo, mono: true });
-    if (snapshot?.sha256) facts.push({ label: 'Design source', value: snapshot.sha256 === approval.boundTo ? 'Same content as the design source this comparison read' : 'Differs from the design source this comparison read' });
+    if (snapshot?.sha256 === approval.boundTo) facts.push({ label: 'Design source', value: 'Same content as the design source this comparison read' });
+    else if (snapshot?.sha256) {
+      facts.push({ label: 'Design source', value: 'Differs from the design source this comparison read, whose hash is:' });
+      facts.push({ label: 'Source read', value: snapshot.sha256, mono: true });
+    }
   }
   for (const cause of approval.causes ?? []) facts.push({ label: 'Changed since', value: cause });
-  if (approval.note) facts.push({ label: 'Note', value: approval.note });
+  if (approval.note) facts.push({ label: 'Note', value: approval.note, long: true });
   return facts;
 }
 

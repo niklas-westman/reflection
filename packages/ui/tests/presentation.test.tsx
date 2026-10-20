@@ -54,4 +54,18 @@ describe('the page view with a hint', () => {
     expect(within(screen.getByRole('region', { name: 'email' })).getAllByRole('article')).toHaveLength(2);
     expect(screen.getByText(/All 14 required items, laid out as the provider describes them; 1 failing and 2 not proven first/)).toBeInTheDocument();
   });
+
+  it('names a missing column value and a variant that is not required, instead of borrowing the item name', async () => {
+    const changed = structuredClone(projection);
+    const email = changed.requirements.find((requirement) => requirement.subject.state === 'email-01')!;
+    delete email.subject.dimensions!.device;
+    for (const comparison of changed.comparisons) if (comparison.requirementId === email.id) delete comparison.subject.dimensions!.device;
+    renderApp(await makeCatalog([{ id: 'login-2', projection: changed }]), '/bundles/login-2/pages/login');
+
+    const app = within(await screen.findByRole('region', { name: 'app' }));
+    const email01 = within(screen.getByRole('region', { name: 'email' })).getByRole('article', { name: 'email-01' });
+    expect(within(email01).getByText('No value')).toBeInTheDocument();
+    expect(within(email01).queryByText('email-01.phone')).not.toBeInTheDocument();
+    expect(app.queryByText('No value')).not.toBeInTheDocument();
+  });
 });

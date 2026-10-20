@@ -249,11 +249,13 @@ function PresentedChecks({ bundleId, subject, rows, sections }: { bundleId: stri
 }
 
 function PresentedCell({ bundleId, subject, column, rows }: { bundleId: string; subject: { id: string; kind: SubjectKind }; column: string; rows: MatrixRow[] }): ReactNode {
+  // An item with no value for the columns dimension is shown under "No value", never under its own name.
+  const heading = column || 'No value';
   if (rows.length === 0) {
     return (
       <div className="cell">
-        <span className="meta">{column || 'Item'}</span>
-        <span className="meta">Not required</span>
+        <span className="meta">{heading}</span>
+        <span className="meta">{column ? `No ${column} variant required` : 'Nothing required'}</span>
       </div>
     );
   }
@@ -267,7 +269,7 @@ function PresentedCell({ bundleId, subject, column, rows }: { bundleId: string; 
           <div className={`cell${row.group === 'failed' ? ' failed' : row.group === 'not-proven' ? ' unproven' : ''}`} key={row.requirement.id}>
             <span className="status">
               <StatusGlyph kind={display.glyph} label={display.text} />
-              {column || row.label}
+              {heading}
             </span>
             {primary ? (
               <a href={paths.comparison(bundleId, subject.kind, subject.id, primary.id)} aria-label={`${row.label}: ${display.text}. Open comparison`}>

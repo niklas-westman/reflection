@@ -125,14 +125,15 @@ describe('what the inspector shows of a provider\'s own record', () => {
       { label: 'Approved on', value: '13 Oct 2026' },
       { label: 'Bound to', value: bound, mono: true },
       { label: 'Design source', value: 'Same content as the design source this comparison read' },
-      { label: 'Note', value: 'These are the approved Login frames.' }
+      { label: 'Note', value: 'These are the approved Login frames.', long: true }
     ]);
 
     first.reference!.approval = { state: 'holds', attestation: 'agent', by: 'Assistant', boundTo: 'd'.repeat(64) };
     const agent = modelFor(delegated, 'btn.primary/react');
     expect(agent.caution).toContain('recorded by an agent');
     expect(agent.approvalFacts).toContainEqual({ label: 'Approval', value: "Recorded by an agent, no person's words" });
-    expect(agent.approvalFacts).toContainEqual({ label: 'Design source', value: 'Differs from the design source this comparison read' });
+    expect(agent.approvalFacts).toContainEqual({ label: 'Design source', value: 'Differs from the design source this comparison read, whose hash is:' });
+    expect(agent.approvalFacts).toContainEqual({ label: 'Source read', value: bound, mono: true });
   });
 
   it('says a lapsed approval no longer matches, and who had recorded it', () => {

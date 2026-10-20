@@ -226,7 +226,8 @@ describe('approvals a person gave in conversation', () => {
     const delegated = projection.comparisons.filter((comparison) => comparison.reference).length;
     await openOverview(projection);
 
-    const note = attention().getByText(new RegExp(`^${delegated} reference approvals were written down by an agent`));
+    // One person's statement written down once, however many comparisons it covers.
+    const note = attention().getByText(new RegExp(`^1 reference approval written down by an agent on a person's words covers ${delegated} comparisons`));
     expect(note).not.toHaveTextContent('▲');
     expect(within(note).getByRole('link', { name: 'Read the notes' })).toHaveAttribute('href', '#/bundles/docs-site/design-references');
     expect(attention().queryByText(/not confirmed by a person/)).not.toBeInTheDocument();
