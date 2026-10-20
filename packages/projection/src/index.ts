@@ -19,3 +19,4 @@ export * from './bundle-build.js';
 export * from './bundle-reader.js';
 export * from './note.js';
 export * from './archive-summary.js';
+export * from './hosting.js';

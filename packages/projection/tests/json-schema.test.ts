@@ -4,7 +4,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { projectFromReflectionReport, projectionSchema, type ReflectionReportLike } from '../src/index.js';
+import { decisionListSchema, projectFromReflectionReport, projectionSchema, recordDecisionRequestSchema, releaseIndexSchema, type ReflectionReportLike } from '../src/index.js';
 import { buildFromSample, readFixture } from './helpers/builders.js';
 
 const schemaPath = fileURLToPath(new URL('../schema/projection.v1.schema.json', import.meta.url));
@@ -15,6 +15,15 @@ function compile(): ReturnType<Ajv2020['compile']> {
   addFormats(ajv);
   return ajv.compile(committed);
 }
+
+describe('committed JSON Schemas for hosting', () => {
+  it('match their Zod schemas: index.json, the decision request and the decision list', () => {
+    const read = (name: string): object => JSON.parse(readFileSync(fileURLToPath(new URL(`../schema/${name}`, import.meta.url)), 'utf8')) as object;
+    expect(read('release-index.v1.schema.json')).toEqual(JSON.parse(JSON.stringify(z.toJSONSchema(releaseIndexSchema, { io: 'input' }))));
+    expect(read('decision-request.v1.schema.json')).toEqual(JSON.parse(JSON.stringify(z.toJSONSchema(recordDecisionRequestSchema, { io: 'input' }))));
+    expect(read('decision-list.v1.schema.json')).toEqual(JSON.parse(JSON.stringify(z.toJSONSchema(decisionListSchema, { io: 'input' }))));
+  });
+});
 
 describe('committed JSON Schema', () => {
   it('matches the Zod schema, so a change to one is a visible change to the other', () => {
