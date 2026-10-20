@@ -48,8 +48,8 @@ The briefs are untracked because they hold local paths. If a brief and this file
   - [x] Viewer, superseded: counted as not proven; a cell, row reason, needs-attention item and comparison banner say "superseded design source".
   - [x] Viewer, accepted deviations: a neutral overview line, a marker on the gallery and table cells, and the decision (who, when, words, still holds or lapsed) on the comparison.
   - [x] Viewer, smaller: delegated approvals counted by record ("1 record covers 573 comparisons", "bound to the reference set as a whole"); both hashes when `boundTo` differs from the source; long approval notes clamped on the comparison; a "(none)" choice for items without a dimension; a visible "no value" column and "No mobile variant required"; segmented controls wrap at 390px.
-  - [~] Gates pass: projection 151 and viewer 268 tests, build, `reflect` (no blocking failures; the 14 baseline differences remain for review), `a11y` (no findings). The `checkout-200` demo carries a superseded export and an accepted deviation. Left: bump to 0.4.0 and push (owner's go-ahead), the owner publishes, then prompts for Marwes round 2 and Sourcer round 4.
-  - [ ] Visual baselines: promote the differences from 0.3.0 and this round in one go, after the owner approves (dry run first).
+  - [~] Gates pass: projection 151 and viewer 268 tests, build, `reflect` (no blocking failures; the 14 baseline differences remain for review), `a11y` (no findings). The `checkout-200` demo carries a superseded export and an accepted deviation. 0.4.0 prepared and pushed (engine, projection and viewer checks, package smoke and pack contents verified). Left: the owner runs `npm publish`, then prompts for Marwes round 2 and Sourcer round 4.
+  - [x] Visual baselines: the 14 differences from 0.3.0 and 0.4.0 promoted with the owner's approval (2026-10-20); the next smoke run is `pass` with no review items.
 
 ## Next (in order)
 
