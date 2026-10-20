@@ -116,7 +116,7 @@ What this asks of a provider: **keep verdicts, baseline hashes and requirement i
 
 When the owner accepted a difference (a raised pixel limit for label-only text, a known rendering difference), import it as a decision with `kind: 'accept-deviation'`, `scope.comparisonIds` naming the comparisons it covers, and `binding: bindingForComparisons(projection, comparisonIds)`. Use `delegated` (with `recordedBy` and the owner's words in `comment`) or `human`, never `agent`. The comparisons keep their own outcome: a deviation is review, not proof. The viewer counts the items that pass within an accepted deviation, shows the decision on each comparison, and says when it lapsed because a verdict, a reference or a capture policy changed. Keep the raised limit itself in `diff.threshold` and `diff.metric.passAt`.
 
-`buildDecisionBinding(requirements, comparisons)` takes the two lists, not a projection.
+`buildDecisionBinding(requirements, comparisons)` takes the two lists, not a projection. **Build a binding from the hashes the bundle will carry.** A binding records each comparison's reference hash (`reference.baselineSha256`, else the reference artifact's `sha256`). If you leave artifact hashes for `writeBundle` to fill in and build the binding before writing, the binding has no reference hashes and the decision reads as lapsed in the viewer. Set `baselineSha256` (or hash the reference files yourself) before you build it.
 
 The other decisions a provider may include are imports of `accept-reference` records: `delegated` when the record names the person and keeps their words (`recordedBy`, and the words in `comment`), `agent` otherwise. A person's decision given to an agent in conversation is recorded as `delegated`; the portal records its own as `human`.
 

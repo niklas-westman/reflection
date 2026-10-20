@@ -73,7 +73,7 @@ const ATTENTION_TEXT: Record<AttentionKind, { title: (count: number) => string; 
 
 const SHOWN_SUBJECTS = 4;
 
-export function AttentionCard({ bundleId, items, delegatedApprovals = 0 }: { bundleId: string; items: AttentionItem[]; delegatedApprovals?: number }): ReactNode {
+export function AttentionCard({ bundleId, items, delegatedApprovals = 0, deviations = { provenItems: 0, lapsed: 0 } }: { bundleId: string; items: AttentionItem[]; delegatedApprovals?: number; deviations?: { provenItems: number; lapsed: number } }): ReactNode {
   return (
     <Card aria-label="Needs attention">
       <h2>Needs attention</h2>
@@ -98,6 +98,16 @@ export function AttentionCard({ bundleId, items, delegatedApprovals = 0 }: { bun
           ))}
         </ul>
       )}
+      {deviations.provenItems > 0 ? (
+        <p className="note">
+          {deviations.provenItems} proven {deviations.provenItems === 1 ? 'item passes' : 'items pass'} within a deviation the owner accepted, such as a raised limit. Each comparison shows the decision.
+        </p>
+      ) : null}
+      {deviations.lapsed > 0 ? (
+        <p className="note" style={{ color: 'var(--gap)', fontWeight: 600 }}>
+          ▲ {deviations.lapsed} accepted {deviations.lapsed === 1 ? 'deviation no longer holds' : 'deviations no longer hold'}: a result, reference or capture setting changed after the owner accepted it.
+        </p>
+      ) : null}
       {delegatedApprovals > 0 ? (
         <p className="note">
           {delegatedApprovals} reference {delegatedApprovals === 1 ? 'approval was' : 'approvals were'} written down by an agent on a person's words. <a href={paths.designReferences(bundleId)}>Read the notes</a>

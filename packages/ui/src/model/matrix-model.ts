@@ -1,4 +1,5 @@
-import { deriveReadiness, missingImplementations, type Comparison, type Projection, type ReferenceApproval, type Readiness, type Requirement, type Subject } from 'reflection-projection';
+import { deriveReadiness, missingImplementations, type Comparison, type Projection, type ReferenceApproval, type Readiness, type Requirement, type StandingDeviation, type Subject } from 'reflection-projection';
+import { deviationHolds } from './deviations';
 import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
 import type { SubjectGroup } from './subject-model';
 
@@ -21,6 +22,8 @@ export interface MatrixCell {
   unusable: boolean;
   // Some evidence behind this cell read a superseded design source, so its outcome is unknown.
   superseded: boolean;
+  // The owner accepted a deviation for the primary comparison: whether it still holds. Review, not proof.
+  accepted: 'holds' | 'lapsed' | undefined;
 }
 
 export interface ReferenceSummary {
@@ -66,13 +69,15 @@ export interface BuildMatrixOptions {
   subject: SubjectGroup;
   unusableComparisonIds: ReadonlySet<string>;
   supersededComparisonIds?: ReadonlySet<string>;
+  deviations?: ReadonlyMap<string, StandingDeviation>;
 }
 
+const NO_DEVIATIONS: ReadonlyMap<string, StandingDeviation> = new Map();
 const NONE_SUPERSEDED: ReadonlySet<string> = new Set();
 const SUPERSEDED_DETAIL = 'Checked against a design source that was later superseded; it needs a run against the current source.';
 
 /** The table for one subject: one row per required item, grouped by outcome so failures are never buried. */
-export function buildMatrix({ projection, subject, unusableComparisonIds, supersededComparisonIds = NONE_SUPERSEDED }: BuildMatrixOptions): Matrix {
+export function buildMatrix({ projection, subject, unusableComparisonIds, supersededComparisonIds = NONE_SUPERSEDED, deviations = NO_DEVIATIONS }: BuildMatrixOptions): Matrix {
   const concepts = projection.provider.readinessConcepts;
   const columns = buildColumns(subject.comparisons, subject.requirements);
   const snapshotLabels = new Map(projection.snapshots.map((snapshot) => [snapshot.id, snapshot.label ?? snapshot.version ?? snapshot.role]));
@@ -97,7 +102,7 @@ export function buildMatrix({ projection, subject, unusableComparisonIds, supers
       detail: detailFor(readiness, requirement, comparisons) ?? (comparisons.some((comparison) => supersededComparisonIds.has(comparison.id)) ? SUPERSEDED_DETAIL : undefined),
       reference: summarizeReference(requirement, comparisons, snapshotLabels),
       referenceIsCommon: false,
-      cells: buildCells(columns, comparisons, unusableComparisonIds, supersededComparisonIds)
+      cells: buildCells(columns, comparisons, unusableComparisonIds, supersededComparisonIds, deviations)
     };
   });
 
@@ -141,14 +146,16 @@ function buildColumns(comparisons: Comparison[], requirements: Requirement[]): M
   return adapters.map((adapter) => ({ id: adapter, label: adapter === NO_ADAPTER ? 'Result' : adapter }));
 }
 
-function buildCells(columns: MatrixColumn[], comparisons: Comparison[], unusable: ReadonlySet<string>, superseded: ReadonlySet<string>): Map<string, MatrixCell> {
+function buildCells(columns: MatrixColumn[], comparisons: Comparison[], unusable: ReadonlySet<string>, superseded: ReadonlySet<string>, deviations: ReadonlyMap<string, StandingDeviation>): Map<string, MatrixCell> {
   return new Map(
     columns.map((column) => {
       const here = comparisons.filter((comparison) => (comparison.subject.adapter ?? NO_ADAPTER) === column.id);
       const outcomes = here.map(comparisonOutcome);
       const outcome: MatrixCell['outcome'] = outcomes.includes('failed') ? 'failed' : outcomes.includes('not-run') ? 'not-run' : outcomes.length > 0 ? 'passed' : 'none';
       const primary = here.find((comparison) => comparisonOutcome(comparison) === 'failed') ?? here[0];
-      return [column.id, { outcome, comparisons: here, primary, unusable: here.some((comparison) => unusable.has(comparison.id)), superseded: here.some((comparison) => superseded.has(comparison.id)) }];
+      const deviation = primary ? deviations.get(primary.id) : undefined;
+      const accepted = deviation === undefined ? undefined : deviationHolds(deviation) ? 'holds' : 'lapsed';
+      return [column.id, { outcome, comparisons: here, primary, unusable: here.some((comparison) => unusable.has(comparison.id)), superseded: here.some((comparison) => superseded.has(comparison.id)), accepted }];
     })
   );
 }

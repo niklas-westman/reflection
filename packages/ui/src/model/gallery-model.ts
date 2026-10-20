@@ -62,6 +62,7 @@ export interface AdapterCard {
   outcome: ComparisonOutcome | 'none';
   unusable: boolean;
   superseded: boolean;
+  accepted: 'holds' | 'lapsed' | undefined;
   artifactPath: string | undefined;
   // The requirement names this implementation as one that must pass.
   required: boolean;
@@ -112,7 +113,7 @@ export function buildItemDetail({ row, projection, columns, unusableComparisonId
   const adapters = columns.map((column): AdapterCard => {
     const cell = row.cells.get(column.id);
     const comparison = cell?.primary;
-    return { column, comparison, outcome: cell?.outcome ?? 'none', unusable: cell?.unusable ?? false, superseded: cell?.superseded ?? false, artifactPath: comparison?.actual?.path, required: (row.requirement.requiredImplementations ?? []).includes(column.id) };
+    return { column, comparison, outcome: cell?.outcome ?? 'none', unusable: cell?.unusable ?? false, superseded: cell?.superseded ?? false, accepted: cell?.accepted, artifactPath: comparison?.actual?.path, required: (row.requirement.requiredImplementations ?? []).includes(column.id) };
   });
 
   const outcomes = all.map(comparisonOutcome);

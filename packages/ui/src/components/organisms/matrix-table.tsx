@@ -146,6 +146,18 @@ const CommonReference = styled.div<{ $caution: boolean }>`
   color: ${({ $caution }) => ($caution ? 'var(--gap)' : 'var(--text)')};
 `;
 
+// Words, not only a mark: a deviation the owner accepted, or one that no longer holds.
+const ACCEPTED_TEXT = { holds: 'within a deviation the owner accepted', lapsed: 'an accepted deviation that no longer holds' } as const;
+
+const Accepted = styled.span<{ $lapsed: boolean }>`
+  font-size: ${({ theme }) => theme.font.xs};
+  color: ${({ $lapsed }) => ($lapsed ? 'var(--gap)' : 'var(--muted)')};
+  border: 1px solid ${({ $lapsed }) => ($lapsed ? 'var(--gap)' : 'var(--border-strong)')};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 0 0.25rem;
+  white-space: nowrap;
+`;
+
 const Small = styled.div<{ $caution?: boolean }>`
   color: ${({ $caution }) => ($caution ? 'var(--gap)' : 'var(--muted)')};
   font-weight: ${({ $caution }) => ($caution ? 600 : 400)};
@@ -350,12 +362,13 @@ function ResultCell({ cell, row, column, comparisonHref, density }: { cell: Matr
     <CellLink
       href={comparisonHref(cell.primary.id)}
       $failed={cell.outcome === 'failed' && !cell.unusable}
-      aria-label={`${row.label}, ${column.label}: ${text}${more}`}
-      title={`${text}${more}`}
+      aria-label={`${row.label}, ${column.label}: ${text}${more}${cell.accepted ? `, ${ACCEPTED_TEXT[cell.accepted]}` : ''}`}
+      title={`${text}${more}${cell.accepted ? `, ${ACCEPTED_TEXT[cell.accepted]}` : ''}`}
     >
       {density === 'comfortable' && imagePath ? <Thumbnail path={imagePath} alt={`${row.label} ${column.label}`} /> : null}
       <StatusGlyph kind={glyph} label={text} />
       {density === 'comfortable' ? null : density === 'compact' ? <span>{text}</span> : null}
+      {cell.accepted && density !== 'status-only' ? <Accepted $lapsed={cell.accepted === 'lapsed'}>{cell.accepted === 'holds' ? 'accepted' : 'acceptance lapsed'}</Accepted> : null}
     </CellLink>
   );
 }

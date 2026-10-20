@@ -332,6 +332,7 @@ function AdapterPreview({ card, itemLabel, href }: { card: AdapterCard; itemLabe
         </span>
       </header>
       <ArtifactImage path={card.artifactPath} alt={`${itemLabel}, ${card.column.label}`} emptyText={card.outcome === 'none' ? 'Not compared' : 'No image recorded'} />
+      {card.accepted ? <div className="meta">{card.accepted === 'holds' ? 'Passes within a deviation the owner accepted' : '▲ The accepted deviation no longer holds'}</div> : null}
       <div className="meta">{href ? <a href={href}>Open comparison</a> : 'No comparison recorded for this item'}</div>
     </CardBox>
   );

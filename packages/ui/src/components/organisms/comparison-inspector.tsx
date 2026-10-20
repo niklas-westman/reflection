@@ -349,6 +349,18 @@ export function ComparisonInspector({ model, view, onViewChange, hrefs, subjectL
         />
         <Rail>
           <ResultCard model={model} offline={offline} />
+          {model.deviation ? (
+            <Card $caution={!model.deviation.holds} aria-label="Accepted deviation">
+              <h2>Accepted deviation</h2>
+              <p>The owner accepted this difference. It is a review decision: the result above is as recorded, not changed by it.</p>
+              <p>{model.deviation.standing}</p>
+              <dl>
+                {model.deviation.facts.map((fact) => (
+                  <FactRow key={fact.label} fact={fact} />
+                ))}
+              </dl>
+            </Card>
+          ) : null}
           <Card>
             <FreshnessFacts lines={model.freshness} inCard />
           </Card>

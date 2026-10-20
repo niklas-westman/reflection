@@ -15,6 +15,7 @@ import { useReleaseDiff } from '../data/release-diff';
 import { ExternalLink } from '../components/atoms/external-link';
 import type { ChangeKind } from 'reflection-projection';
 import { buildAttention, countDelegatedApprovals, sortByAttention } from '../model/attention';
+import { summarizeDeviations } from '../model/deviations';
 import { countComparisons } from '../model/comparison-outcome';
 import { formatDate, releaseStateLabel } from '../model/format';
 import { buildFreshness } from '../model/freshness';
@@ -137,7 +138,7 @@ export function ReleaseOverviewPage(): ReactNode {
       <Cards role="group" aria-label="Release highlights">
         {comparableDelta ? <ChangesCard delta={comparableDelta} /> : null}
         {diffState.status === 'ready' ? <DesignChangesCard bundleId={bundleId} diff={diffState.diff} previousRelease={diffState.previousRelease} /> : null}
-        <AttentionCard bundleId={bundleId} items={attention} delegatedApprovals={delegatedApprovals} />
+        <AttentionCard bundleId={bundleId} items={attention} delegatedApprovals={delegatedApprovals} deviations={summarizeDeviations(projection, prepared.deviations)} />
       </Cards>
       {(['components', 'pages'] as const).map((section) => (
         <SubjectCards key={section} bundleId={bundleId} section={section} subjects={subjects.filter((subject) => sectionOf(subject.kind) === section)} changes={diffState.status === 'ready' ? new Map(diffState.diff.subjects.map((change) => [`${change.kind}/${change.id}`, change.change])) : undefined} />

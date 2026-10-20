@@ -1,4 +1,5 @@
-import { computeValidity, summarizeProjection, supersededComparisonIds, toIntegrityFailures, type BundleProblem, type Comparison, type CoverageSummary, type OpenedBundle, type Projection, type Validity } from 'reflection-projection';
+import { computeValidity, summarizeProjection, supersededComparisonIds, toIntegrityFailures, type BundleProblem, type Comparison, type CoverageSummary, type OpenedBundle, type Projection, type StandingDeviation, type Validity } from 'reflection-projection';
+import { indexDeviations } from './deviations';
 import { collectArtifactRefs } from 'reflection-projection';
 
 export interface PreparedBundle {
@@ -11,6 +12,8 @@ export interface PreparedBundle {
   supersededComparisonIds: ReadonlySet<string>;
   // The comparisons above as the provider recorded them, before their proof was set aside, for the comparison page.
   recordedComparisons: ReadonlyMap<string, Comparison>;
+  // The deviation the owner accepted for each comparison it covers, with whether it still holds. Review, not proof.
+  deviations: ReadonlyMap<string, StandingDeviation>;
   summary: CoverageSummary;
 }
 
@@ -41,6 +44,8 @@ export function prepareBundle(bundle: OpenedBundle, problems: BundleProblem[]): 
     unusableComparisonIds: unusable,
     supersededComparisonIds: superseded,
     recordedComparisons: recorded,
+    // Evaluated against the comparisons as recorded: a deviation is about the recorded result, whatever is set aside here.
+    deviations: indexDeviations(bundle.projection, bundle.manifest.release.bundleId),
     summary: summarizeProjection(projection)
   };
 }

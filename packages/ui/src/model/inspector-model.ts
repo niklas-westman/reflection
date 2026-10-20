@@ -1,4 +1,4 @@
-import { missingImplementations, type Artifact, type Comparison, type Projection, type ProofLayer, type Validity } from 'reflection-projection';
+import { missingImplementations, type Artifact, type Comparison, type Projection, type ProofLayer, type StandingDeviation, type Validity } from 'reflection-projection';
 import { comparisonOutcome, type ComparisonOutcome } from './comparison-outcome';
 import { formatDate } from './format';
 import { buildFreshness, type FreshnessLine } from './freshness';
@@ -57,6 +57,8 @@ export interface InspectorModel {
   implementation: string | undefined;
   outcome: ComparisonOutcome;
   unusable: boolean;
+  // The deviation the owner accepted for this comparison: who, when, the words, and whether it still holds.
+  deviation: { holds: boolean; standing: string; facts: Fact[] } | undefined;
   // Set when the comparison read a superseded design source: what it read, what replaced it, and what it recorded.
   superseded: { source: string; replacedBy: string; recordedOutcome: ComparisonOutcome } | undefined;
   referenceArtifact: Artifact | undefined;
@@ -99,6 +101,7 @@ export interface BuildInspectorOptions {
   supersededComparisonIds?: ReadonlySet<string>;
   // Comparisons as the provider recorded them, before an unusable file or a superseded source set their proof aside.
   recordedComparisons?: ReadonlyMap<string, Comparison>;
+  deviations?: ReadonlyMap<string, StandingDeviation>;
 }
 
 /** Everything the inspector shows, derived from one recorded comparison. Pure; nothing here is invented. */
@@ -127,6 +130,7 @@ export function buildInspectorModel(options: BuildInspectorOptions): InspectorMo
     outcome: comparisonOutcome(comparison),
     unusable,
     superseded,
+    deviation: describeDeviation(options.deviations?.get(comparison.id)),
     referenceArtifact: comparison.reference?.artifact,
     actualArtifact: comparison.actual,
     diffArtifact: comparison.diff?.artifact,
@@ -180,6 +184,25 @@ function describeMetricMeaning(direction: 'higher-is-better' | 'lower-is-better'
   if (!direction) return undefined;
   if (passAt === undefined) return direction === 'higher-is-better' ? 'Higher is better' : 'Lower is better';
   return `Passes at ${passAt} or ${direction === 'higher-is-better' ? 'more' : 'less'}`;
+}
+
+function describeDeviation(deviation: StandingDeviation | undefined): InspectorModel['deviation'] {
+  if (!deviation) return undefined;
+  const { decision, standing } = deviation;
+  const facts: Fact[] = [{ label: 'Accepted by', value: decision.by }];
+  if (decision.recordedBy) facts.push({ label: 'Written down by', value: decision.recordedBy });
+  facts.push({ label: 'Accepted on', value: formatDate(decision.at) });
+  if (decision.comment ?? decision.message) facts.push({ label: 'Words', value: decision.comment ?? decision.message ?? '' });
+  if (deviation.comparisonIds.length > 1) facts.push({ label: 'Covers', value: `${deviation.comparisonIds.length} comparisons` });
+  const text =
+    standing.state === 'holds'
+      ? 'Still holds: nothing it was bound to changed.'
+      : standing.state === 'carried-forward'
+        ? `Carried forward from build ${standing.from}: nothing it was bound to changed.`
+        : standing.state === 'lapsed'
+          ? `No longer holds: ${standing.causes.map((cause) => `${cause.kind} of ${cause.id} ${cause.change}`).join('; ')}.`
+          : 'Withdrawn.';
+  return { holds: standing.state === 'holds' || standing.state === 'carried-forward', standing: text, facts };
 }
 
 function describeSuperseded(comparison: Comparison, projection: Projection, recorded: Comparison): NonNullable<InspectorModel['superseded']> {
