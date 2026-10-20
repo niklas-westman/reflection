@@ -165,7 +165,7 @@ describe('the address of a view', () => {
 
 describe('preparing a bundle', () => {
   const opened = (projection: Projection, unusablePaths: string[]) =>
-    ({ manifest: {} as never, projection: { ...projection, release: undefined }, unusablePaths: new Set(unusablePaths) }) as never;
+    ({ manifest: { release: { bundleId: 'bundle-1' } } as never, projection: { ...projection, release: undefined }, unusablePaths: new Set(unusablePaths) }) as never;
 
   it('reads a sound bundle as offline, never current', () => {
     expect(prepareBundle(opened(makeProjection(), []), []).validity).toEqual({ state: 'offline' });
