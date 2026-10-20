@@ -15,7 +15,9 @@
       "import": "./dist/node/index.js",
       "types": "./dist/node/index.d.ts"
     },
-    "./schema": "./schema/projection.v1.schema.json"
+    "./schema": "./schema/projection.v1.schema.json",
+    "./schema/*": "./schema/*",
+    "./viewer/*": "./viewer/*"
   },
   "keywords": [
     "reflection",
@@ -31,6 +33,7 @@
     "dist",
     "schema",
     "docs",
+    "viewer",
     "LICENSE",
     "README.md"
   ],
@@ -40,8 +43,9 @@
     "test": "vitest run",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "schema": "pnpm build && node scripts/generate-json-schema.mjs",
-    "prepack": "pnpm build",
-    "smoke:package": "node scripts/smoke-package-install.mjs"
+    "prepack": "pnpm build && pnpm build:viewer",
+    "smoke:package": "node scripts/smoke-package-install.mjs",
+    "build:viewer": "pnpm --dir ../ui exec vite build --outDir ../projection/viewer --emptyOutDir"
   },
   "dependencies": {
     "zod": "^4.4.3"

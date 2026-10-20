@@ -51,13 +51,17 @@ A release is published as an immutable bundle: `manifest.json` (project, release
 
 Writing a provider: see [docs/provider-guide.md](docs/provider-guide.md).
 
+## Hosting the viewer
+
+The built viewer ships in `viewer/` as static files with relative paths: copy the folder to any base path, put bundles and an `index.json` beside it, and optionally a `reflection-config.json` and a decision API. `releaseIndexSchema`, `recordDecisionRequestSchema`, `decisionListSchema` and `recordDecision` are the shapes and the server-side helper. See [docs/hosting.md](docs/hosting.md).
+
 ## Conventions
 
 Property names are camelCase, matching the engine's report. Ids, enum values, file and folder names are kebab-case (`needs-design`, `changes-required`, `canonical-json`).
 
 ## JSON Schema
 
-`schema/projection.v1.schema.json` is generated from the Zod schema (`pnpm schema`) so providers in other repositories can validate without importing this package. It covers structure only. Integrity rules (unique ids, resolving references, relative paths, decision rules) need the Zod schema. A test fails if the committed file drifts from the Zod schema.
+`schema/projection.v1.schema.json` is generated from the Zod schema (`pnpm schema`) so providers in other repositories can validate without importing this package. `schema/release-index.v1.schema.json`, `schema/decision-request.v1.schema.json` and `schema/decision-list.v1.schema.json` do the same for hosts. It covers structure only. Integrity rules (unique ids, resolving references, relative paths, decision rules) need the Zod schema. A test fails if the committed file drifts from the Zod schema.
 
 ## Fixtures
 

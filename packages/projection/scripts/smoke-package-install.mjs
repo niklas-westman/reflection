@@ -50,6 +50,11 @@ console.log('flow ok');
 );
 await run('node', ['flow.mjs'], consumerDir);
 
+// The built viewer ships as static files a host copies as they are; its assets must be relative to it.
+const viewerPage = await readFile(join(consumerDir, 'node_modules', 'reflection-projection', 'viewer', 'index.html'), 'utf8');
+if (!viewerPage.includes('src="./assets/')) throw new Error('the packaged viewer does not load its assets relative to itself');
+console.log('viewer ok');
+
 console.log(`Package install smoke passed for ${packageJson.name}@${packageJson.version}`);
 console.log(`Tarball: ${join(packDir, tarball)}`);
 

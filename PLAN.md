@@ -46,7 +46,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
   - [x] Projection: `releaseIndexSchema` for `index.json` (explicit `latest`), `recordDecisionRequestSchema`, `decisionListSchema`, and a pure `recordDecision` (server computes the binding and counts; identity from the verified email); JSON Schemas; tests.
   - [x] Hosting doc in the package: paths, `reflection-config.json`, `index.json`, the decision API contract (request, response, server duties).
   - [x] Viewer: `reflection-config.json` (`bundlesUrl`, `decisionsUrl`) read at start, so one build runs under any base path; the plain-path redirect fixed for a base path; richer `index.json` with a missing `latest` shown, never replaced; decisions read from the API and shown with their standing. No Approve or Require changes controls yet.
-  - [ ] Packaging: the built viewer ships as static files in `reflection-projection/viewer/`.
+  - [x] Packaging: the built viewer ships as static files in `reflection-projection/viewer/` (built at pack time; 256 kB packed in all). Checked by the package smoke and by serving the packed viewer under `/reflection/` from a plain static server with a config, an `index.json` and three bundles.
   - [ ] Gates, then release 0.5.0 (owner publishes) and a reply to Marwes.
 
 ## Next (in order)
