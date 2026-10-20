@@ -42,14 +42,12 @@ The briefs are untracked because they hold local paths. If a brief and this file
 
 ## Now
 
-- [ ] **Provider round: Marwes 1 and Sourcer 3, 0.4.0** (`marwes-feedback-01.md`, `sourcer-feedback-03.md`; scope accepted 2026-10-20).
-  - [x] Projection: `snapshot.supersededBy`; comparisons that read a superseded snapshot count as not proven (`supersededComparisonIds`, used by `summarizeProjection`); `bindingForComparisons` and `standingDeviations` for provider-imported `accept-deviation` decisions; tests; JSON Schema.
-  - [x] Guide: superseded sources, imported accepted deviations, absent (not `not-run`) layers that are not required, the `buildDecisionBinding(requirements, comparisons)` signature, `run.inputs` keys from the project root, one comparison per requirement and adapter when cases are shared, every item needs a value for a `columns` dimension.
-  - [x] Viewer, superseded: counted as not proven; a cell, row reason, needs-attention item and comparison banner say "superseded design source".
-  - [x] Viewer, accepted deviations: a neutral overview line, a marker on the gallery and table cells, and the decision (who, when, words, still holds or lapsed) on the comparison.
-  - [x] Viewer, smaller: delegated approvals counted by record ("1 record covers 573 comparisons", "bound to the reference set as a whole"); both hashes when `boundTo` differs from the source; long approval notes clamped on the comparison; a "(none)" choice for items without a dimension; a visible "no value" column and "No mobile variant required"; segmented controls wrap at 390px.
-  - [~] Gates pass: projection 151 and viewer 268 tests, build, `reflect` (no blocking failures; the 14 baseline differences remain for review), `a11y` (no findings). The `checkout-200` demo carries a superseded export and an accepted deviation. 0.4.0 prepared and pushed (engine, projection and viewer checks, package smoke and pack contents verified). Left: the owner runs `npm publish`, then prompts for Marwes round 2 and Sourcer round 4.
-  - [x] Visual baselines: the 14 differences from 0.3.0 and 0.4.0 promoted with the owner's approval (2026-10-20); the next smoke run is `pass` with no review items.
+- [ ] **Hosting and decisions contract, 0.5.0** (`marwes-ask-02.md`; scope accepted 2026-10-20: contract plus read side). The viewer will be hosted by Marwes at `dev.marwes.io/reflection/` (S3, CloudFront, Cognito), bundles beside it, a decision API at `/reflection/api/`.
+  - [ ] Projection: `releaseIndexSchema` for `index.json` (explicit `latest`), `recordDecisionRequestSchema`, `decisionListSchema`, and a pure `recordDecision` (server computes the binding and counts; identity from the verified email); JSON Schemas; tests.
+  - [ ] Hosting doc in the package: paths, `reflection-config.json`, `index.json`, the decision API contract (request, response, server duties).
+  - [ ] Viewer: `reflection-config.json` (`bundlesUrl`, `decisionsUrl`) read at start, so one build runs under any base path; the plain-path redirect fixed for a base path; richer `index.json` with a missing `latest` shown, never replaced; decisions read from the API and shown with their standing. No Approve or Require changes controls yet.
+  - [ ] Packaging: the built viewer ships as static files in `reflection-projection/viewer/`.
+  - [ ] Gates, then release 0.5.0 (owner publishes) and a reply to Marwes.
 
 ## Next (in order)
 
@@ -95,6 +93,8 @@ The briefs are untracked because they hold local paths. If a brief and this file
 | 2026-10-19 | Presentation is a provider hint (`subjects[].presentation`), never guessed from dimension names | gallery |
 | 2026-10-20 | A provider may import `accept-deviation` decisions (a raised limit the owner accepted), as `delegated` or `human`; bound to content, so they lapse when the result changes; shown apart from proof | deviations |
 | 2026-10-20 | A comparison that read a superseded design snapshot (`snapshot.supersededBy`) counts as not proven, never passed or failed | readiness |
+| 2026-10-20 | The built viewer ships as static files inside `reflection-projection` (`viewer/`), so the viewer always matches the contract version; `reflection-ui` stays a private workspace app. Replaces "adapters run the viewer from this repository" for hosting | hosting |
+| 2026-10-20 | Decisions are recorded through an API on the hosting side (Marwes: Lambda, DynamoDB, Discord); Reflection owns the record and request shapes and a pure `recordDecision`; the binding is computed on the server, never in the browser | R5 |
 
 Rules every screen follows: two units never one ratio (required items versus comparisons); unknown is not zero; a reference is never a result; invalid evidence shows unknown, not a result; no percentages that read as compliance; no green comfort while items are missing; status is glyph plus text plus colour; one banner at a time; read-only until the decisions work starts.
 
@@ -239,7 +239,8 @@ Viewer quality:
 - [x] Sourcer UX brief built and released as `reflection-projection` 0.3.0 (2026-10-19).
 - [x] Sourcer round 3 on 0.3.0: all ten UX findings done, counts 30 / 30 (`sourcer-feedback-03.md`); five Login states are emails, not eight.
 - [x] Marwes round 1 on `reflection-check` 0.7.0 and `reflection-projection` 0.3.0: Button counts match (273 / 203 / 0 / 14 / 56), 0 verdict changes from the engine upgrade (`marwes-feedback-01.md`).
-- [ ] Marwes round 2 and Sourcer round 4 on 0.4.0.
+- [x] `reflection-projection` 0.4.0 published (2026-10-20); Marwes is on it: Button's 15 raised limits are one accepted deviation (holds), Checkbox reads not proven through `supersededBy` (`marwes-ask-02.md`).
+- [ ] Sourcer round 4 on 0.4.0 or later (the Login re-export and the Changes check).
 - [ ] Marwes round 1, with what Sourcer taught us.
 
 **Sourcer (Penpot)**
@@ -300,6 +301,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-20: `reflection-projection` 0.4.0 published; Marwes's hosting ask read; 0.5.0 scoped (contract plus read side; viewer shipped in the package).
 - 2026-10-20: 0.4.0 built: superseded design sources count as not proven, imported accepted deviations shown apart from proof, delegated approvals counted by record, smaller fixes from both providers. Projection tests 145 to 151, UI tests 259 to 268.
 - 2026-10-20: `reflection-projection` 0.3.0 published; Sourcer round 3 and Marwes round 1 read; 0.4.0 scoped.
 - 2026-10-19: UX brief built for 0.3.0: metric meaning and presentation hint in the projection; delegated-approval note, trust-ordered approvals and per-row approval; comparison page led by the images (437px panes at 1400px, Difference large, navigation toggle); grouped page gallery; one Freshness group; Unreleased; phone width without sideways scroll, in the gate. Projection tests 142 to 145, UI tests 248 to 259.
