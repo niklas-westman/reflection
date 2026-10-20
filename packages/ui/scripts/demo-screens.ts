@@ -1,7 +1,7 @@
 // A generated page provider for the demo set, shaped like a whole-page capture tool with a presentation hint:
 // states captured on several devices, app screens and rendered emails in separate sections. Used for the large
 // mixed bundle (200 required items, every outcome) and for one where every check fails. Illustrative data.
-import { projectionSchema, type Projection } from 'reflection-projection';
+import { bindingForComparisons, projectionSchema, type Projection } from 'reflection-projection';
 
 interface Screen {
   state: string;
@@ -26,6 +26,9 @@ export interface ScreensDemoOptions {
   emailStates: number;
   emailDevices: string[];
   allFailing?: boolean;
+  // Adds the two review cases a provider can import: app states still checked against an older export that was
+  // superseded, and a raised limit the owner accepted for a few passing screens.
+  withHistory?: boolean;
 }
 
 /** The outcome of the n-th screen in the mixed demo: mostly passing, with every other kind spread through it. */
@@ -78,7 +81,7 @@ export function screensDemo(options: ScreensDemoOptions): Projection {
         subject: requirement.subject,
         snapshotId,
         runId: 'run-1',
-        reference: { artifact: { role: 'reference', path: `references/${file}.png`, ...size }, approval: approvalOf(index, boundTo) },
+        reference: { artifact: { role: 'reference', path: `references/${file}.png`, ...size }, baselineSha256: 'b'.repeat(64), approval: approvalOf(index, boundTo) },
         actual: { role: 'actual', path: `actual/${file}.png`, ...size },
         ...(outcome === 'error'
           ? {}
@@ -91,16 +94,45 @@ export function screensDemo(options: ScreensDemoOptions): Projection {
     ];
   });
 
+  const oldSnapshotId = `${options.pageId}-references-june`;
+  const history = options.withHistory ?? false;
+  if (history) {
+    // The last three app states were never re-run after the new export.
+    const stale = new Set(screens.filter((screen) => screen.surface === 'app').slice(-3 * options.appDevices.length).map((screen) => `${options.pageId}/${screen.state}.${screen.device}/visual`));
+    for (const comparison of comparisons) if (stale.has(comparison.id)) comparison.snapshotId = oldSnapshotId;
+  }
+  const acceptedIds = comparisons.filter((comparison) => comparison.proof.visual === 'passed' && comparison.subject.dimensions.device === 'mobile').slice(0, 4).map((comparison) => comparison.id);
+  const draft = { requirements, comparisons };
+
   return projectionSchema.parse({
     schemaVersion: 1,
     project: { id: `${options.pageId}-demo`, name: options.label },
     provider: { name: 'page-capture', readinessConcepts: { needsDesign: false, notEnrolled: false }, capabilities: [] },
     generatedAt: '2026-10-18T12:00:00Z',
     inventory: 'full',
-    snapshots: [{ id: snapshotId, kind: 'design-export', role: 'proof-source', label: `Design export of the ${options.label} frames`, capturedAt: '2026-10-12T09:00:00Z', sha256: boundTo }],
+    snapshots: [
+      { id: snapshotId, kind: 'design-export', role: 'proof-source', label: `Design export of the ${options.label} frames`, capturedAt: '2026-10-12T09:00:00Z', sha256: boundTo },
+      ...(history ? [{ id: oldSnapshotId, kind: 'design-export', role: 'proof-source', label: `June export of the ${options.label} frames`, capturedAt: '2026-06-12T09:00:00Z', supersededBy: snapshotId }] : [])
+    ],
     runs: [{ id: 'run-1', finishedAt: '2026-10-14T09:00:00Z', engine: { name: 'pixel-compare', version: '1.0.0' }, nativeValidity: 'current' }],
     requirements,
     comparisons,
-    subjects: [{ id: options.pageId, kind: 'page', label: options.label, presentation: { groupBy: 'state', columns: 'device', sections: 'surface' } }]
+    subjects: [{ id: options.pageId, kind: 'page', label: options.label, presentation: { groupBy: 'state', columns: 'device', sections: 'surface' } }],
+    decisions: history
+      ? [
+          {
+            id: `${options.pageId}-raised-mobile-limit`,
+            kind: 'accept-deviation',
+            bundleId: `${options.pageId}-earlier-build`,
+            by: 'Owner',
+            recordedBy: 'Assistant',
+            at: '2026-10-13T10:00:00Z',
+            attestation: 'delegated',
+            comment: 'The owner said: "mobile label wrapping differs by a few pixels, accept up to 2 % for these screens".',
+            scope: { comparisonIds: acceptedIds },
+            binding: bindingForComparisons(draft as unknown as Projection, acceptedIds)
+          }
+        ]
+      : []
   });
 }

@@ -48,7 +48,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
   - [x] Viewer, superseded: counted as not proven; a cell, row reason, needs-attention item and comparison banner say "superseded design source".
   - [x] Viewer, accepted deviations: a neutral overview line, a marker on the gallery and table cells, and the decision (who, when, words, still holds or lapsed) on the comparison.
   - [x] Viewer, smaller: delegated approvals counted by record ("1 record covers 573 comparisons", "bound to the reference set as a whole"); both hashes when `boundTo` differs from the source; long approval notes clamped on the comparison; a "(none)" choice for items without a dimension; a visible "no value" column and "No mobile variant required"; segmented controls wrap at 390px.
-  - [ ] Gates (tests, `reflect`, `a11y`), then release 0.4.0 (owner publishes) and prompts for Marwes round 2 and Sourcer round 4.
+  - [~] Gates pass: projection 151 and viewer 268 tests, build, `reflect` (no blocking failures; the 14 baseline differences remain for review), `a11y` (no findings). The `checkout-200` demo carries a superseded export and an accepted deviation. Left: bump to 0.4.0 and push (owner's go-ahead), the owner publishes, then prompts for Marwes round 2 and Sourcer round 4.
   - [ ] Visual baselines: promote the differences from 0.3.0 and this round in one go, after the owner approves (dry run first).
 
 ## Next (in order)
@@ -300,6 +300,7 @@ Try the viewer: `pnpm --filter reflection-projection build`, then `pnpm --filter
 
 ## Change log
 
+- 2026-10-20: 0.4.0 built: superseded design sources count as not proven, imported accepted deviations shown apart from proof, delegated approvals counted by record, smaller fixes from both providers. Projection tests 145 to 151, UI tests 259 to 268.
 - 2026-10-20: `reflection-projection` 0.3.0 published; Sourcer round 3 and Marwes round 1 read; 0.4.0 scoped.
 - 2026-10-19: UX brief built for 0.3.0: metric meaning and presentation hint in the projection; delegated-approval note, trust-ordered approvals and per-row approval; comparison page led by the images (437px panes at 1400px, Difference large, navigation toggle); grouped page gallery; one Freshness group; Unreleased; phone width without sideways scroll, in the gate. Projection tests 142 to 145, UI tests 248 to 259.
 - 2026-10-19: `reflection-projection` 0.2.0 published; Sourcer round 2 passed; UX brief scoped for 0.3.0.

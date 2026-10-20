@@ -34,7 +34,7 @@ const demos: Demo[] = [
   { id: 'docs-site-strict', projection: strictOf(docsSite) },
   { id: 'docs-site-previous', projection: previousOf(docsSite), release: { release: 'demo-0', state: 'released', previousRelease: null }, oldLook: 'hero.tablet' },
   // A page of 200 required items with a presentation hint and every outcome, and one where every check fails.
-  { id: 'checkout-200', projection: screensDemo({ pageId: 'checkout', label: 'Checkout', appStates: 60, appDevices: ['desktop', 'tablet', 'mobile'], emailStates: 10, emailDevices: ['desktop', 'phone'] }) },
+  { id: 'checkout-200', projection: screensDemo({ pageId: 'checkout', label: 'Checkout', appStates: 60, appDevices: ['desktop', 'tablet', 'mobile'], emailStates: 10, emailDevices: ['desktop', 'phone'], withHistory: true }) },
   { id: 'signup-all-failing', projection: screensDemo({ pageId: 'signup', label: 'Sign-up', appStates: 15, appDevices: ['desktop', 'mobile'], emailStates: 0, emailDevices: [], allFailing: true }) }
 ];
 
