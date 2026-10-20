@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import styled from 'styled-components';
 import type { Delta, ProjectionDiff } from 'reflection-projection';
 import type { AttentionItem, AttentionKind } from '../../model/attention';
+import type { ReleaseDecisionView } from '../../model/release-decision';
 import { paths } from '../../routes/paths';
 
 const Card = styled.section`
@@ -163,6 +164,35 @@ export function DesignChangesCard({ bundleId, diff, previousRelease }: { bundleI
         {diff.totals.subjects.added} subjects added, {diff.totals.subjects.updated} updated, {diff.totals.subjects.removed} removed.{' '}
         <a href={paths.changes(bundleId)}>See the changes</a>
       </p>
+    </Card>
+  );
+}
+
+/**
+ * The release decision as recorded by the host's decision API, with whether it still applies to this build.
+ * Shown only when the host records decisions; a failure to load says so instead of reading as "no decision".
+ */
+export function DecisionCard({ view, loading, error }: { view: ReleaseDecisionView | undefined; loading: boolean; error: string | undefined }): ReactNode {
+  return (
+    <Card aria-label="Decision">
+      <h2>Decision</h2>
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : loading || !view ? (
+        <p className="muted">Loading decisions…</p>
+      ) : (
+        <>
+          <p style={view.lapsed ? { color: 'var(--gap)', fontWeight: 600 } : undefined}>
+            <strong>{view.lapsed ? `▲ ${view.title}, on an earlier build` : view.title}</strong>
+          </p>
+          {view.lines.map((line) => (
+            <p key={line} className="muted" style={{ margin: '0.25rem 0 0' }}>
+              {line}
+            </p>
+          ))}
+          {view.recorded > 1 ? <p className="note">{view.recorded} records for this release, kept in order; none is ever changed.</p> : null}
+        </>
+      )}
     </Card>
   );
 }

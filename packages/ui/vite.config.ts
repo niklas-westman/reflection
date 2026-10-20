@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import { BundleFileMissingError } from 'reflection-projection';
@@ -25,16 +25,20 @@ const CONTENT_TYPES: Record<string, string> = {
 function localBundles(directory: string): Plugin {
   const root = resolve(directory);
 
-  async function listBundleIds(): Promise<string[]> {
+  // index.json as a host writes it (`releaseIndexSchema`): each bundle's identity from its own manifest, and the
+  // most recently built bundle of each project as its latest.
+  async function listBundles(): Promise<{ bundles: Array<Record<string, unknown>>; latest: Record<string, string> }> {
     const names = await readdir(root).catch(() => [] as string[]);
-    const ids: string[] = [];
+    const bundles: Array<{ id: string; project: string; release: string; build: number; state: string; builtAt: string; bundleHash: string }> = [];
     for (const name of names.sort()) {
-      const hasManifest = await stat(join(root, name, 'manifest.json')).then((stats) => stats.isFile(), () => false);
-      if (hasManifest) {
-        ids.push(name);
+      const manifest = await readFile(join(root, name, 'manifest.json'), 'utf8').then((text) => JSON.parse(text) as { project: { id: string }; bundleHash: string; release: { release: string; build: number; state: string; builtAt: string } }, () => undefined);
+      if (manifest) {
+        bundles.push({ id: name, project: manifest.project.id, release: manifest.release.release, build: manifest.release.build, state: manifest.release.state, builtAt: manifest.release.builtAt, bundleHash: manifest.bundleHash });
       }
     }
-    return ids;
+    const latest: Record<string, string> = {};
+    for (const bundle of [...bundles].sort((a, b) => a.builtAt.localeCompare(b.builtAt) || a.id.localeCompare(b.id))) latest[bundle.project] = bundle.id;
+    return { bundles, latest };
   }
 
   // Summaries of releases whose evidence was removed: every .json file in <folder>/archive. Not validated here;
@@ -52,7 +56,7 @@ function localBundles(directory: string): Plugin {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (url.pathname === '/index.json') {
       response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify({ bundles: (await listBundleIds()).map((id) => ({ id })), archive: await listArchive() }));
+      response.end(JSON.stringify({ schemaVersion: 1, generatedAt: new Date().toISOString(), ...(await listBundles()), archive: await listArchive() }));
       return;
     }
 

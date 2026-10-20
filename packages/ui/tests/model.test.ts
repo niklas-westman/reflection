@@ -7,6 +7,7 @@ import { buildMatrix } from '../src/model/matrix-model';
 import { DEFAULT_SUBJECT_VIEW, parseSubjectSearch, toSubjectSearch } from '../src/model/search';
 import { describeRuns, releaseStateLabel, runAgeAtBuild } from '../src/model/format';
 import { hashRouteForPlainPath } from '../src/router';
+import { resolveViewerConfig } from '../src/data/viewer-config';
 import { buildFreshness } from '../src/model/freshness';
 import { groupBySubject } from '../src/model/subject-model';
 import { makeProjection } from './helpers/test-bundles';
@@ -215,12 +216,14 @@ describe('release and run wording', () => {
 });
 
 describe('a plain path pasted without the hash', () => {
-  it('becomes the same hash route, and the root or a hash route is left alone', () => {
-    expect(hashRouteForPlainPath('/bundles/login-1', '', '/')).toBe('/#/bundles/login-1');
-    expect(hashRouteForPlainPath('/viewer/bundles/login-1/pages/login', '', '/viewer/')).toBe('/viewer/#/bundles/login-1/pages/login');
-    expect(hashRouteForPlainPath('/', '', '/')).toBeUndefined();
-    expect(hashRouteForPlainPath('/index.html', '', '/')).toBeUndefined();
-    expect(hashRouteForPlainPath('/bundles/login-1', '#/bundles/x', '/')).toBeUndefined();
+  it('becomes the same hash route under any base path, and the root or a hash route is left alone', () => {
+    expect(hashRouteForPlainPath('/bundles/login-1', '')).toBe('/#/bundles/login-1');
+    expect(hashRouteForPlainPath('/reflection/bundles/login-1/pages/login', '')).toBe('/reflection/#/bundles/login-1/pages/login');
+    expect(hashRouteForPlainPath('/reflection/archive/marwes/2.2.0', '')).toBe('/reflection/#/archive/marwes/2.2.0');
+    expect(hashRouteForPlainPath('/', '')).toBeUndefined();
+    expect(hashRouteForPlainPath('/reflection/', '')).toBeUndefined();
+    expect(hashRouteForPlainPath('/reflection/index.html', '')).toBeUndefined();
+    expect(hashRouteForPlainPath('/bundles/login-1', '#/bundles/x')).toBeUndefined();
   });
 });
 
@@ -242,5 +245,18 @@ describe('freshness', () => {
     expect(stale).toEqual([{ label: 'Changed since the run', value: 'app:src (changed)', caution: true }]);
     expect(buildFreshness({ snapshots: [], runs: [], builtAt: '2026-10-19T09:00:00Z', validity: { state: 'never-run' } })[0]).toMatchObject({ label: 'Not run', caution: true });
     expect(buildFreshness({ snapshots: [], runs: [], builtAt: '2026-10-19T09:00:00Z', validity: { state: 'invalid', reasons: ['a.png does not match'] } })[0]).toMatchObject({ label: 'Unusable evidence', caution: true });
+  });
+});
+
+describe('the host\'s viewer config', () => {
+  it('resolves both URLs against the viewer\'s own address, with bundles/ and no decisions by default', () => {
+    expect(resolveViewerConfig({}, 'https://dev.example.com/reflection/')).toEqual({ bundlesUrl: 'https://dev.example.com/reflection/bundles', decisionsUrl: undefined });
+    expect(resolveViewerConfig({ bundlesUrl: '.', decisionsUrl: 'api' }, 'https://dev.example.com/reflection/')).toEqual({ bundlesUrl: 'https://dev.example.com/reflection/', decisionsUrl: 'https://dev.example.com/reflection/api' });
+    expect(resolveViewerConfig({ bundlesUrl: 'https://cdn.example.com/b/' }, 'https://dev.example.com/reflection/').bundlesUrl).toBe('https://cdn.example.com/b/');
+  });
+
+  it('refuses a config of the wrong shape instead of guessing', () => {
+    expect(() => resolveViewerConfig({ bundlesUrl: 3 }, 'https://dev.example.com/')).toThrow('bundlesUrl must be a non-empty string');
+    expect(() => resolveViewerConfig('not json', 'https://dev.example.com/')).toThrow('must be a JSON object');
   });
 });

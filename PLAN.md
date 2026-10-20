@@ -45,7 +45,7 @@ The briefs are untracked because they hold local paths. If a brief and this file
 - [ ] **Hosting and decisions contract, 0.5.0** (`marwes-ask-02.md`; scope accepted 2026-10-20: contract plus read side). The viewer will be hosted by Marwes at `dev.marwes.io/reflection/` (S3, CloudFront, Cognito), bundles beside it, a decision API at `/reflection/api/`.
   - [x] Projection: `releaseIndexSchema` for `index.json` (explicit `latest`), `recordDecisionRequestSchema`, `decisionListSchema`, and a pure `recordDecision` (server computes the binding and counts; identity from the verified email); JSON Schemas; tests.
   - [x] Hosting doc in the package: paths, `reflection-config.json`, `index.json`, the decision API contract (request, response, server duties).
-  - [ ] Viewer: `reflection-config.json` (`bundlesUrl`, `decisionsUrl`) read at start, so one build runs under any base path; the plain-path redirect fixed for a base path; richer `index.json` with a missing `latest` shown, never replaced; decisions read from the API and shown with their standing. No Approve or Require changes controls yet.
+  - [x] Viewer: `reflection-config.json` (`bundlesUrl`, `decisionsUrl`) read at start, so one build runs under any base path; the plain-path redirect fixed for a base path; richer `index.json` with a missing `latest` shown, never replaced; decisions read from the API and shown with their standing. No Approve or Require changes controls yet.
   - [ ] Packaging: the built viewer ships as static files in `reflection-projection/viewer/`.
   - [ ] Gates, then release 0.5.0 (owner publishes) and a reply to Marwes.
 

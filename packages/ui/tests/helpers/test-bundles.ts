@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll } from 'vitest';
 import { collectArtifactRefs, projectionSchema, type Projection, type ReleaseManifest } from 'reflection-projection';
 import { createDirectorySource, writeBundle, type BundleFileInput } from 'reflection-projection/node';
-import type { ArchiveSummary } from 'reflection-projection';
+import type { ArchiveSummary, Decision } from 'reflection-projection';
 import type { BundleCatalog } from '../../src/data/bundle-catalog';
 
 type RequirementInput = Projection['requirements'][number];
@@ -90,7 +90,7 @@ afterAll(async () => {
 });
 
 /** Writes real bundles to a temporary directory and serves them as a catalog, so tests read what the writer wrote. */
-export async function makeCatalog(bundles: TestBundle[], options: { archive?: ArchiveSummary[]; unreadableArchive?: number } = {}): Promise<BundleCatalog> {
+export async function makeCatalog(bundles: TestBundle[], options: { archive?: ArchiveSummary[]; unreadableArchive?: number; latest?: Record<string, string | null>; decisions?: Decision[] | Error } = {}): Promise<BundleCatalog> {
   const root = await mkdtemp(join(tmpdir(), 'reflection-ui-'));
   created.push(root);
 
@@ -102,6 +102,15 @@ export async function makeCatalog(bundles: TestBundle[], options: { archive?: Ar
 
   return {
     list: async () => bundles.map((bundle) => ({ id: bundle.id })),
+    latest: async () => options.latest ?? {},
+    ...(options.decisions
+      ? {
+          decisions: async (release: string) => {
+            if (options.decisions instanceof Error) throw options.decisions;
+            return (options.decisions ?? []).filter((decision) => decision.scope?.release === release);
+          }
+        }
+      : {}),
     archive: async () => ({ summaries: options.archive ?? [], unreadable: options.unreadableArchive ?? 0 }),
     source: (bundleId) => createDirectorySource(join(root, bundleId))
   };

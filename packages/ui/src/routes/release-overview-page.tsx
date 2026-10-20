@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
-import type { Delta } from 'reflection-projection';
+import { buildDecisionBinding, type Delta } from 'reflection-projection';
 import { useBundleView } from '../data/bundle-context';
 import { Button } from '../components/atoms/button';
 import { Pill } from '../components/atoms/pill';
@@ -10,7 +10,9 @@ import { Banner } from '../components/molecules/banner';
 import { SubjectCard } from '../components/molecules/subject-card';
 import { SummaryGroups } from '../components/molecules/summary-groups';
 import { EvidenceNotice } from '../components/organisms/evidence-notice';
-import { AttentionCard, ChangesCard, DesignChangesCard } from '../components/organisms/release-cards';
+import { AttentionCard, ChangesCard, DecisionCard, DesignChangesCard } from '../components/organisms/release-cards';
+import { useDecisions } from '../data/bundle-queries';
+import { describeReleaseDecision } from '../model/release-decision';
 import { useReleaseDiff } from '../data/release-diff';
 import { ExternalLink } from '../components/atoms/external-link';
 import type { ChangeKind } from 'reflection-projection';
@@ -80,6 +82,7 @@ export function ReleaseOverviewPage(): ReactNode {
   const comparisons = useMemo(() => countComparisons(projection.comparisons), [projection]);
   const attention = useMemo(() => buildAttention({ projection, subjects, unusableComparisonIds: prepared.unusableComparisonIds, supersededComparisonIds: prepared.supersededComparisonIds }), [projection, subjects, prepared]);
   const delegatedApprovals = countDelegatedApprovals(projection);
+  const decisions = useDecisions(manifest.release.release);
   const { release, project } = manifest;
   const diffState = useReleaseDiff();
   const delta = projection.delta;
@@ -138,6 +141,13 @@ export function ReleaseOverviewPage(): ReactNode {
       <Cards role="group" aria-label="Release highlights">
         {comparableDelta ? <ChangesCard delta={comparableDelta} /> : null}
         {diffState.status === 'ready' ? <DesignChangesCard bundleId={bundleId} diff={diffState.diff} previousRelease={diffState.previousRelease} /> : null}
+        {decisions.recorded ? (
+          <DecisionCard
+            view={decisions.data ? describeReleaseDecision(decisions.data, buildDecisionBinding(projection.requirements, projection.comparisons), manifest.release.bundleId) : undefined}
+            loading={decisions.isPending}
+            error={decisions.isError ? decisions.error.message : undefined}
+          />
+        ) : null}
         <AttentionCard bundleId={bundleId} items={attention} delegatedApprovals={delegatedApprovals} deviations={summarizeDeviations(projection, prepared.deviations)} />
       </Cards>
       {(['components', 'pages'] as const).map((section) => (

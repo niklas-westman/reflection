@@ -1,5 +1,5 @@
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { openBundle, verifyBundleFile, type BundleManifest, type BundleProblemCode, type OpenBundleResult } from 'reflection-projection';
+import { openBundle, verifyBundleFile, type BundleManifest, type BundleProblemCode, type Decision, type OpenBundleResult } from 'reflection-projection';
 import { useBundleCatalog, type ArchiveListing, type BundleListEntry } from './bundle-catalog';
 
 export function useArchive(): UseQueryResult<ArchiveListing> {
@@ -10,6 +10,19 @@ export function useArchive(): UseQueryResult<ArchiveListing> {
 export function useBundleList(): UseQueryResult<BundleListEntry[]> {
   const catalog = useBundleCatalog();
   return useQuery({ queryKey: ['bundles'], queryFn: () => catalog.list() });
+}
+
+/** The bundle the host names as the latest per project. */
+export function useLatest(): UseQueryResult<Record<string, string | null>> {
+  const catalog = useBundleCatalog();
+  return useQuery({ queryKey: ['latest'], queryFn: () => catalog.latest() });
+}
+
+/** The decisions recorded for a release; disabled when the host records none. */
+export function useDecisions(release: string): UseQueryResult<Decision[]> & { recorded: boolean } {
+  const catalog = useBundleCatalog();
+  const query = useQuery({ queryKey: ['decisions', release], queryFn: () => catalog.decisions?.(release) ?? Promise.resolve([]), enabled: catalog.decisions !== undefined });
+  return Object.assign(query, { recorded: catalog.decisions !== undefined });
 }
 
 /** Opens one bundle: manifest, hash and projection checked. Individual files are verified when they load. */

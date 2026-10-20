@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
 import type { OpenBundleResult } from 'reflection-projection';
-import { useArchive, useBundleList, useOpenedBundles } from '../data/bundle-queries';
+import { useArchive, useBundleList, useLatest, useOpenedBundles } from '../data/bundle-queries';
 import { Pill } from '../components/atoms/pill';
 import { ValidityPill } from '../components/organisms/validity-pill';
 import { AppShell } from '../components/organisms/app-shell';
@@ -53,7 +53,11 @@ const TableScroll = styled.div`
 
 export function BundleListPage(): ReactNode {
   const list = useBundleList();
+  const latest = useLatest();
   const opened = useOpenedBundles(list.data ?? []);
+  const latestIds = new Set(Object.values(latest.data ?? {}).filter((id): id is string => id !== null));
+  // A latest bundle the host names but does not hold is said out loud, never replaced by another one.
+  const missingLatest = Object.entries(latest.data ?? {}).filter(([, id]) => id !== null && !(list.data ?? []).some((entry) => entry.id === id));
   const archive = useArchive();
   const summaries = archive.data?.summaries ?? [];
 
@@ -65,6 +69,11 @@ export function BundleListPage(): ReactNode {
         {list.isPending ? <p>Loading bundles…</p> : null}
         {list.isError ? <p role="alert">{list.error.message}</p> : null}
         {list.data && list.data.length === 0 ? <p>No bundles were found. Create the demo bundles with <code>pnpm --filter reflection-ui demo-bundles</code>.</p> : null}
+        {missingLatest.map(([project, id]) => (
+          <p key={project} role="alert">
+            The host names {id} as the latest bundle of {project}, but that bundle is not here.
+          </p>
+        ))}
         {list.data && list.data.length > 0 ? (
           <TableScroll tabIndex={0} role="region" aria-label="Bundles, as a table">
           <table>
@@ -81,7 +90,7 @@ export function BundleListPage(): ReactNode {
             </thead>
             <tbody>
               {list.data.map((entry, index) => (
-                <BundleRow key={entry.id} id={entry.id} state={opened[index]?.data} pending={opened[index]?.isPending ?? true} />
+                <BundleRow key={entry.id} id={entry.id} latest={latestIds.has(entry.id)} state={opened[index]?.data} pending={opened[index]?.isPending ?? true} />
               ))}
             </tbody>
           </table>
@@ -134,7 +143,7 @@ export function BundleListPage(): ReactNode {
   );
 }
 
-function BundleRow({ id, state, pending }: { id: string; state: OpenBundleResult | undefined; pending: boolean }): ReactNode {
+function BundleRow({ id, latest, state, pending }: { id: string; latest: boolean; state: OpenBundleResult | undefined; pending: boolean }): ReactNode {
   if (pending || !state) {
     return (
       <tr>
@@ -149,7 +158,7 @@ function BundleRow({ id, state, pending }: { id: string; state: OpenBundleResult
           <a href={paths.bundle(id)}>{id}</a>
         </td>
         <td colSpan={6}>
-          <Pill $tone="fail">Bundle rejected</Pill> {state.problems[0]?.message}
+          {latest ? <Pill $tone="fail">Latest</Pill> : null} <Pill $tone="fail">Bundle rejected</Pill> {state.problems[0]?.message}
         </td>
       </tr>
     );
@@ -160,7 +169,7 @@ function BundleRow({ id, state, pending }: { id: string; state: OpenBundleResult
   return (
     <tr>
       <td>
-        <a href={paths.bundle(id)}>{manifest.project.name}</a>
+        <a href={paths.bundle(id)}>{manifest.project.name}</a> {latest ? <Pill $tone="idle">Latest</Pill> : null}
         <div style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{id}</div>
       </td>
       <td>
