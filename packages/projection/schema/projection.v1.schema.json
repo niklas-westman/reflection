@@ -191,6 +191,11 @@
             "type": "string",
             "format": "uri"
           },
+          "supersededBy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
           "note": {
             "type": "string"
           }

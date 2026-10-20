@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { comparisonSchema } from './comparison.js';
-import { decisionSchema } from './decision.js';
+import { buildDecisionBinding, decisionSchema, evaluateDecision, type Decision, type DecisionBinding, type DecisionState } from './decision.js';
 import { runSchema } from './evidence.js';
 import { idSchema, timestampSchema } from './primitives.js';
 import { deltaSchema, releaseManifestSchema } from './release.js';
@@ -62,6 +62,12 @@ export const projectionSchema = z
     projection.requirements.forEach((requirement, index) => {
       requireKnown(requirement.design?.snapshotId, snapshotIds, ['requirements', index, 'design', 'snapshotId'], 'snapshot', context);
     });
+    projection.snapshots.forEach((snapshot, index) => {
+      requireKnown(snapshot.supersededBy, snapshotIds, ['snapshots', index, 'supersededBy'], 'snapshot', context);
+      if (snapshot.supersededBy === snapshot.id) {
+        context.addIssue({ code: 'custom', path: ['snapshots', index, 'supersededBy'], message: 'a snapshot cannot supersede itself' });
+      }
+    });
     projection.release?.snapshotIds.forEach((snapshotId, index) => {
       requireKnown(snapshotId, snapshotIds, ['release', 'snapshotIds', index], 'snapshot', context);
     });
@@ -71,9 +77,52 @@ export const projectionSchema = z
   });
 export type Projection = z.output<typeof projectionSchema>;
 
-/** Readiness counts for a projection, using the provider's own concepts. The only place views should count. */
+/**
+ * Readiness counts for a projection, using the provider's own concepts. The only place views should count.
+ * Comparisons that read a superseded design snapshot are left out, so their requirements read as not proven.
+ */
 export function summarizeProjection(projection: Projection): CoverageSummary {
-  return summarizeReadiness(projection.requirements, projection.comparisons, projection.provider.readinessConcepts);
+  const superseded = supersededComparisonIds(projection);
+  const counted = projection.comparisons.filter((comparison) => !superseded.has(comparison.id));
+  return summarizeReadiness(projection.requirements, counted, projection.provider.readinessConcepts);
+}
+
+/** Comparisons whose design snapshot was superseded: they proved an old design and count as not proven. */
+export function supersededComparisonIds(projection: Pick<Projection, 'snapshots' | 'comparisons'>): Set<string> {
+  const superseded = new Set(projection.snapshots.filter((snapshot) => snapshot.supersededBy !== undefined).map((snapshot) => snapshot.id));
+  return new Set(projection.comparisons.filter((comparison) => comparison.snapshotId !== undefined && superseded.has(comparison.snapshotId)).map((comparison) => comparison.id));
+}
+
+export interface StandingDeviation {
+  decision: Decision;
+  comparisonIds: string[];
+  standing: DecisionState;
+}
+
+/**
+ * The binding of a set of comparisons and their requirements. A provider that imports a decision scoped to
+ * comparisons builds its binding with this, and a viewer evaluates it against the same scope.
+ */
+export function bindingForComparisons(projection: Pick<Projection, 'requirements' | 'comparisons'>, comparisonIds: string[]): DecisionBinding {
+  const scope = new Set(comparisonIds);
+  const comparisons = projection.comparisons.filter((comparison) => scope.has(comparison.id));
+  const requirementIds = new Set(comparisons.flatMap((comparison) => (comparison.requirementId ? [comparison.requirementId] : [])));
+  return buildDecisionBinding(projection.requirements.filter((requirement) => requirementIds.has(requirement.id)), comparisons);
+}
+
+/**
+ * Deviations the owner accepted (raised limits, known differences), each with whether it still holds against the
+ * evidence in this bundle. Only `accept-deviation` decisions scoped to comparisons, and not withdrawn, are listed.
+ * They are review, never proof: a comparison's outcome does not change because of them.
+ */
+export function standingDeviations(projection: Projection, bundleId: string): StandingDeviation[] {
+  const withdrawn = new Set(projection.decisions.filter((decision) => decision.kind === 'withdrawn' && decision.target).map((decision) => decision.target));
+  return projection.decisions
+    .filter((decision) => decision.kind === 'accept-deviation' && !withdrawn.has(decision.id) && (decision.scope?.comparisonIds?.length ?? 0) > 0)
+    .map((decision) => {
+      const comparisonIds = decision.scope?.comparisonIds ?? [];
+      return { decision, comparisonIds, standing: evaluateDecision(decision, bindingForComparisons(projection, comparisonIds), bundleId) };
+    });
 }
 
 function collectUniqueIds(items: Array<{ id: string }>, collection: string, context: z.RefinementCtx): Set<string> {

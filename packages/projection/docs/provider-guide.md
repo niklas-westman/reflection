@@ -46,7 +46,8 @@ Every number a view shows must come from `summarizeProjection`. Do not add your 
 One comparison is one check of a reference against a rendered result.
 
 - `requirementId` joins it to its requirement by exact identity. Do not join by name or position.
-- Set the proof of each layer you actually ran. Leave a layer absent if you have no concept of it.
+- Set the proof of each layer you actually ran. Leave a layer absent if you have no concept of it, and also when it is not required for this item and did not run: a layer that is present counts in the comparison's outcome, so `not-run` on a layer nobody required makes the comparison read as not run.
+- **One comparison per requirement and implementation.** When one of your test cases serves several requirements (a behaviour-only item that reuses a visual case), emit a comparison for each requirement, each with its own `requirementId`. One comparison per case leaves the other requirements without evidence.
 - `verdict` is what the engine or tool reported, in its own words: `status`, `severity`, `failureClass`. A decision binds to these three fields, so keep them free of anything that differs between identical runs (timestamps, run ids, paths).
 - **Never forward a folded word.** If your tool folds coverage gaps into every case outcome (one provider reported `blocked` for every row because coverage gaps were folded into each case outcome), do not copy that word into `verdict` or `proof`. Map the real per-layer result. Keep the tool's own word in `nativeOutcome`; the viewer shows it as "native" next to the verdict and never counts it.
 - `limitations` is where to say what a check could not do.
@@ -80,12 +81,12 @@ A snapshot is the design data something was proven against. Reflection does not 
 - `sha256` is the hash of the design source content the snapshot holds (for example your reference manifest), never of the bundle. A reference approval's `boundTo` uses the same value.
 - `fileKey` is the upstream file the snapshot came from. `originalFileKey` is the file it was copied from, if each snapshot is a copy of an original file.
 - `release.snapshotIds` lists the snapshots a release used. It may equal the previous release's: not every release has a new sync.
-- If the design source has moved on and your proof still reads the old one, that is a validity problem, not a note. Report it through `run.inputs` or as an integrity failure (below).
+- If the design source has moved on and your proof still reads the old one, that is a validity problem, not a note. Keep the old snapshot and set its `supersededBy` to the id of the snapshot that replaced it. Every comparison that read the superseded snapshot then counts as not proven (never passed or failed), and the viewer says it proved an old design. Do not fake this with an integrity failure.
 
 ## Subjects, links and release changes
 
 - **`subjects[]` is optional.** A subject (a component family or a page, grouped by `subject.id` and `kind`) needs no entry. Add one to give it a `label`, a `description`, a `sourceUrl`, a `changeNote` and a `presentation`. `changeNote` is what changed in this release in your own words; the viewer never derives it.
-- **`presentation`** says how to lay out the subject's required items. Each value names a dimension: a common key (`variant`, `mode`, `adapter`, `viewport`, `state`) or a key of `subject.dimensions`. `groupBy` gives one row per value (for example `state`), `columns` puts that dimension's values side by side in the row (`device`: desktop next to mobile), `sections` splits the rows under headings (`surface`: app and email). Failing and unproven items still come first. Without a hint the viewer keeps its default layout; it never guesses from dimension names.
+- **`presentation`** says how to lay out the subject's required items. Give every item a value for the `columns` dimension (use a word such as `default` where there is no variant); an item without one is shown under "No value". Each value names a dimension: a common key (`variant`, `mode`, `adapter`, `viewport`, `state`) or a key of `subject.dimensions`. `groupBy` gives one row per value (for example `state`), `columns` puts that dimension's values side by side in the row (`device`: desktop next to mobile), `sections` splits the rows under headings (`surface`: app and email). Failing and unproven items still come first. Without a hint the viewer keeps its default layout; it never guesses from dimension names.
 - **Links** (`subject.sourceUrl`, `snapshot.sourceUrl`) must be `http` or `https`. A script or `file:` URL is rejected. The viewer shows them as links and never follows them. Never put a Figma or Penpot name in the label of the generic chrome; the link text comes from your data.
 - **Release changes are computed by `diffProjections(previous, current)`**, not by the provider. For it to say something true, keep **requirement ids stable** across releases and give every reference a **hash** (`writeBundle` fills it in). A requirement is "updated" when its reference hash changed; renaming a requirement id reads as one removed and one added.
 - The baseline is the previous release: set `release.previousRelease` to the latest released version before this build.
@@ -95,7 +96,7 @@ A snapshot is the design data something was proven against. Reflection does not 
 A run records what produced the evidence and what it was produced from.
 
 - `run.inputs[]` is the engine's `report.inputs[]` shape: `{ role, key, hashKind, sha256, bytes, missing }`. For a native Reflection run, copy it as it is. For your own pipeline, hash the files and data the proof depends on (the coverage contract, the design snapshot, the baselines) with the same shape.
-- Keys are relative to a project directory. Never an absolute path.
+- Keys are relative to the project root. Never an absolute path. The engine writes keys relative to its config file; if that file is not at the root, rebase the keys onto the root when you copy them, so a live check can hash the same files.
 - `hashKind` is `bytes` (the file's bytes), `canonical-json` (a JSON value in canonical form) or `composite`: one hash you compute over a declared set of files, such as your app code. Name the set in the key (`app:src,public,index.html`) and keep the way you hash it fixed; a changed composite hash reads as that input changed. Prefer one input per file when the list is short, so the stale causes can name the file. For a live check, compute the current value with the same function over the live files.
 - Validity is never stored. A viewer with access to the current inputs recomputes it with `computeValidity(recorded, current)` and gets `current`, `stale` (with the exact inputs that changed), `invalid`, `never-run` or `offline`. A bundle opened without live inputs reads `offline`: "freshness not verified".
 - `nativeValidity` keeps what your tool said about its own validity. The viewer shows it as "native" beside the run and never trusts it.
@@ -111,7 +112,13 @@ Providers do not write decisions. The portal records them, bound to content (ver
 
 What this asks of a provider: **keep verdicts, baseline hashes and requirement ids stable between identical builds.** A provider that puts a timestamp into a verdict or renames ids on every build lapses every decision for no reason.
 
-The only decisions a provider may include are imports of `accept-reference` records: `delegated` when the record names the person and keeps their words (`recordedBy`, and the words in `comment`), `agent` otherwise. A person's decision given to an agent in conversation is recorded as `delegated`; the portal records its own as `human`.
+### Accepted deviations
+
+When the owner accepted a difference (a raised pixel limit for label-only text, a known rendering difference), import it as a decision with `kind: 'accept-deviation'`, `scope.comparisonIds` naming the comparisons it covers, and `binding: bindingForComparisons(projection, comparisonIds)`. Use `delegated` (with `recordedBy` and the owner's words in `comment`) or `human`, never `agent`. The comparisons keep their own outcome: a deviation is review, not proof. The viewer counts the items that pass within an accepted deviation, shows the decision on each comparison, and says when it lapsed because a verdict, a reference or a capture policy changed. Keep the raised limit itself in `diff.threshold` and `diff.metric.passAt`.
+
+`buildDecisionBinding(requirements, comparisons)` takes the two lists, not a projection.
+
+The other decisions a provider may include are imports of `accept-reference` records: `delegated` when the record names the person and keeps their words (`recordedBy`, and the words in `comment`), `agent` otherwise. A person's decision given to an agent in conversation is recorded as `delegated`; the portal records its own as `human`.
 
 ## Artifacts
 

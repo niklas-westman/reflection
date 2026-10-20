@@ -21,6 +21,9 @@ export const sourceSnapshotSchema = z.object({
   originalFileKey: z.string().min(1).optional(),
   // A link to the design source, supplied by the provider and shown as a link, never followed by the viewer.
   sourceUrl: httpUrlSchema.optional(),
+  // The snapshot that replaced this one as the design source. Evidence read from a superseded snapshot proves the
+  // old design, so it is never counted as proven or failing.
+  supersededBy: idSchema.optional(),
   note: z.string().optional()
 });
 export type SourceSnapshot = z.output<typeof sourceSnapshotSchema>;
